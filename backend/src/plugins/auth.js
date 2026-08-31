@@ -46,6 +46,41 @@ async function authPlugin(fastify, opts) {
       }
     };
   });
+
+  fastify.decorate('verifyDeviceKey', async function (request, reply) {
+    const deviceKey = request.headers['x-device-key'];
+    if (!deviceKey) {
+      return reply.code(401).send({
+        success: false,
+        error: {
+          code: 'MISSING_KEY',
+          message: 'X-Device-Key header is required',
+        },
+      });
+    }
+
+    const db = fastify.db;
+    const result = await db.query(
+      `SELECT id, plate_number, name, device_api_key, status, is_active, last_lat, last_lng, last_speed_kmh, last_heading, last_seen_at
+       FROM vehicles
+       WHERE device_api_key = $1 AND is_active = true
+       LIMIT 1;`,
+      [deviceKey]
+    );
+
+    const vehicle = result.rows && result.rows[0];
+    if (!vehicle) {
+      return reply.code(403).send({
+        success: false,
+        error: {
+          code: 'INVALID_KEY',
+          message: 'Invalid or inactive device key',
+        },
+      });
+    }
+
+    request.vehicle = vehicle;
+  });
 }
 
 export default fp(authPlugin);

@@ -4,6 +4,7 @@ import defaultDb from './db/index.js';
 import config from './config/env.js';
 import authPlugin from './plugins/auth.js';
 import authRoutes from './routes/auth.js';
+import telemetryRoutes from './routes/telemetry.js';
 
 export function buildApp(opts = {}) {
   const app = Fastify({
@@ -37,6 +38,7 @@ export function buildApp(opts = {}) {
 
   // Register API Routes
   app.register(authRoutes, { prefix: '/api/v1/auth' });
+  app.register(telemetryRoutes, { prefix: '/api/v1/telemetry' });
 
   // Custom 404 handler
   app.setNotFoundHandler((request, reply) => {
