@@ -1,0 +1,57 @@
+services:
+  postgres:
+    image: postgis/postgis:16-3.4
+    container_name: shuttle-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: shuttle_tracking
+      POSTGRES_USER: shuttle
+      POSTGRES_PASSWORD: shuttle_secret_dev
+      PGDATA: /var/lib/postgresql/data/pgdata
+    ports:
+      - "5432:5432"
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U shuttle -d shuttle_tracking"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  mosquitto:
+    image: eclipse-mosquitto:2.0
+    container_name: shuttle-mosquitto
+    restart: unless-stopped
+    ports:
+      - "1883:1883"
+      - "9001:9001"
+    volumes:
+      - ./mosquitto/config/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+      - ./mosquitto/config/acl.conf:/mosquitto/config/acl.conf:ro
+      - mosq_data:/mosquitto/data
+      - mosq_log:/mosquitto/log
+
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: shuttle-backend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: development
+      PORT: 3000
+      DATABASE_URL: postgres://shuttle:shuttle_secret_dev@postgres:5432/shuttle_tracking
+      MQTT_BROKER_URL: mqtt://mosquitto:1883
+      JWT_SECRET: shuttle_jwt_super_secret_key_2026
+    depends_on:
+      postgres:
+        condition: service_healthy
+      mosquitto:
+        condition: service_started
+
+volumes:
+  pg_data:
+  mosq_data:
+  mosq_log:
