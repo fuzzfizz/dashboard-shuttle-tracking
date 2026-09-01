@@ -1,0 +1,12 @@
+{
+  "name": "shuttle-tracking-tools",
+  "version": "1.0.0",
+  "description": "GPS Simulator Tool",
+  "type": "module",
+  "scripts": {
+    "test": "node --test"
+  },
+  "dependencies": {
+    "mqtt": "^5.0.0"
+  }
+}
