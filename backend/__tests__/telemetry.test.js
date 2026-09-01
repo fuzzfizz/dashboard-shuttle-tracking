@@ -884,5 +884,46 @@ describe('HTTP Telemetry API & Batch Flush Endpoints', () => {
       assert.equal(vehicle.last_speed_kmh, 40);
       assert.equal(vehicle.last_seen_at, t3);
     });
+
+    it('triggers broadcastTripEvent on new trip start and completion accurately without spamming', async () => {
+      const now = Date.now();
+      const t1 = new Date(now - 40000).toISOString();
+      const t2 = new Date(now - 30000).toISOString();
+      const t3 = new Date(now - 20000).toISOString();
+      const t4 = new Date(now - 10000).toISOString();
+
+      const points = [
+        { lat: 13.7463, lng: 100.5347, speed: 20, timestamp: t1, acc: true }, // new trip -> 'trip:started'
+        { lat: 13.7556, lng: 100.5365, speed: 30, timestamp: t2, acc: true }, // intermediate -> none
+        { lat: 13.7649, lng: 100.5382, speed: 40, timestamp: t3, acc: true }, // intermediate -> none
+        { lat: 13.7649, lng: 100.5382, speed: 0, timestamp: t4, acc: false }, // completes trip -> 'trip:completed'
+      ];
+
+      const res = await app.inject({
+        method: 'POST',
+        url: '/api/v1/telemetry/batch',
+        headers: { 'x-device-key': VALID_KEY },
+        payload: { points },
+      });
+
+      assert.equal(res.statusCode, 200);
+      const json = JSON.parse(res.payload);
+      assert.equal(json.success, true);
+      assert.equal(json.data.processed_count, 4);
+
+      // We expect exactly 1 trip:started and 1 trip:completed
+      const startedEvents = broadcastedTripEvents.filter(e => e.event === 'trip:started');
+      const completedEvents = broadcastedTripEvents.filter(e => e.event === 'trip:completed');
+      
+      assert.equal(startedEvents.length, 1);
+      assert.equal(completedEvents.length, 1);
+      
+      assert.equal(startedEvents[0].payload.vehicle_id, VEHICLE_ID);
+      assert.ok(startedEvents[0].payload.trip_id);
+      
+      assert.equal(completedEvents[0].payload.vehicle_id, VEHICLE_ID);
+      assert.ok(completedEvents[0].payload.trip_id);
+      assert.equal(startedEvents[0].payload.trip_id, completedEvents[0].payload.trip_id);
+    });
   });
 });
