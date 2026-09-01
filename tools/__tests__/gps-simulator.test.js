@@ -67,8 +67,8 @@ test('handleCommand', (t) => {
 import { SEED_VEHICLES, Simulator, calculateDistance } from '../gps-simulator.js';
 
 test('Verify Thai Plate Numbers and UTF-8 encoding', (t) => {
-  assert.strictEqual(SEED_VEHICLES[0].plate_number, 'กข-1234');
-  assert.strictEqual(SEED_VEHICLES[1].plate_number, 'ขค-5678');
+  assert.strictEqual(SEED_VEHICLES[0].plate_number, '\u0E01\u0E02-1234');
+  assert.strictEqual(SEED_VEHICLES[1].plate_number, '\u0E02\u0E04-5678');
 });
 
 test('Route stop proximity detection', async (t) => {

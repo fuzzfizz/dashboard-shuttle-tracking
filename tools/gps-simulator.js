@@ -9,8 +9,8 @@ const __dirname = path.dirname(__filename);
 
 // Pre-configured vehicles
 export const SEED_VEHICLES = [
-  { id: 'd0000000-0000-0000-0000-000000000001', plate_number: 'กข-1234', device_api_key: 'dev_key_v01_a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6' },
-  { id: 'd0000000-0000-0000-0000-000000000002', plate_number: 'ขค-5678', device_api_key: 'dev_key_v02_q1w2e3r4t5y6u7i8o9p0a1s2d3f4g5h6' }
+  { id: 'd0000000-0000-0000-0000-000000000001', plate_number: '\u0E01\u0E02-1234', device_api_key: 'dev_key_v01_a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6' },
+  { id: 'd0000000-0000-0000-0000-000000000002', plate_number: '\u0E02\u0E04-5678', device_api_key: 'dev_key_v02_q1w2e3r4t5y6u7i8o9p0a1s2d3f4g5h6' }
 ];
 
 export function toRadians(degrees) {
@@ -180,6 +180,7 @@ export class Simulator {
         };
       }
       
+      const routeIndex = i % this.routes.length;
       const routeDef = this.routes[routeIndex];
       
       this.vehicles.push({
