@@ -188,6 +188,26 @@ export default async function telemetryRoutes(fastify, opts) {
           trip_id: result?.trip?.id || null,
           status: finalAcc === false ? 'offline' : 'online',
         });
+
+        if (result?.trip) {
+          if (result.isAccOff) {
+            broadcaster.broadcastTripEvent('trip:completed', {
+              trip_id: result.trip.id,
+              vehicle_id: request.vehicle.id,
+              started_at: result.trip.started_at,
+              ended_at: result.trip.ended_at,
+              total_distance_km: Number(result.trip.total_distance_km || 0)
+            });
+          } else if (result.trip.isNew) {
+            broadcaster.broadcastTripEvent('trip:started', {
+              trip_id: result.trip.id,
+              vehicle_id: request.vehicle.id,
+              started_at: result.trip.started_at,
+              ended_at: null,
+              total_distance_km: 0
+            });
+          }
+        }
       }
 
       return reply.code(200).send({
@@ -291,6 +311,27 @@ export default async function telemetryRoutes(fastify, opts) {
           timestamp: ptTimestamp,
           acc: ptAcc,
         });
+
+        const broadcaster = fastify.broadcaster || request.server.broadcaster;
+        if (broadcaster && result?.trip) {
+          if (result.isAccOff) {
+            broadcaster.broadcastTripEvent('trip:completed', {
+              trip_id: result.trip.id,
+              vehicle_id: request.vehicle.id,
+              started_at: result.trip.started_at,
+              ended_at: result.trip.ended_at,
+              total_distance_km: Number(result.trip.total_distance_km || 0)
+            });
+          } else if (result.trip.isNew) {
+            broadcaster.broadcastTripEvent('trip:started', {
+              trip_id: result.trip.id,
+              vehicle_id: request.vehicle.id,
+              started_at: result.trip.started_at,
+              ended_at: null,
+              total_distance_km: 0
+            });
+          }
+        }
 
         processedCount++;
         totalDistanceAddedM += (result?.distanceAddedM || 0);

@@ -179,6 +179,7 @@ describe('HTTP Telemetry API & Batch Flush Endpoints', () => {
   let app;
   let mockDb;
   let broadcastedLocations = [];
+  let broadcastedTripEvents = [];
 
   const VALID_KEY = 'dev-key-active-001';
   const INACTIVE_KEY = 'dev-key-inactive-002';
@@ -186,6 +187,7 @@ describe('HTTP Telemetry API & Batch Flush Endpoints', () => {
 
   beforeEach(async () => {
     broadcastedLocations = [];
+    broadcastedTripEvents = [];
 
     const initialVehicles = [
       {
@@ -227,6 +229,9 @@ describe('HTTP Telemetry API & Batch Flush Endpoints', () => {
     
     app.broadcaster.broadcastLocation = (payload) => {
       broadcastedLocations.push(payload);
+    };
+    app.broadcaster.broadcastTripEvent = (event, payload) => {
+      broadcastedTripEvents.push({ event, payload });
     };
   });
 
@@ -447,6 +452,8 @@ describe('HTTP Telemetry API & Batch Flush Endpoints', () => {
         },
       });
 
+      broadcastedTripEvents.length = 0; // reset
+
       // 2nd ping with acc = false
       const res = await app.inject({
         method: 'POST',
@@ -471,6 +478,38 @@ describe('HTTP Telemetry API & Batch Flush Endpoints', () => {
 
       const trip = mockDb.trips[0];
       assert.equal(trip.status, 'completed');
+
+      const completedEvent = broadcastedTripEvents.find(e => e.event === 'trip:completed');
+      assert.ok(completedEvent);
+      assert.equal(completedEvent.payload.vehicle_id, VEHICLE_ID);
+      assert.ok(completedEvent.payload.trip_id);
+    });
+
+    it('triggers broadcastTripEvent on new trip start', async () => {
+      const nowIso = new Date(Date.now() - 60000).toISOString();
+      const res = await app.inject({
+        method: 'POST',
+        url: '/api/v1/telemetry',
+        headers: {
+          'x-device-key': VALID_KEY,
+        },
+        payload: {
+          lat: 13.7463,
+          lng: 100.5347,
+          speed: 25.5,
+          heading: 90,
+          timestamp: nowIso,
+          acc: true,
+        },
+      });
+
+      assert.equal(res.statusCode, 200);
+
+      const startedEvent = broadcastedTripEvents.find(e => e.event === 'trip:started');
+      assert.ok(startedEvent);
+      assert.equal(startedEvent.payload.vehicle_id, VEHICLE_ID);
+      assert.ok(startedEvent.payload.trip_id);
+      assert.equal(startedEvent.payload.total_distance_km, 0);
     });
 
     it('accepts epoch numeric timestamp', async () => {
