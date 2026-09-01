@@ -297,7 +297,7 @@ describe('MQTT Ingestion Service & Downlink Commands', () => {
         onBroadcastLocation: (data) => {
           broadcastData = data;
         },
-        onTripEvent: (data) => {
+        onTripEvent: (eventName, data) => {
           tripEventData = data;
         }
       });

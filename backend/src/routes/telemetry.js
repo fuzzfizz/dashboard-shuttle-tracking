@@ -179,6 +179,7 @@ export default async function telemetryRoutes(fastify, opts) {
       if (broadcaster) {
         broadcaster.broadcastLocation({
           vehicle_id: request.vehicle.id,
+          plate_number: request.vehicle.plate_number,
           lat,
           lng: finalLng,
           speed_kmh: finalSpeed,

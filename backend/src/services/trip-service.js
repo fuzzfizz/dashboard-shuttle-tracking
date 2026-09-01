@@ -33,7 +33,9 @@ export async function getOrCreateActiveTrip(dbClient, vehicleId, timestamp) {
   const activeTripRes = await dbClient.query(activeTripQuery, [vehicleId, tripDate]);
 
   if (activeTripRes.rows && activeTripRes.rows.length > 0) {
-    return activeTripRes.rows[0];
+    const trip = activeTripRes.rows[0];
+    trip.isNew = false;
+    return trip;
   }
 
   // 2. Determine next trip_number for today
@@ -68,7 +70,9 @@ export async function getOrCreateActiveTrip(dbClient, vehicleId, timestamp) {
     tripDate
   ]);
 
-  return insertRes.rows[0];
+  const newTrip = insertRes.rows[0];
+  newTrip.isNew = true;
+  return newTrip;
 }
 
 /**

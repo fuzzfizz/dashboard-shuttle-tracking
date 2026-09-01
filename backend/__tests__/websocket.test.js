@@ -164,7 +164,29 @@ describe('WebSocket Server & Broadcaster', () => {
         resolve();
       });
       ws.on('error', () => {
-        // sometimes it emits error if connection fails immediately, which is fine
+        clearTimeout(timeout);
+        resolve();
+      });
+    });
+  });
+
+  test('Admin WebSocket: auth timeout if no token provided', async () => {
+    return new Promise((resolve, reject) => {
+      // Connect without token
+      const ws = new WebSocket(`${serverAddress}/ws`);
+      
+      const timeout = setTimeout(() => {
+        ws.close();
+        reject(new Error('Should have disconnected due to auth timeout'));
+      }, 6000); // Wait longer than 5 seconds
+
+      ws.on('close', (code, reason) => {
+        clearTimeout(timeout);
+        assert.strictEqual(code, 4401);
+        assert.strictEqual(reason.toString(), 'Auth timeout');
+        resolve();
+      });
+      ws.on('error', (err) => {
         clearTimeout(timeout);
         resolve();
       });
@@ -172,14 +194,13 @@ describe('WebSocket Server & Broadcaster', () => {
   });
 
   test('Broadcaster handles closed sockets gracefully', async () => {
-    // Just ensuring no crash
     return new Promise((resolve, reject) => {
       const ws = new WebSocket(`${serverAddress}/ws/public`);
       ws.on('open', () => {
         ws.close();
         setTimeout(() => {
           try {
-            app.broadcaster.broadcastLocation({ vehicle_id: 3, lat: 10, lng: 20 });
+            app.broadcaster.broadcastLocation({ vehicle_id: 3, plate_number: 'XYZ', lat: 10, lng: 20 });
             resolve();
           } catch(e) {
             reject(e);
@@ -187,6 +208,93 @@ describe('WebSocket Server & Broadcaster', () => {
         }, 100);
       });
       ws.on('error', reject);
+    });
+  });
+
+  test('Public WebSocket: verify plate_number in location broadcast', async () => {
+    return new Promise((resolve, reject) => {
+      const ws = new WebSocket(`${serverAddress}/ws/public`);
+      const timeout = setTimeout(() => {
+        ws.close();
+        reject(new Error('Timeout waiting for location broadcast'));
+      }, 1000);
+
+      ws.on('open', () => {
+        setTimeout(() => {
+          app.broadcaster.broadcastLocation({
+            vehicle_id: 99,
+            plate_number: 'TEST-123',
+            lat: 10,
+            lng: 20
+          });
+        }, 50);
+      });
+
+      ws.on('message', (data) => {
+        const msg = JSON.parse(data.toString());
+        if (msg.event === 'vehicle:location') {
+          clearTimeout(timeout);
+          assert.strictEqual(msg.data.vehicle_id, 99);
+          assert.strictEqual(msg.data.plate_number, 'TEST-123');
+          ws.close();
+          resolve();
+        }
+      });
+    });
+  });
+
+  test('Admin WebSocket: verify trip:started and trip:completed payload formats', async () => {
+    return new Promise((resolve, reject) => {
+      const ws = new WebSocket(`${serverAddress}/ws?token=${adminToken}`);
+      const receivedEvents = {};
+
+      const timeout = setTimeout(() => {
+        ws.close();
+        try {
+          assert.ok(receivedEvents['trip:started']);
+          assert.strictEqual(receivedEvents['trip:started'].trip_id, 100);
+          assert.strictEqual(receivedEvents['trip:started'].vehicle_id, 1);
+          assert.strictEqual(receivedEvents['trip:started'].ended_at, null);
+          assert.strictEqual(receivedEvents['trip:started'].total_distance_km, 0);
+
+          assert.ok(receivedEvents['trip:completed']);
+          assert.strictEqual(receivedEvents['trip:completed'].trip_id, 100);
+          assert.strictEqual(receivedEvents['trip:completed'].vehicle_id, 1);
+          assert.strictEqual(receivedEvents['trip:completed'].total_distance_km, 5);
+          assert.ok(receivedEvents['trip:completed'].ended_at !== null);
+          
+          resolve();
+        } catch (e) {
+          reject(e);
+        }
+      }, 500);
+
+      ws.on('open', () => {
+        setTimeout(() => {
+          app.broadcaster.broadcastTripEvent('trip:started', {
+            trip_id: 100,
+            vehicle_id: 1,
+            started_at: new Date().toISOString(),
+            ended_at: null,
+            total_distance_km: 0
+          });
+
+          app.broadcaster.broadcastTripEvent('trip:completed', {
+            trip_id: 100,
+            vehicle_id: 1,
+            started_at: new Date().toISOString(),
+            ended_at: new Date().toISOString(),
+            total_distance_km: 5
+          });
+        }, 50);
+      });
+
+      ws.on('message', (data) => {
+        const msg = JSON.parse(data.toString());
+        if (msg.event === 'trip:started' || msg.event === 'trip:completed') {
+          receivedEvents[msg.event] = msg.data;
+        }
+      });
     });
   });
 });

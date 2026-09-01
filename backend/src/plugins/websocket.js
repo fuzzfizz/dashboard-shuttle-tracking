@@ -75,18 +75,28 @@ async function websocketPlugin(fastify, options) {
         if (!authed) return;
       });
     } else {
+      let authTimeout = setTimeout(() => {
+        socket.close(4401, 'Auth timeout');
+      }, 5000);
+
+      socket.on('close', () => {
+        clearTimeout(authTimeout);
+      });
+
       // Allow auth via message
       socket.on('message', async (message) => {
         try {
           const msg = JSON.parse(message.toString());
           if (msg.action === 'auth' && msg.token) {
-            await handleAuth(msg.token);
+            const authed = await handleAuth(msg.token);
+            if (authed) {
+              clearTimeout(authTimeout);
+            }
           }
         } catch (err) {
           // ignore
         }
       });
-      // Optionally timeout if no auth after some time, but task doesn't strictly require
     }
   });
 }

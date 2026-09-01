@@ -163,6 +163,7 @@ export async function processTelemetryPoint(dbClient, telemetryData) {
     `;
     const updatedTripRes = await dbClient.query(updateTripQuery, [activeTrip.id, distanceKm]);
     currentTrip = updatedTripRes.rows?.[0] || activeTrip;
+    currentTrip.isNew = activeTrip.isNew;
   }
 
   // 6. Update vehicle live status and coordinates

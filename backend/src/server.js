@@ -8,6 +8,9 @@ const app = buildApp({
   },
 });
 
+import { createMqttIngestService } from './services/mqtt-ingest.js';
+import defaultDb from './db/index.js';
+
 async function start() {
   try {
     const address = await app.listen({
@@ -15,6 +18,17 @@ async function start() {
       host: config.HOST,
     });
     app.log.info(`Shuttle Tracking API Server running at ${address}`);
+
+    if (config.NODE_ENV !== 'test') {
+      app.mqttService = createMqttIngestService({
+        dbClient: defaultDb,
+        logger: app.log,
+        onBroadcastLocation: (payload) => app.broadcaster?.broadcastLocation(payload),
+        onBroadcastStatus: (payload) => app.broadcaster?.broadcastStatus(payload),
+        onTripEvent: (eventName, payload) => app.broadcaster?.broadcastTripEvent(eventName, payload),
+        onCommandResponse: (payload) => app.broadcaster?.broadcastCommandResponse(payload),
+      });
+    }
   } catch (err) {
     app.log.error(err);
     process.exit(1);
@@ -25,6 +39,9 @@ const signals = ['SIGINT', 'SIGTERM'];
 for (const signal of signals) {
   process.on(signal, async () => {
     app.log.info(`Received ${signal}, closing server...`);
+    if (app.mqttService) {
+      await app.mqttService.close();
+    }
     await app.close();
     await closePool();
     process.exit(0);

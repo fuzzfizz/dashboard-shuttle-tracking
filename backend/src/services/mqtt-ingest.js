@@ -219,6 +219,7 @@ export class MqttIngestService {
     if (this.onBroadcastLocation) {
       this.onBroadcastLocation({
         vehicle_id: vehicle.id,
+        plate_number: vehicle.plate_number,
         lat,
         lng,
         speed_kmh: speed,
@@ -230,11 +231,23 @@ export class MqttIngestService {
     }
 
     if (this.onTripEvent && result?.trip) {
-      this.onTripEvent({
-        vehicle_id: vehicle.id,
-        trip: result.trip,
-        isAccOff: result.isAccOff
-      });
+      if (result.isAccOff) {
+        this.onTripEvent('trip:completed', {
+          trip_id: result.trip.id,
+          vehicle_id: vehicle.id,
+          started_at: result.trip.started_at,
+          ended_at: result.trip.ended_at,
+          total_distance_km: Number(result.trip.total_distance_km || 0)
+        });
+      } else if (result.trip.isNew) {
+        this.onTripEvent('trip:started', {
+          trip_id: result.trip.id,
+          vehicle_id: vehicle.id,
+          started_at: result.trip.started_at,
+          ended_at: null,
+          total_distance_km: 0
+        });
+      }
     }
   }
 
@@ -256,7 +269,7 @@ export class MqttIngestService {
     const isoTimestamp = timestamp.toISOString();
 
     if (status === 'offline') {
-      await closeActiveTrip(this.dbClient, vehicle.id, isoTimestamp, payload.reason || 'offline_status');
+      const closedTrip = await closeActiveTrip(this.dbClient, vehicle.id, isoTimestamp, payload.reason || 'offline_status');
       const updateQuery = `
         UPDATE vehicles
         SET status = 'offline',
@@ -265,6 +278,16 @@ export class MqttIngestService {
         RETURNING *;
       `;
       await this.dbClient.query(updateQuery, [vehicle.id, isoTimestamp]);
+
+      if (this.onTripEvent && closedTrip) {
+        this.onTripEvent('trip:completed', {
+          trip_id: closedTrip.id,
+          vehicle_id: closedTrip.vehicle_id,
+          started_at: closedTrip.started_at,
+          ended_at: closedTrip.ended_at,
+          total_distance_km: Number(closedTrip.total_distance_km || 0)
+        });
+      }
     } else {
       const updateQuery = `
         UPDATE vehicles
