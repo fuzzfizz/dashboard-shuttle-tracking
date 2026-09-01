@@ -8,7 +8,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Pre-configured vehicles
-const SEED_VEHICLES = [
+export const SEED_VEHICLES = [
   { id: 'd0000000-0000-0000-0000-000000000001', plate_number: 'กข-1234', device_api_key: 'dev_key_v01_a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6' },
   { id: 'd0000000-0000-0000-0000-000000000002', plate_number: 'ขค-5678', device_api_key: 'dev_key_v02_q1w2e3r4t5y6u7i8o9p0a1s2d3f4g5h6' }
 ];
@@ -161,7 +161,10 @@ export class Simulator {
     
     // load routes
     const routesData = JSON.parse(fs.readFileSync(path.join(__dirname, 'routes-sample.geojson'), 'utf8'));
-    this.routes = routesData.features.map(f => f.geometry.coordinates);
+    this.routes = routesData.features.map(f => ({
+      coordinates: f.geometry.coordinates,
+      stops: f.properties.stops || []
+    }));
   }
 
   async start() {
@@ -177,54 +180,61 @@ export class Simulator {
         };
       }
       
-      const routeIndex = i % this.routes.length;
+      const routeDef = this.routes[routeIndex];
       
       this.vehicles.push({
         ...seed,
+        client: null,
         state: {
           interval: this.interval,
           status: 'online',
           segmentIndex: 0,
           segmentProgress: 0,
-          routeCoordinates: this.routes[routeIndex],
-          lat: this.routes[routeIndex][0][1],
-          lng: this.routes[routeIndex][0][0],
+          routeCoordinates: routeDef.coordinates,
+          stops: routeDef.stops,
+          lat: routeDef.coordinates[0][1],
+          lng: routeDef.coordinates[0][0],
           heading: 0,
           speed: this.speed,
-          stopWaitMs: 0
+          stopWaitMs: 0,
+          lastVisitedStop: null
         }
       });
     }
 
     if (this.protocol === 'mqtt') {
-      this.mqttClient = mqtt.connect(this.brokerUrl);
-      this.mqttClient.on('connect', () => {
-        console.log('Connected to MQTT Broker');
-        this.vehicles.forEach(v => {
-          this.mqttClient.subscribe(`vehicles/${v.id}/command`);
-          this.mqttClient.publish(`vehicles/${v.id}/status`, JSON.stringify({ status: 'online', timestamp: new Date().toISOString() }), { retain: true });
+      this.vehicles.forEach(v => {
+        v.client = mqtt.connect(this.brokerUrl, {
+          will: {
+            topic: `vehicles/${v.id}/status`,
+            payload: JSON.stringify({ status: 'offline', timestamp: new Date().toISOString() }),
+            qos: 1,
+            retain: false
+          }
         });
-      });
-      
-      this.mqttClient.on('message', (topic, message) => {
-        const parts = topic.split('/');
-        if (parts[0] === 'vehicles' && parts[2] === 'command') {
-          const id = parts[1];
-          const vehicle = this.vehicles.find(v => v.id === id);
-          if (vehicle) {
+        
+        v.client.on('connect', () => {
+          console.log(`Vehicle ${v.id} connected to MQTT Broker`);
+          v.client.subscribe(`vehicles/${v.id}/command`);
+          v.client.publish(`vehicles/${v.id}/status`, JSON.stringify({ status: 'online', timestamp: new Date().toISOString() }), { retain: true });
+        });
+        
+        v.client.on('message', (topic, message) => {
+          const parts = topic.split('/');
+          if (parts[0] === 'vehicles' && parts[2] === 'command') {
             const cmd = JSON.parse(message.toString());
-            handleCommand(vehicle.state, cmd);
-            console.log(`Vehicle ${id} handled command:`, cmd);
+            handleCommand(v.state, cmd);
+            console.log(`Vehicle ${v.id} handled command:`, cmd);
             
             if (cmd.type === 'check_ota') {
-              this.mqttClient.publish(`vehicles/${id}/response`, JSON.stringify({
+              v.client.publish(`vehicles/${v.id}/response`, JSON.stringify({
                 command_id: cmd.id,
                 status: 'success',
                 message: 'No OTA available'
               }));
             }
           }
-        }
+        });
       });
     }
     
@@ -241,13 +251,13 @@ export class Simulator {
     if (vehicle.state.status === 'rebooting') {
       console.log(`Vehicle ${vehicle.id} rebooting...`);
       vehicle.state.status = 'offline';
-      if (this.protocol === 'mqtt') {
-        this.mqttClient.publish(`vehicles/${vehicle.id}/status`, JSON.stringify({ status: 'offline' }));
+      if (this.protocol === 'mqtt' && vehicle.client) {
+        vehicle.client.publish(`vehicles/${vehicle.id}/status`, JSON.stringify({ status: 'offline' }));
       }
       setTimeout(() => {
         vehicle.state.status = 'online';
-        if (this.protocol === 'mqtt') {
-          this.mqttClient.publish(`vehicles/${vehicle.id}/status`, JSON.stringify({ status: 'online', timestamp: new Date().toISOString() }));
+        if (this.protocol === 'mqtt' && vehicle.client) {
+          vehicle.client.publish(`vehicles/${vehicle.id}/status`, JSON.stringify({ status: 'online', timestamp: new Date().toISOString() }));
         }
         this.scheduleNextTick(vehicle);
       }, 2000);
@@ -282,16 +292,26 @@ export class Simulator {
       
       if (nextState.reachedEnd) {
         vehicle.state.stopWaitMs = 5000; // stop for 5s at end before looping
-      } else if (Math.random() < 0.05) {
-        // random stops
-        vehicle.state.stopWaitMs = 2000;
+        vehicle.state.lastVisitedStop = null;
+      } else {
+        const stopProx = vehicle.state.stops.find(s => {
+          return vehicle.state.lastVisitedStop !== s.name &&
+                 calculateDistance(vehicle.state.lat, vehicle.state.lng, s.lat, s.lng) <= 50;
+        });
+        if (stopProx) {
+          vehicle.state.stopWaitMs = 5000;
+          vehicle.state.lastVisitedStop = stopProx.name;
+        } else if (Math.random() < 0.05) {
+          // random stops
+          vehicle.state.stopWaitMs = 2000;
+        }
       }
     }
     
     const telemetry = buildTelemetry(vehicle.state);
     
-    if (this.protocol === 'mqtt') {
-      this.mqttClient.publish(`vehicles/${vehicle.id}/telemetry`, JSON.stringify(telemetry));
+    if (this.protocol === 'mqtt' && vehicle.client) {
+      vehicle.client.publish(`vehicles/${vehicle.id}/telemetry`, JSON.stringify(telemetry));
     } else if (this.protocol === 'http') {
       try {
         await fetch(`${this.apiUrl}/telemetry`, {
@@ -317,12 +337,16 @@ export class Simulator {
     for (const id in this.timers) {
       clearTimeout(this.timers[id]);
     }
-    if (this.protocol === 'mqtt' && this.mqttClient) {
+    if (this.protocol === 'mqtt') {
       this.vehicles.forEach(v => {
-        this.mqttClient.publish(`vehicles/${v.id}/status`, JSON.stringify({ status: 'offline' }));
+        if (v.client) {
+          v.client.publish(`vehicles/${v.id}/status`, JSON.stringify({ status: 'offline' }));
+        }
       });
       setTimeout(() => {
-        this.mqttClient.end();
+        this.vehicles.forEach(v => {
+          if (v.client) v.client.end();
+        });
         process.exit(0);
       }, 500);
     } else {

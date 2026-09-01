@@ -63,3 +63,56 @@ test('handleCommand', (t) => {
   const rebootResponse = handleCommand(deviceState, { type: 'reboot' });
   assert.strictEqual(deviceState.status, 'rebooting');
 });
+
+import { SEED_VEHICLES, Simulator, calculateDistance } from '../gps-simulator.js';
+
+test('Verify Thai Plate Numbers and UTF-8 encoding', (t) => {
+  assert.strictEqual(SEED_VEHICLES[0].plate_number, 'กข-1234');
+  assert.strictEqual(SEED_VEHICLES[1].plate_number, 'ขค-5678');
+});
+
+test('Route stop proximity detection', async (t) => {
+  const sim = new Simulator({ count: 1, protocol: 'http', jitter: false });
+  
+  // mock fetch to avoid errors
+  global.fetch = async () => ({ ok: true });
+  
+  const vehicle = {
+    id: 'test-id',
+    device_api_key: 'test-key',
+    state: {
+      interval: 1000,
+      status: 'online',
+      segmentIndex: 0,
+      segmentProgress: 0,
+      routeCoordinates: [[0, 0], [0, 0.001]], // very short mock route
+      stops: [
+        { name: 'Test Stop', lat: 0, lng: 0 } // Stop at start
+      ],
+      lat: 0,
+      lng: 0,
+      heading: 0,
+      speed: 30,
+      stopWaitMs: 0,
+      lastVisitedStop: null
+    }
+  };
+  
+  // Initial tick, vehicle is at 0,0, should detect stop and set stopWaitMs
+  await sim.tick(vehicle);
+  
+  assert.strictEqual(vehicle.state.lastVisitedStop, 'Test Stop', 'Should have visited Test Stop');
+  assert.strictEqual(vehicle.state.stopWaitMs, 5000, 'Should wait 5s at stop');
+  
+  // Second tick, stopWaitMs should decrease
+  await sim.tick(vehicle);
+  assert.strictEqual(vehicle.state.stopWaitMs, 4000, 'Should decrease wait time');
+  assert.strictEqual(vehicle.state.speed, 0, 'Speed should be 0 while stopping');
+  
+  // Clear stopWaitMs to simulate finishing wait, move it away
+  vehicle.state.stopWaitMs = 0;
+  vehicle.state.lat = 0.5; // Far away
+  await sim.tick(vehicle);
+  
+  assert.ok(vehicle.state.speed > 0, 'Speed should resume');
+});
