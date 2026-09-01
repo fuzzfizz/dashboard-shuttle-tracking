@@ -5,6 +5,10 @@ import config from './config/env.js';
 import authPlugin from './plugins/auth.js';
 import authRoutes from './routes/auth.js';
 import telemetryRoutes from './routes/telemetry.js';
+import vehiclesRoutes from './routes/vehicles.js';
+import tripsRoutes from './routes/trips.js';
+import routesRoutes from './routes/routes.js';
+import reportsRoutes from './routes/reports.js';
 
 export function buildApp(opts = {}) {
   const app = Fastify({
@@ -39,6 +43,10 @@ export function buildApp(opts = {}) {
   // Register API Routes
   app.register(authRoutes, { prefix: '/api/v1/auth' });
   app.register(telemetryRoutes, { prefix: '/api/v1/telemetry' });
+  app.register(vehiclesRoutes, { prefix: '/api/v1/vehicles' });
+  app.register(tripsRoutes, { prefix: '/api/v1/trips' });
+  app.register(routesRoutes, { prefix: '/api/v1/routes' });
+  app.register(reportsRoutes, { prefix: '/api/v1/reports' });
 
   // Custom 404 handler
   app.setNotFoundHandler((request, reply) => {
