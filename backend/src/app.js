@@ -9,6 +9,7 @@ import vehiclesRoutes from './routes/vehicles.js';
 import tripsRoutes from './routes/trips.js';
 import routesRoutes from './routes/routes.js';
 import reportsRoutes from './routes/reports.js';
+import websocketPlugin from './plugins/websocket.js';
 
 export function buildApp(opts = {}) {
   const app = Fastify({
@@ -31,6 +32,9 @@ export function buildApp(opts = {}) {
   app.register(authPlugin, {
     jwtSecret: opts.jwtSecret || config.JWT_SECRET,
   });
+
+  // Register WebSocket Plugin
+  app.register(websocketPlugin);
 
   // Health check endpoint
   app.get('/health', async (request, reply) => {

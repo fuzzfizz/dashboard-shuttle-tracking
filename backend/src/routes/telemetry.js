@@ -175,18 +175,17 @@ export default async function telemetryRoutes(fastify, opts) {
         acc: finalAcc,
       });
 
-      const broadcastFn = fastify.broadcastLocation || request.server.broadcastLocation;
-      if (typeof broadcastFn === 'function') {
-        broadcastFn({
-          vehicleId: request.vehicle.id,
+      const broadcaster = fastify.broadcaster || request.server.broadcaster;
+      if (broadcaster) {
+        broadcaster.broadcastLocation({
+          vehicle_id: request.vehicle.id,
           lat,
           lng: finalLng,
-          speed: finalSpeed,
+          speed_kmh: finalSpeed,
           heading: finalHeading,
-          tripKm: result?.trip?.total_distance_km ?? 0,
+          timestamp: finalTimestamp,
+          trip_id: result?.trip?.id || null,
           status: finalAcc === false ? 'offline' : 'online',
-          isValid: result?.isValid,
-          isAccOff: result?.isAccOff,
         });
       }
 

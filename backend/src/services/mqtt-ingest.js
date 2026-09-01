@@ -218,21 +218,20 @@ export class MqttIngestService {
 
     if (this.onBroadcastLocation) {
       this.onBroadcastLocation({
-        vehicleId: vehicle.id,
+        vehicle_id: vehicle.id,
         lat,
         lng,
-        speed,
+        speed_kmh: speed,
         heading,
-        tripKm: result?.trip?.total_distance_km ?? 0,
+        trip_id: result?.trip?.id || null,
         status: acc === false ? 'offline' : 'online',
-        isValid: result?.isValid,
-        isAccOff: result?.isAccOff
+        timestamp: timestamp.toISOString()
       });
     }
 
     if (this.onTripEvent && result?.trip) {
       this.onTripEvent({
-        vehicleId: vehicle.id,
+        vehicle_id: vehicle.id,
         trip: result.trip,
         isAccOff: result.isAccOff
       });
@@ -279,9 +278,9 @@ export class MqttIngestService {
 
     if (this.onBroadcastStatus) {
       this.onBroadcastStatus({
-        vehicleId: vehicle.id,
+        vehicle_id: vehicle.id,
         status,
-        lastSeenAt: timestamp,
+        last_seen_at: isoTimestamp,
         reason: payload.reason
       });
     }

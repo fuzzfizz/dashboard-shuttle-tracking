@@ -223,12 +223,11 @@ describe('HTTP Telemetry API & Batch Flush Endpoints', () => {
       db: mockDb,
     });
 
-    // Decorate broadcastLocation hook
-    app.decorate('broadcastLocation', (payload) => {
-      broadcastedLocations.push(payload);
-    });
-
     await app.ready();
+    
+    app.broadcaster.broadcastLocation = (payload) => {
+      broadcastedLocations.push(payload);
+    };
   });
 
   afterEach(async () => {
@@ -368,9 +367,9 @@ describe('HTTP Telemetry API & Batch Flush Endpoints', () => {
 
       // Verify broadcast callback
       assert.equal(broadcastedLocations.length, 1);
-      assert.equal(broadcastedLocations[0].vehicleId, VEHICLE_ID);
+      assert.equal(broadcastedLocations[0].vehicle_id, VEHICLE_ID);
       assert.equal(broadcastedLocations[0].lat, 13.7463);
-      assert.equal(broadcastedLocations[0].speed, 25.5);
+      assert.equal(broadcastedLocations[0].speed_kmh, 25.5);
     });
 
     it('accumulates distance on consecutive valid point', async () => {

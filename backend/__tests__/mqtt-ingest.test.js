@@ -84,7 +84,7 @@ describe('MQTT Ingestion Service & Downlink Commands', () => {
           device_api_key: 'DEV-KEY-001',
           last_lat: 13.7463,
           last_lng: 100.5347,
-          last_speed_kmh: 0,
+          last_speed_kmh_kmh: 0,
           last_heading: 0,
           last_seen_at: '2026-09-15T08:00:00Z',
           status: 'online'
@@ -95,7 +95,7 @@ describe('MQTT Ingestion Service & Downlink Commands', () => {
           device_api_key: 'DEV-KEY-002',
           last_lat: null,
           last_lng: null,
-          last_speed_kmh: 0,
+          last_speed_kmh_kmh: 0,
           last_heading: 0,
           last_seen_at: null,
           status: 'offline'
@@ -121,8 +121,8 @@ describe('MQTT Ingestion Service & Downlink Commands', () => {
 
         // 2. UPDATE vehicle
         if (normalized.includes('update vehicles') && (normalized.includes('where id = $1') || normalized.includes('where id::text = $1'))) {
-          const vehicleId = params[0];
-          const vehicle = this.vehicles.find((v) => v.id === vehicleId);
+          const vehicle_id = params[0];
+          const vehicle = this.vehicles.find((v) => v.id === vehicle_id);
           if (vehicle) {
             if (normalized.includes("status = 'offline'")) {
               vehicle.last_seen_at = params[1] ? new Date(params[1]).toISOString() : new Date().toISOString();
@@ -131,13 +131,13 @@ describe('MQTT Ingestion Service & Downlink Commands', () => {
               vehicle.status = params[1];
               vehicle.last_seen_at = params[2] ? new Date(params[2]).toISOString() : new Date().toISOString();
             } else {
-              // Telemetry update: [vehicleId, last_lat, last_lng, last_speed_kmh, last_heading, last_seen_at]
-              const [, lastLat, lastLng, lastSpeed, lastHeading, lastSeenAt] = params;
+              // Telemetry update: [vehicle_id, last_lat, last_lng, last_speed_kmh_kmh, last_heading, last_seen_at]
+              const [, lastLat, lastLng, lastspeed_kmh, lastHeading, last_seen_at] = params;
               vehicle.last_lat = lastLat;
               vehicle.last_lng = lastLng;
-              vehicle.last_speed_kmh = lastSpeed;
+              vehicle.last_speed_kmh_kmh = lastspeed_kmh;
               vehicle.last_heading = lastHeading;
-              vehicle.last_seen_at = lastSeenAt ? new Date(lastSeenAt).toISOString() : new Date().toISOString();
+              vehicle.last_seen_at = last_seen_at ? new Date(last_seen_at).toISOString() : new Date().toISOString();
               vehicle.status = 'online';
             }
             return { rows: [{ ...vehicle }], rowCount: 1 };
@@ -147,11 +147,11 @@ describe('MQTT Ingestion Service & Downlink Commands', () => {
 
         // 3. Trip queries: SELECT active trip
         if (normalized.includes('select') && normalized.includes('from trips') && normalized.includes("status = 'in_progress'")) {
-          const vehicleId = params[0];
+          const vehicle_id = params[0];
           const tripDate = params[1];
           const trip = this.trips.find(
             (t) =>
-              t.vehicle_id === vehicleId &&
+              t.vehicle_id === vehicle_id &&
               t.status === 'in_progress' &&
               (!tripDate || t.trip_date === tripDate)
           );
@@ -160,10 +160,10 @@ describe('MQTT Ingestion Service & Downlink Commands', () => {
 
         // 4. Trip queries: SELECT MAX(trip_number)
         if (normalized.includes('max(trip_number)') && normalized.includes('from trips')) {
-          const vehicleId = params[0];
+          const vehicle_id = params[0];
           const tripDate = params[1];
           const matching = this.trips.filter(
-            (t) => t.vehicle_id === vehicleId && (!tripDate || t.trip_date === tripDate)
+            (t) => t.vehicle_id === vehicle_id && (!tripDate || t.trip_date === tripDate)
           );
           const maxNum = matching.reduce((max, t) => Math.max(max, t.trip_number || 0), 0);
           return { rows: [{ max_trip_number: maxNum }] };
@@ -171,10 +171,10 @@ describe('MQTT Ingestion Service & Downlink Commands', () => {
 
         // 5. Trip queries: INSERT INTO trips
         if (normalized.includes('insert into trips')) {
-          const [vehicleId, tripNumber, startedAt, tripDate] = params;
+          const [vehicle_id, tripNumber, startedAt, tripDate] = params;
           const newTrip = {
             id: `trip-${this.trips.length + 1}`,
-            vehicle_id: vehicleId,
+            vehicle_id: vehicle_id,
             trip_number: tripNumber,
             started_at: startedAt ? new Date(startedAt).toISOString() : new Date().toISOString(),
             ended_at: null,
@@ -201,10 +201,10 @@ describe('MQTT Ingestion Service & Downlink Commands', () => {
 
         // 7. Trip queries: UPDATE trips to close active trip
         if (normalized.includes('update trips') && normalized.includes("status = 'completed'") && normalized.includes("vehicle_id = $1")) {
-          const vehicleId = params[0];
+          const vehicle_id = params[0];
           const endedAt = params[1] ? new Date(params[1]).toISOString() : new Date().toISOString();
           const trip = this.trips.find(
-            (t) => t.vehicle_id === vehicleId && t.status === 'in_progress'
+            (t) => t.vehicle_id === vehicle_id && t.status === 'in_progress'
           );
           if (trip) {
             trip.status = 'completed';
@@ -217,11 +217,11 @@ describe('MQTT Ingestion Service & Downlink Commands', () => {
         // 8. INSERT INTO gps_points
         if (normalized.includes('insert into gps_points')) {
           const [
-            vehicleId,
+            vehicle_id,
             tripId,
             lat,
             lng,
-            speedKmh,
+            speed_kmhKmh,
             heading,
             distPrevM,
             deviceTimestamp,
@@ -230,11 +230,11 @@ describe('MQTT Ingestion Service & Downlink Commands', () => {
 
           const point = {
             id: this.gps_points.length + 1,
-            vehicle_id: vehicleId,
+            vehicle_id: vehicle_id,
             trip_id: tripId,
             lat,
             lng,
-            speed_kmh: speedKmh,
+            speed_kmh_kmh: speed_kmhKmh,
             heading,
             distance_from_prev_m: distPrevM,
             device_timestamp: new Date(deviceTimestamp).toISOString(),
@@ -319,16 +319,16 @@ describe('MQTT Ingestion Service & Downlink Commands', () => {
       );
 
       assert.ok(broadcastData, 'onBroadcastLocation should have been called');
-      assert.strictEqual(broadcastData.vehicleId, '11111111-1111-1111-1111-111111111111');
+      assert.strictEqual(broadcastData.vehicle_id, '11111111-1111-1111-1111-111111111111');
       assert.strictEqual(broadcastData.lat, 13.7465);
       assert.strictEqual(broadcastData.lng, 100.5350);
-      assert.strictEqual(broadcastData.speed, 28.5);
+      assert.strictEqual(broadcastData.speed_kmh, 28.5);
       assert.strictEqual(broadcastData.heading, 85);
       assert.strictEqual(broadcastData.status, 'online');
-      assert.strictEqual(typeof broadcastData.tripKm, 'number');
+      assert.strictEqual(broadcastData.trip_id, 'trip-1');
 
       assert.ok(tripEventData, 'onTripEvent should have been called');
-      assert.strictEqual(tripEventData.vehicleId, '11111111-1111-1111-1111-111111111111');
+      assert.strictEqual(tripEventData.vehicle_id, '11111111-1111-1111-1111-111111111111');
 
       // Verify DB point recorded
       assert.strictEqual(mockDb.gps_points.length, 1);
@@ -350,7 +350,7 @@ describe('MQTT Ingestion Service & Downlink Commands', () => {
       const telemetryPayload = {
         lat: 13.7500,
         lng: 100.5400,
-        speed: 35.0,
+        speed_kmh: 35.0,
         heading: 120,
         ts: Date.now(),
         acc: true
@@ -362,7 +362,7 @@ describe('MQTT Ingestion Service & Downlink Commands', () => {
       );
 
       assert.ok(broadcastData);
-      assert.strictEqual(broadcastData.vehicleId, '11111111-1111-1111-1111-111111111111');
+      assert.strictEqual(broadcastData.vehicle_id, '11111111-1111-1111-1111-111111111111');
     });
 
     it('resolves vehicle by device_api_key and handles lon alias', async () => {
@@ -380,7 +380,7 @@ describe('MQTT Ingestion Service & Downlink Commands', () => {
       const telemetryPayload = {
         lat: 13.7600,
         lon: 100.5500, // lon instead of lng
-        speed: 15.0,
+        speed_kmh: 15.0,
         heading: 0,
         ts: '2026-09-15T08:10:00Z',
         acc: true
@@ -441,7 +441,7 @@ describe('MQTT Ingestion Service & Downlink Commands', () => {
       const telemetryPayload = {
         lat: 13.7463,
         lng: 100.5347,
-        speed: 10.0
+        speed_kmh: 10.0
       };
 
       await service.handleMessage(
@@ -493,9 +493,9 @@ describe('MQTT Ingestion Service & Downlink Commands', () => {
       );
 
       assert.ok(statusData);
-      assert.strictEqual(statusData.vehicleId, '11111111-1111-1111-1111-111111111111');
+      assert.strictEqual(statusData.vehicle_id, '11111111-1111-1111-1111-111111111111');
       assert.strictEqual(statusData.status, 'offline');
-      assert.ok(statusData.lastSeenAt);
+      assert.ok(statusData.last_seen_at);
 
       // Vehicle in DB updated to offline
       const vehicle = mockDb.vehicles.find((v) => v.id === '11111111-1111-1111-1111-111111111111');
@@ -529,7 +529,7 @@ describe('MQTT Ingestion Service & Downlink Commands', () => {
       );
 
       assert.ok(statusData);
-      assert.strictEqual(statusData.vehicleId, '22222222-2222-2222-2222-222222222222');
+      assert.strictEqual(statusData.vehicle_id, '22222222-2222-2222-2222-222222222222');
       assert.strictEqual(statusData.status, 'online');
 
       const vehicle = mockDb.vehicles.find((v) => v.id === '22222222-2222-2222-2222-222222222222');
@@ -673,7 +673,7 @@ describe('MQTT Ingestion Service & Downlink Commands', () => {
 
       await service.handleMessage(
         'vehicles/unknown-vehicle-id/telemetry',
-        Buffer.from(JSON.stringify({ lat: 13.75, lng: 100.5, speed: 20 }))
+        Buffer.from(JSON.stringify({ lat: 13.75, lng: 100.5, speed_kmh: 20 }))
       );
 
       assert.strictEqual(broadcastCalled, false);
@@ -722,7 +722,7 @@ describe('MQTT Ingestion Service & Downlink Commands', () => {
       // Emit message event via client
       mockMqttClient.simulateMessage(
         'vehicles/11111111-1111-1111-1111-111111111111/telemetry',
-        { lat: 13.75, lng: 100.5, speed: 20 }
+        { lat: 13.75, lng: 100.5, speed_kmh: 20 }
       );
 
       // Wait a tick for async message processing
