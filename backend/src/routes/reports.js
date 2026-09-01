@@ -39,11 +39,16 @@ export default async function reportsRoutes(fastify, options) {
       SELECT * FROM daily_mileage_summary WHERE date BETWEEN $1 AND $2
     `, [fromDate, toDate]);
 
+    const total_fleet_distance = rows.reduce((sum, r) => sum + Number(r.total_distance_km || r.fleet_total_km || 0), 0);
+    const total_trips = rows.reduce((sum, r) => sum + Number(r.total_trips || 0), 0);
+
     return { 
       success: true, 
       data: {
         from: fromDate,
         to: toDate,
+        total_fleet_distance,
+        total_trips,
         records: rows
       } 
     };

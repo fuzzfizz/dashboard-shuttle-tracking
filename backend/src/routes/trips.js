@@ -25,6 +25,9 @@ export default async function tripRoutes(fastify, options) {
   }, async (request, reply) => {
     const { id } = request.params;
     
+    const tripRes = await db.query(`SELECT total_distance_km FROM trips WHERE id = $1`, [id]);
+    const total_distance_km = tripRes.rows.length > 0 ? Number(tripRes.rows[0].total_distance_km || 0) : 0;
+
     const { rows } = await db.query(`
       SELECT lat, lng, speed_kmh, heading, server_timestamp 
       FROM gps_points 
@@ -40,7 +43,7 @@ export default async function tripRoutes(fastify, options) {
         trip_id: id,
         coordinates,
         total_points: rows.length,
-        total_distance_km: 0 // In real app, might query trip table for this
+        total_distance_km
       } 
     };
   });

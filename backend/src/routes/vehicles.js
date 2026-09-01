@@ -6,20 +6,26 @@ export default async function vehicleRoutes(fastify, options) {
   fastify.get('/', {
     preValidation: [fastify.authenticate]
   }, async (request, reply) => {
-    // simplified for tests, a real join query would compute trips and km
     const { rows } = await db.query(`
-      SELECT v.*, r.name as route_name
+      SELECT 
+        v.*, 
+        r.name as route_name,
+        COALESCE(SUM(t_all.total_distance_km) FILTER (WHERE DATE(t_all.started_at) = CURRENT_DATE), 0) as today_total_km,
+        COUNT(t_all.id) FILTER (WHERE DATE(t_all.started_at) = CURRENT_DATE) as today_total_trips,
+        COALESCE(SUM(t_curr.total_distance_km), 0) as current_trip_km
       FROM vehicles v
       LEFT JOIN routes r ON v.route_id = r.id
+      LEFT JOIN trips t_all ON t_all.vehicle_id = v.id
+      LEFT JOIN trips t_curr ON t_curr.vehicle_id = v.id AND t_curr.status IN ('in_transit', 'active')
       WHERE v.is_active = true
+      GROUP BY v.id, r.name
     `);
     
-    // For tests, just mapping
     const data = rows.map(v => ({
       ...v,
-      today_total_km: 0,
-      today_total_trips: 0,
-      current_trip_km: 0
+      today_total_km: Number(v.today_total_km || 0),
+      today_total_trips: Number(v.today_total_trips || 0),
+      current_trip_km: Number(v.current_trip_km || 0)
     }));
 
     return { success: true, data };
@@ -96,6 +102,11 @@ export default async function vehicleRoutes(fastify, options) {
     const { id } = request.params;
     const { action, params } = request.body;
     
+    const { rows } = await db.query('SELECT * FROM vehicles WHERE id = $1 AND is_active = true', [id]);
+    if (rows.length === 0) {
+      return reply.code(404).send({ success: false, message: 'Vehicle not found' });
+    }
+
     if (fastify.mqttService) {
       await fastify.mqttService.sendCommand(id, { action, params });
     }
@@ -114,7 +125,9 @@ export default async function vehicleRoutes(fastify, options) {
       WHERE vehicle_id = $1 AND DATE(started_at) = $2
     `, [id, date]);
 
-    return { success: true, data: rows };
+    const daily_total_km = rows.reduce((sum, row) => sum + Number(row.total_distance_km || 0), 0);
+
+    return { success: true, daily_total_km, data: rows };
   });
 }
 

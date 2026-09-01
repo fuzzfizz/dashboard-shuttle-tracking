@@ -15,9 +15,20 @@ function createMockDb() {
 
   const queries = [];
 
-  return {
+  const db = {
     data,
     queries,
+    getClient: async () => ({
+      query: async (text, params) => {
+        queries.push({ text, params });
+        const sql = text.replace(/\s+/g, ' ').trim().toLowerCase();
+        if (sql === 'begin' || sql === 'commit' || sql === 'rollback') {
+          return { command: sql.toUpperCase() };
+        }
+        return db.query(text, params);
+      },
+      release: () => {}
+    }),
     async query(text, params = []) {
       queries.push({ text, params });
       const sql = text.replace(/\s+/g, ' ').trim().toLowerCase();
@@ -142,6 +153,8 @@ function createMockDb() {
       return { rows: [] };
     }
   };
+
+  return db;
 }
 
 describe('Admin API', () => {
