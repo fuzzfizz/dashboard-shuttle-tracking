@@ -56,12 +56,34 @@ export default function PublicLiveTrackingPage() {
       });
     });
 
+    const unsubTripStarted = publicWs.subscribe('trip:started', (payload) => {
+      setVehicles(prev => {
+        const index = prev.findIndex(v => v.id === payload.vehicle_id);
+        if (index === -1) return prev;
+        const next = [...prev];
+        next[index] = { ...next[index], status: 'in_transit' };
+        return next;
+      });
+    });
+
+    const unsubTripCompleted = publicWs.subscribe('trip:completed', (payload) => {
+      setVehicles(prev => {
+        const index = prev.findIndex(v => v.id === payload.vehicle_id);
+        if (index === -1) return prev;
+        const next = [...prev];
+        next[index] = { ...next[index], status: 'idle' };
+        return next;
+      });
+    });
+
     return () => {
       unsubConnected();
       unsubDisconnected();
       unsubError();
       unsubLocation();
       unsubStatus();
+      unsubTripStarted();
+      unsubTripCompleted();
       publicWs.disconnect();
     };
   }, []);

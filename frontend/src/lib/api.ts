@@ -164,6 +164,41 @@ export class ApiClient {
     const query = new URLSearchParams(params as Record<string, string>).toString();
     return this.request<DailyReportSummary[]>(`/reports/daily?${query}`);
   }
+
+  // Namespaced accessors
+  public auth = {
+    login: (username: string, password: string) => this.login(username, password),
+    getProfile: () => this.getProfile(),
+    logout: () => this.logout(),
+  };
+
+  public vehicles = {
+    list: (params?: Record<string, string>) => this.listVehicles(params),
+    get: (id: string) => this.getVehicle(id),
+    create: (data: Partial<Vehicle>) => this.createVehicle(data),
+    update: (id: string, data: Partial<Vehicle>) => this.updateVehicle(id, data),
+    delete: (id: string) => this.deleteVehicle(id),
+    sendCommand: (id: string, command: string, params: any = {}) => this.sendCommand(id, command, params),
+  };
+
+  public trips = {
+    list: (params?: Record<string, string>) => this.listTrips(params),
+    get: (id: string) => this.getTrip(id),
+    getTrack: (id: string) => this.getTripTrack(id),
+  };
+
+  public routes = {
+    list: () => this.listRoutes(),
+    get: (id: string) => this.getRoute(id),
+    create: (data: Partial<Route>) => this.createRoute(data),
+    update: (id: string, data: Partial<Route>) => this.updateRoute(id, data),
+    delete: (id: string) => this.deleteRoute(id),
+  };
+
+  public reports = {
+    getDaily: (params: { date?: string, start_date?: string, end_date?: string, vehicle_id?: string }) => this.getDailyReport(params),
+  };
 }
 
 export const api = new ApiClient();
+
