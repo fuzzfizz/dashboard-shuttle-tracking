@@ -8,4 +8,5 @@ dist/
 coverage/
 .next/
 *.tsbuildinfo
-
+.obsidian/
+next-env.d.ts
