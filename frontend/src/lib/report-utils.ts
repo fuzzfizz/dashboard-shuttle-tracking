@@ -1,4 +1,4 @@
-import { DailyReportSummary } from './types.ts';
+import type { DailyReportSummary } from './types';
 
 export function calculateReportTotals(reports: DailyReportSummary[]) {
   if (!reports || reports.length === 0) {
