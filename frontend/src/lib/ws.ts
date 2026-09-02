@@ -40,9 +40,9 @@ export class WebSocketClient {
 
     this.ws.onmessage = (event) => {
       try {
-        const data = JSON.parse(event.data);
-        if (data.event) {
-          this.emit(data.event, data.payload);
+        const parsed = JSON.parse(event.data);
+        if (parsed.event) {
+          this.emit(parsed.event, parsed.data !== undefined ? parsed.data : parsed.payload);
         }
       } catch (e) {
         console.error('Failed to parse WebSocket message', e);
@@ -61,7 +61,7 @@ export class WebSocketClient {
     };
   }
 
-  private reconnect() {
+  reconnect() {
     if (this.reconnectAttempts >= this.maxReconnectAttempts) {
       console.error('Max WebSocket reconnect attempts reached');
       return;
