@@ -122,7 +122,11 @@ export default function TrackPlaybackMap({ track, currentIndex, vehiclePlate }: 
         <div class="text-gray-500 text-xs mt-1">Point ${currentIndex + 1}/${track.length}</div>
       </div>
     `;
-    movingMarkerRef.current.bindPopup(popupContent);
+    if (!movingMarkerRef.current.getPopup()) {
+      movingMarkerRef.current.bindPopup(popupContent);
+    } else {
+      movingMarkerRef.current.setPopupContent(popupContent);
+    }
   }, [currentIndex, track, vehiclePlate]);
 
   return <div ref={containerRef} style={{ width: '100%', height: '100%', minHeight: '400px', zIndex: 0 }} />;
