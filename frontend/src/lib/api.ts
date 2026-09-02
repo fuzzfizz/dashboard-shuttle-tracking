@@ -14,7 +14,15 @@ export class ApiClient {
   private token: string | null = null;
 
   constructor() {
-    this.baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api/v1';
+    if (process.env.NEXT_PUBLIC_API_URL) {
+      this.baseUrl = process.env.NEXT_PUBLIC_API_URL;
+    } else if (typeof window !== 'undefined' && window.location?.hostname) {
+      const protocol = window.location.protocol || 'http:';
+      const host = window.location.hostname;
+      this.baseUrl = `${protocol}//${host}:3000/api/v1`;
+    } else {
+      this.baseUrl = 'http://localhost:3000/api/v1';
+    }
     if (typeof window !== 'undefined') {
       this.token = localStorage.getItem('token');
     }
@@ -71,7 +79,7 @@ export class ApiClient {
   async login(username: string, password: string):Promise<AuthResponse> {
     return this.request<AuthResponse>('/auth/login', {
       method: 'POST',
-      body: JSON.stringify({ username, password }),
+      body: JSON.stringify({ email: username, username, password }),
     });
   }
   

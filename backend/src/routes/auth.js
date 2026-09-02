@@ -3,14 +3,15 @@ import bcrypt from 'bcrypt';
 export default async function authRoutes(fastify, opts) {
   // POST /login
   fastify.post('/login', async (request, reply) => {
-    const { email, password } = request.body || {};
+    const email = request.body?.email || request.body?.username;
+    const password = request.body?.password;
 
     if (!email || !password) {
       return reply.code(400).send({
         success: false,
         error: {
           code: 'VALIDATION_ERROR',
-          message: 'Email and password are required',
+          message: 'Email or username and password are required',
         },
       });
     }

@@ -11,7 +11,15 @@ export class WebSocketClient {
 
   constructor(isPublic = false) {
     this.isPublic = isPublic;
-    const baseUrl = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:3000';
+    let baseUrl = process.env.NEXT_PUBLIC_WS_URL;
+    if (!baseUrl) {
+      if (typeof window !== 'undefined' && window.location?.hostname) {
+        const wsProto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        baseUrl = `${wsProto}//${window.location.hostname}:3000`;
+      } else {
+        baseUrl = 'ws://localhost:3000';
+      }
+    }
     this.url = isPublic ? `${baseUrl}/ws/public` : `${baseUrl}/ws`;
     if (typeof window !== 'undefined' && !isPublic) {
       this.token = localStorage.getItem('token');

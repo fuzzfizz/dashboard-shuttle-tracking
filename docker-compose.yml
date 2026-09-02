@@ -12,6 +12,7 @@ services:
       - "5432:5432"
     volumes:
       - pg_data:/var/lib/postgresql/data
+      - ./database/migrations:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U shuttle -d shuttle_tracking"]
       interval: 5s
@@ -40,7 +41,7 @@ services:
     ports:
       - "3000:3000"
     environment:
-      NODE_ENV: development
+      NODE_ENV: production
       PORT: 3000
       DATABASE_URL: postgres://shuttle:shuttle_secret_dev@postgres:5432/shuttle_tracking
       MQTT_BROKER_URL: mqtt://mosquitto:1883
@@ -50,6 +51,20 @@ services:
         condition: service_healthy
       mosquitto:
         condition: service_started
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: shuttle-frontend
+    restart: unless-stopped
+    ports:
+      - "3001:3000"
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+    depends_on:
+      - api
 
 volumes:
   pg_data:

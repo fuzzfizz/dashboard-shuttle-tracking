@@ -48,8 +48,19 @@ for (const signal of signals) {
   });
 }
 
-if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '/'))) {
-  start();
+import { fileURLToPath } from 'node:url';
+import path from 'node:path';
+
+if (process.argv[1]) {
+  try {
+    const currentPath = fileURLToPath(import.meta.url);
+    const execPath = path.resolve(process.argv[1]);
+    if (currentPath === execPath || import.meta.url.endsWith(process.argv[1].replace(/\\/g, '/'))) {
+      start();
+    }
+  } catch {
+    start();
+  }
 }
 
 export { app, start };
