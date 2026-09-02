@@ -73,11 +73,27 @@ export default function VehicleModal({ isOpen, onClose, vehicle, routes, onSucce
     }
   };
 
+  const copyTimerRef = React.useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (copyTimerRef.current) {
+        clearTimeout(copyTimerRef.current);
+      }
+    };
+  }, []);
+
   const copyApiKey = () => {
     if (newApiKey) {
-      navigator.clipboard.writeText(newApiKey);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      navigator.clipboard.writeText(newApiKey)
+        .then(() => {
+          setCopied(true);
+          if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
+          copyTimerRef.current = setTimeout(() => setCopied(false), 2000);
+        })
+        .catch((err) => {
+          console.warn('Clipboard write failed', err);
+        });
     }
   };
 

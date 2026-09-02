@@ -19,12 +19,21 @@ export default function CommandModal({ isOpen, onClose, vehicle }: CommandModalP
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState<{ type: 'success' | 'error' | 'info', message: string } | null>(null);
 
+  const timeoutRef = React.useRef<NodeJS.Timeout | null>(null);
+
   useEffect(() => {
     if (isOpen) {
       setCommand('set_interval');
       setIntervalMs(5000);
       setStatus(null);
+      setLoading(false);
     }
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
+      }
+    };
   }, [isOpen, vehicle]);
 
   useEffect(() => {
@@ -32,6 +41,10 @@ export default function CommandModal({ isOpen, onClose, vehicle }: CommandModalP
 
     const unsub = adminWs.subscribe('command:response', (data) => {
       if (data.vehicle_id === vehicle.id) {
+        if (timeoutRef.current) {
+          clearTimeout(timeoutRef.current);
+          timeoutRef.current = null;
+        }
         setStatus({
           type: data.success ? 'success' : 'error',
           message: data.message || (data.success ? 'Command executed successfully.' : 'Command failed.')
@@ -57,10 +70,14 @@ export default function CommandModal({ isOpen, onClose, vehicle }: CommandModalP
     setLoading(true);
     setStatus({ type: 'info', message: 'Sending command...' });
 
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
+
     try {
       await api.vehicles.sendCommand(vehicle.id, command, params);
       // Wait for WS response or timeout
-      setTimeout(() => {
+      timeoutRef.current = setTimeout(() => {
         setLoading(prev => {
           if (prev) {
             setStatus({ type: 'error', message: 'Command timed out (No response from device).' });
