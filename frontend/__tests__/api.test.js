@@ -79,3 +79,27 @@ test('ApiClient - login parsing', async (t) => {
      assert.strictEqual(res.token, 'mock-token');
      assert.strictEqual(res.user.id, '1');
 });
+
+test('ApiClient - handles HTML 404 response gracefully', async (t) => {
+    const originalFetch = global.fetch;
+    global.fetch = async () => ({
+        ok: false,
+        status: 404,
+        headers: new Headers({ 'content-type': 'text/html' }),
+        text: async () => '<!DOCTYPE html><html><body>404 Not Found</body></html>',
+        json: async () => { throw new SyntaxError("Unexpected token '<'"); }
+    });
+
+    try {
+        const client = new ApiClient();
+        await client.listRoutes();
+        assert.fail('Should have thrown ApiError');
+    } catch (err) {
+        assert.ok(err instanceof ApiError);
+        assert.strictEqual(err.status, 404);
+        assert.ok(err.message.includes("returned HTML (status 404)"));
+    } finally {
+        global.fetch = originalFetch;
+    }
+});
+

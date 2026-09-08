@@ -99,148 +99,211 @@ export default function ReportsPage() {
   }, [reports, sortField, sortOrder]);
 
   return (
-    <div className="container mx-auto p-4 space-y-6">
-      <h1 className="text-2xl font-bold">Daily Mileage & Fleet Report</h1>
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+          รายงานสรุปการเดินรถ (Fleet Reports)
+        </h1>
+        <p className="text-xs sm:text-sm text-slate-500 mt-1">
+          สรุปสถิติระยะทาง จำนวนเที่ยววิ่ง และระยะเวลาการปฏิบัติงานของรถรับ-ส่งประจำวัน
+        </p>
+      </div>
       
-      {error && <div className="bg-red-50 text-red-600 p-4 rounded">{error}</div>}
+      {error && (
+        <div className="bg-rose-50 border border-rose-200 text-rose-700 p-4 rounded-xl text-xs sm:text-sm">
+          {error}
+        </div>
+      )}
 
-      <div className="bg-white p-4 rounded shadow space-y-4">
-        <div className="flex flex-wrap gap-2 items-center">
-          <span className="font-semibold mr-2">Presets:</span>
-          <button className="px-3 py-1 bg-gray-100 hover:bg-gray-200 rounded" onClick={() => handlePreset('today')}>Today</button>
-          <button className="px-3 py-1 bg-gray-100 hover:bg-gray-200 rounded" onClick={() => handlePreset('yesterday')}>Yesterday</button>
-          <button className="px-3 py-1 bg-gray-100 hover:bg-gray-200 rounded" onClick={() => handlePreset('last7days')}>Last 7 Days</button>
-          <button className="px-3 py-1 bg-gray-100 hover:bg-gray-200 rounded" onClick={() => handlePreset('this_month')}>This Month</button>
+      {/* Filter and Presets Card */}
+      <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-2xs space-y-4">
+        <div className="flex flex-wrap gap-2 items-center pb-3 border-b border-slate-100">
+          <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider mr-1">
+            ช่วงเวลาด่วน:
+          </span>
+          <button
+            className="px-3 py-1.5 text-xs font-medium bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl transition-colors"
+            onClick={() => handlePreset('today')}
+          >
+            วันนี้ (Today)
+          </button>
+          <button
+            className="px-3 py-1.5 text-xs font-medium bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl transition-colors"
+            onClick={() => handlePreset('yesterday')}
+          >
+            เมื่อวาน (Yesterday)
+          </button>
+          <button
+            className="px-3 py-1.5 text-xs font-medium bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl transition-colors"
+            onClick={() => handlePreset('last7days')}
+          >
+            7 วันล่าสุด (Last 7 Days)
+          </button>
+          <button
+            className="px-3 py-1.5 text-xs font-medium bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl transition-colors"
+            onClick={() => handlePreset('this_month')}
+          >
+            เดือนนี้ (This Month)
+          </button>
         </div>
 
         <div className="flex flex-wrap gap-4 items-end">
           <div>
-            <label className="block text-sm font-medium mb-1">Start Date</label>
+            <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
+              ตั้งแต่วันที่
+            </label>
             <input 
               type="date" 
-              className="border p-2 rounded" 
+              className="border border-slate-300 rounded-xl px-3 py-2 text-xs sm:text-sm text-slate-800 bg-slate-50/50 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 focus:bg-white transition-all" 
               value={startDate} 
               onChange={e => setStartDate(e.target.value)} 
             />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">End Date</label>
+            <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
+              ถึงวันที่
+            </label>
             <input 
               type="date" 
-              className="border p-2 rounded" 
+              className="border border-slate-300 rounded-xl px-3 py-2 text-xs sm:text-sm text-slate-800 bg-slate-50/50 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 focus:bg-white transition-all" 
               value={endDate} 
               onChange={e => setEndDate(e.target.value)} 
             />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">Vehicle</label>
+            <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
+              ยานพาหนะ
+            </label>
             <select 
-              className="border p-2 rounded w-48"
+              className="border border-slate-300 rounded-xl px-3 py-2 text-xs sm:text-sm text-slate-800 bg-slate-50/50 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 focus:bg-white transition-all min-w-[160px]"
               value={vehicleId}
               onChange={e => setVehicleId(e.target.value)}
             >
-              <option value="">All Vehicles</option>
+              <option value="">รถทุกคัน (All Vehicles)</option>
               {vehicles.map(v => (
-                <option key={v.id} value={v.id}>{v.plate_number}</option>
+                <option key={v.id} value={v.id}>{v.plate_number} ({v.model})</option>
               ))}
             </select>
           </div>
           
-          <div className="ml-auto flex gap-2">
+          <div className="ml-auto flex gap-2.5">
             <button 
-              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+              className="px-4 py-2 bg-blue-600 text-white text-xs sm:text-sm font-semibold rounded-xl hover:bg-blue-700 active:bg-blue-800 transition-all shadow-xs disabled:opacity-60"
               onClick={fetchReports}
               disabled={loading}
             >
-              {loading ? 'Refreshing...' : 'Filter / Refresh'}
+              {loading ? 'กำลังดึงข้อมูล...' : 'กรอง / รีเฟรช'}
             </button>
             <button 
-              className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50 flex items-center gap-2"
+              className="px-4 py-2 bg-emerald-600 text-white text-xs sm:text-sm font-semibold rounded-xl hover:bg-emerald-700 active:bg-emerald-800 transition-all shadow-xs disabled:opacity-50 flex items-center gap-1.5"
               onClick={handleExportCsv}
               disabled={reports.length === 0}
             >
-              <span>Export CSV</span>
+              <span>ดาวน์โหลด CSV</span>
             </button>
           </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-white p-4 rounded shadow">
-          <div className="text-sm text-gray-500">Total Fleet Mileage</div>
-          <div className="text-2xl font-bold">{totals.totalDistanceKm.toFixed(2)} km</div>
+      {/* Metric Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-2xs">
+          <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">
+            ระยะทางรวมทั้งหมด
+          </div>
+          <div className="text-2xl font-bold text-slate-900 tabular-nums font-mono">
+            {totals.totalDistanceKm.toFixed(2)} <span className="text-xs font-sans font-normal text-slate-500">km</span>
+          </div>
         </div>
-        <div className="bg-white p-4 rounded shadow">
-          <div className="text-sm text-gray-500">Total Trips Completed</div>
-          <div className="text-2xl font-bold">{totals.totalTrips}</div>
+
+        <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-2xs">
+          <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">
+            จำนวนเที่ยววิ่งสำเร็จ
+          </div>
+          <div className="text-2xl font-bold text-slate-900 tabular-nums font-mono">
+            {totals.totalTrips} <span className="text-xs font-sans font-normal text-slate-500">เที่ยว</span>
+          </div>
         </div>
-        <div className="bg-white p-4 rounded shadow">
-          <div className="text-sm text-gray-500">Active Driving Duration</div>
-          <div className="text-2xl font-bold">{totals.totalActiveHours.toFixed(2)} hrs</div>
+
+        <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-2xs">
+          <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">
+            ชั่วโมงการวิ่งรวม
+          </div>
+          <div className="text-2xl font-bold text-slate-900 tabular-nums font-mono">
+            {totals.totalActiveHours.toFixed(2)} <span className="text-xs font-sans font-normal text-slate-500">ชม.</span>
+          </div>
         </div>
-        <div className="bg-white p-4 rounded shadow">
-          <div className="text-sm text-gray-500">Avg Distance per Trip</div>
-          <div className="text-2xl font-bold">{totals.avgDistancePerTrip.toFixed(2)} km</div>
+
+        <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-2xs">
+          <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">
+            ระยะทางเฉลี่ยต่อเที่ยว
+          </div>
+          <div className="text-2xl font-bold text-slate-900 tabular-nums font-mono">
+            {totals.avgDistancePerTrip.toFixed(2)} <span className="text-xs font-sans font-normal text-slate-500">km</span>
+          </div>
         </div>
       </div>
 
-      <div className="bg-white rounded shadow overflow-hidden">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              <th 
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                onClick={() => handleSort('date')}
-              >
-                Date {sortField === 'date' && (sortOrder === 'asc' ? '↑' : '↓')}
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Plate Number
-              </th>
-              <th 
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                onClick={() => handleSort('total_trips')}
-              >
-                Total Trips {sortField === 'total_trips' && (sortOrder === 'asc' ? '↑' : '↓')}
-              </th>
-              <th 
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                onClick={() => handleSort('total_distance_km')}
-              >
-                Total Distance (km) {sortField === 'total_distance_km' && (sortOrder === 'asc' ? '↑' : '↓')}
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Active Duration (hrs)
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Avg Distance / Trip (km)
-              </th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {sortedReports.length > 0 ? (
-              sortedReports.map((report, idx) => {
-                const avgDist = report.total_trips > 0 ? report.total_distance_km / report.total_trips : 0;
-                return (
-                  <tr key={`${report.date}-${report.vehicle_id}-${idx}`}>
-                    <td className="px-6 py-4 whitespace-nowrap">{report.date}</td>
-                    <td className="px-6 py-4 whitespace-nowrap">{report.plate_number}</td>
-                    <td className="px-6 py-4 whitespace-nowrap">{report.total_trips}</td>
-                    <td className="px-6 py-4 whitespace-nowrap">{report.total_distance_km.toFixed(2)}</td>
-                    <td className="px-6 py-4 whitespace-nowrap">{report.active_duration_hours.toFixed(2)}</td>
-                    <td className="px-6 py-4 whitespace-nowrap">{avgDist.toFixed(2)}</td>
-                  </tr>
-                );
-              })
-            ) : (
+      {/* Reports Table */}
+      <div className="bg-white rounded-2xl border border-slate-200/80 shadow-2xs overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="min-w-full text-left text-xs sm:text-sm">
+            <thead className="bg-slate-50/80 border-b border-slate-200/80 text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
               <tr>
-                <td colSpan={6} className="px-6 py-8 text-center text-gray-500">
-                  No trips exist in the given range.
-                </td>
+                <th 
+                  className="px-5 py-3.5 cursor-pointer hover:text-blue-600 transition-colors"
+                  onClick={() => handleSort('date')}
+                >
+                  วันที่ {sortField === 'date' && (sortOrder === 'asc' ? '↑' : '↓')}
+                </th>
+                <th className="px-5 py-3.5">
+                  ทะเบียนรถ
+                </th>
+                <th 
+                  className="px-5 py-3.5 cursor-pointer hover:text-blue-600 transition-colors"
+                  onClick={() => handleSort('total_trips')}
+                >
+                  จำนวนเที่ยว {sortField === 'total_trips' && (sortOrder === 'asc' ? '↑' : '↓')}
+                </th>
+                <th 
+                  className="px-5 py-3.5 cursor-pointer hover:text-blue-600 transition-colors"
+                  onClick={() => handleSort('total_distance_km')}
+                >
+                  ระยะทางรวม (km) {sortField === 'total_distance_km' && (sortOrder === 'asc' ? '↑' : '↓')}
+                </th>
+                <th className="px-5 py-3.5">
+                  เวลาวิ่งงาน (ชม.)
+                </th>
+                <th className="px-5 py-3.5">
+                  เฉลี่ยต่อเที่ยว (km)
+                </th>
               </tr>
-            )}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {sortedReports.length > 0 ? (
+                sortedReports.map((report, idx) => {
+                  const avgDist = report.total_trips > 0 ? report.total_distance_km / report.total_trips : 0;
+                  return (
+                    <tr key={`${report.date}-${report.vehicle_id}-${idx}`} className="hover:bg-slate-50/70 transition-colors">
+                      <td className="px-5 py-3.5 font-medium text-slate-900">{report.date}</td>
+                      <td className="px-5 py-3.5 font-semibold text-slate-900">{report.plate_number}</td>
+                      <td className="px-5 py-3.5 text-slate-700 font-mono tabular-nums">{report.total_trips}</td>
+                      <td className="px-5 py-3.5 font-semibold text-slate-900 font-mono tabular-nums">{report.total_distance_km.toFixed(2)}</td>
+                      <td className="px-5 py-3.5 text-slate-700 font-mono tabular-nums">{report.active_duration_hours.toFixed(2)}</td>
+                      <td className="px-5 py-3.5 text-slate-700 font-mono tabular-nums">{avgDist.toFixed(2)}</td>
+                    </tr>
+                  );
+                })
+              ) : (
+                <tr>
+                  <td colSpan={6} className="px-5 py-12 text-center text-slate-400">
+                    ไม่พบข้อมูลสถิติเที่ยววิ่งในช่วงเวลาที่เลือก
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );

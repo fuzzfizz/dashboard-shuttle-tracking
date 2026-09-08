@@ -40,6 +40,16 @@ export default function VehicleModal({ isOpen, onClose, vehicle, routes, onSucce
     }
   }, [isOpen, vehicle]);
 
+  const copyTimerRef = React.useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (copyTimerRef.current) {
+        clearTimeout(copyTimerRef.current);
+      }
+    };
+  }, []);
+
   if (!isOpen) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -72,16 +82,6 @@ export default function VehicleModal({ isOpen, onClose, vehicle, routes, onSucce
       setLoading(false);
     }
   };
-
-  const copyTimerRef = React.useRef<NodeJS.Timeout | null>(null);
-
-  useEffect(() => {
-    return () => {
-      if (copyTimerRef.current) {
-        clearTimeout(copyTimerRef.current);
-      }
-    };
-  }, []);
 
   const copyApiKey = () => {
     if (newApiKey) {

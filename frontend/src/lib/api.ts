@@ -56,17 +56,44 @@ export class ApiClient {
 
     try {
       const response = await fetch(url, { ...options, headers });
-      const data = await response.json();
+
+      const contentType = typeof response.headers?.get === 'function'
+        ? (response.headers.get('content-type') || '')
+        : '';
+      const isJson = !contentType || contentType.includes('application/json');
 
       if (!response.ok) {
-        throw new ApiError(data.error || data.message || 'API request failed', response.status);
-      }
-      
-      if (!data.success && data.error) {
-         throw new ApiError(data.error, response.status);
+        let errorMessage = `API request failed with status ${response.status}`;
+        if (isJson && typeof response.json === 'function') {
+          try {
+            const data = await response.json();
+            errorMessage = data.error || data.message || errorMessage;
+          } catch {
+            // fallback to default status message
+          }
+        } else if (typeof response.text === 'function') {
+          const text = await response.text();
+          if (text.includes('<!DOCTYPE') || text.includes('<html')) {
+            errorMessage = `Endpoint '${endpoint}' returned HTML (status ${response.status}). Ensure the backend API server is running at ${this.baseUrl}`;
+          } else if (text.trim()) {
+            errorMessage = text.slice(0, 200);
+          }
+        }
+        throw new ApiError(errorMessage, response.status);
       }
 
-      return data.data as T;
+      let data: any;
+      try {
+        data = await response.json();
+      } catch (jsonErr) {
+        throw new ApiError(`Invalid JSON response received from ${endpoint}: ${(jsonErr as Error).message}`, response.status);
+      }
+
+      if (data && data.success === false && data.error) {
+        throw new ApiError(data.error, response.status);
+      }
+
+      return (data && data.data !== undefined ? data.data : data) as T;
     } catch (error) {
       if (error instanceof ApiError) {
         throw error;

@@ -93,77 +93,174 @@ export default function TripsPage() {
   const stats = calculateTrackStats(track);
   
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold mb-6">Trip History</h1>
-      
-      <div className="bg-white p-4 rounded shadow mb-6 flex flex-wrap gap-4">
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+          ประวัติเที่ยววิ่ง (Trip History)
+        </h1>
+        <p className="text-xs sm:text-sm text-slate-500 mt-1">
+          ตรวจสอบประวัติการเดินรถ ระยะทางรวม และเปิดดูเส้นทางการวิ่งย้อนหลังแบบ Playback
+        </p>
+      </div>
+
+      {/* Filters Card */}
+      <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-2xs flex flex-wrap gap-4 items-end">
         <div>
-          <label className="block text-sm font-medium mb-1">Date</label>
-          <input type="date" value={filters.date} onChange={e => setFilters({...filters, date: e.target.value})} className="border p-2 rounded w-40" />
+          <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
+            วันที่ (Date)
+          </label>
+          <input
+            type="date"
+            value={filters.date}
+            onChange={e => setFilters({ ...filters, date: e.target.value })}
+            className="border border-slate-300 rounded-xl px-3 py-2 text-xs sm:text-sm text-slate-800 bg-slate-50/50 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 focus:bg-white transition-all"
+          />
         </div>
+
         <div>
-          <label className="block text-sm font-medium mb-1">Vehicle</label>
-          <select value={filters.vehicleId} onChange={e => setFilters({...filters, vehicleId: e.target.value})} className="border p-2 rounded w-48">
-            <option value="">All Vehicles</option>
-            {vehicles.map(v => <option key={v.id} value={v.id}>{v.plate_number} ({v.model})</option>)}
+          <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
+            ยานพาหนะ (Vehicle)
+          </label>
+          <select
+            value={filters.vehicleId}
+            onChange={e => setFilters({ ...filters, vehicleId: e.target.value })}
+            className="border border-slate-300 rounded-xl px-3 py-2 text-xs sm:text-sm text-slate-800 bg-slate-50/50 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 focus:bg-white transition-all min-w-[160px]"
+          >
+            <option value="">รถทุกคัน (All Vehicles)</option>
+            {vehicles.map(v => (
+              <option key={v.id} value={v.id}>
+                {v.plate_number} ({v.model})
+              </option>
+            ))}
           </select>
         </div>
+
         <div>
-          <label className="block text-sm font-medium mb-1">Route</label>
-          <select value={filters.routeId} onChange={e => setFilters({...filters, routeId: e.target.value})} className="border p-2 rounded w-48">
-            <option value="">All Routes</option>
-            {routes.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
+          <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
+            สายรถ (Route)
+          </label>
+          <select
+            value={filters.routeId}
+            onChange={e => setFilters({ ...filters, routeId: e.target.value })}
+            className="border border-slate-300 rounded-xl px-3 py-2 text-xs sm:text-sm text-slate-800 bg-slate-50/50 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 focus:bg-white transition-all min-w-[160px]"
+          >
+            <option value="">ทุกเส้นทาง (All Routes)</option>
+            {routes.map(r => (
+              <option key={r.id} value={r.id}>
+                {r.name}
+              </option>
+            ))}
           </select>
         </div>
+
         <div>
-          <label className="block text-sm font-medium mb-1">Status</label>
-          <select value={filters.status} onChange={e => setFilters({...filters, status: e.target.value})} className="border p-2 rounded w-32">
-            <option value="All">All</option>
-            <option value="completed">Completed</option>
-            <option value="in_progress">In Progress</option>
+          <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
+            สถานะ (Status)
+          </label>
+          <select
+            value={filters.status}
+            onChange={e => setFilters({ ...filters, status: e.target.value })}
+            className="border border-slate-300 rounded-xl px-3 py-2 text-xs sm:text-sm text-slate-800 bg-slate-50/50 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 focus:bg-white transition-all min-w-[120px]"
+          >
+            <option value="All">ทั้งหมด (All)</option>
+            <option value="completed">เสร็จสิ้น (Completed)</option>
+            <option value="in_progress">กำลังวิ่ง (In Progress)</option>
           </select>
         </div>
       </div>
 
-      <div className="bg-white rounded shadow overflow-x-auto">
-        <table className="w-full text-left">
-          <thead className="bg-gray-50 border-b">
-            <tr>
-              <th className="p-3">Vehicle</th>
-              <th className="p-3">Route</th>
-              <th className="p-3">Start Time</th>
-              <th className="p-3">End Time / Status</th>
-              <th className="p-3">Duration</th>
-              <th className="p-3">Distance</th>
-              <th className="p-3">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
-              <tr><td colSpan={7} className="p-4 text-center">Loading...</td></tr>
-            ) : filteredTrips.length === 0 ? (
-              <tr><td colSpan={7} className="p-4 text-center text-gray-500">No trips found.</td></tr>
-            ) : (
-              filteredTrips.map(trip => {
-                const vehicle = vehicles.find(v => v.id === trip.vehicle_id);
-                const route = routes.find(r => r.id === trip.route_id);
-                return (
-                  <tr key={trip.id} className="border-b hover:bg-gray-50">
-                    <td className="p-3">{vehicle ? `${vehicle.plate_number} (${vehicle.model})` : 'Unknown'}</td>
-                    <td className="p-3">{route ? route.name : 'Unknown'}</td>
-                    <td className="p-3">{new Date(trip.started_at).toLocaleString()}</td>
-                    <td className="p-3">{trip.ended_at ? new Date(trip.ended_at).toLocaleString() : <span className="text-blue-500">{trip.status}</span>}</td>
-                    <td className="p-3">{formatDuration(trip.started_at, trip.ended_at)}</td>
-                    <td className="p-3">{(trip.total_distance_km || 0).toFixed(2)} km</td>
-                    <td className="p-3">
-                      <button onClick={() => openTrip(trip)} className="text-blue-600 hover:underline">Play Track / ดูเส้นทาง</button>
-                    </td>
-                  </tr>
-                );
-              })
-            )}
-          </tbody>
-        </table>
+      {/* Trips Table */}
+      <div className="bg-white rounded-2xl border border-slate-200/80 shadow-2xs overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-xs sm:text-sm">
+            <thead className="bg-slate-50/80 border-b border-slate-200/80 text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+              <tr>
+                <th className="py-3.5 px-4">ยานพาหนะ</th>
+                <th className="py-3.5 px-4">เส้นทาง</th>
+                <th className="py-3.5 px-4">เวลาเริ่ม</th>
+                <th className="py-3.5 px-4">เวลาสิ้นสุด / สถานะ</th>
+                <th className="py-3.5 px-4">ระยะเวลา</th>
+                <th className="py-3.5 px-4">ระยะทาง</th>
+                <th className="py-3.5 px-4 text-right">การกระทำ</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {loading ? (
+                <tr>
+                  <td colSpan={7} className="py-12 text-center text-slate-400">
+                    กำลังโหลดข้อมูลเที่ยววิ่ง...
+                  </td>
+                </tr>
+              ) : filteredTrips.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="py-12 text-center text-slate-400">
+                    ไม่พบข้อมูลเที่ยววิ่งตามเงื่อนไขที่เลือก
+                  </td>
+                </tr>
+              ) : (
+                filteredTrips.map(trip => {
+                  const vehicle = vehicles.find(v => v.id === trip.vehicle_id);
+                  const route = routes.find(r => r.id === trip.route_id);
+                  const isCompleted = trip.status === 'completed' || !!trip.ended_at;
+
+                  return (
+                    <tr key={trip.id} className="hover:bg-slate-50/70 transition-colors">
+                      <td className="py-3 px-4 font-semibold text-slate-900">
+                        {vehicle ? (
+                          <div>
+                            <div>{vehicle.plate_number}</div>
+                            <div className="text-[11px] text-slate-400 font-normal">{vehicle.model}</div>
+                          </div>
+                        ) : (
+                          'Unknown'
+                        )}
+                      </td>
+                      <td className="py-3 px-4 text-slate-600">
+                        {route ? (
+                          <span className="inline-flex items-center gap-1.5">
+                            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: route.color || '#3b82f6' }} />
+                            {route.name}
+                          </span>
+                        ) : (
+                          'Unknown'
+                        )}
+                      </td>
+                      <td className="py-3 px-4 text-slate-600 font-mono text-xs tabular-nums">
+                        {new Date(trip.started_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                      </td>
+                      <td className="py-3 px-4">
+                        {isCompleted ? (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+                            เสร็จสิ้น ({trip.ended_at ? new Date(trip.ended_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-'})
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-blue-50 text-blue-700 border border-blue-200">
+                            <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-ping" />
+                            กำลังวิ่ง (In Progress)
+                          </span>
+                        )}
+                      </td>
+                      <td className="py-3 px-4 text-slate-600 font-mono text-xs tabular-nums">
+                        {formatDuration(trip.started_at, trip.ended_at)}
+                      </td>
+                      <td className="py-3 px-4 font-semibold text-slate-900 font-mono text-xs tabular-nums">
+                        {(trip.total_distance_km || 0).toFixed(2)} km
+                      </td>
+                      <td className="py-3 px-4 text-right">
+                        <button
+                          onClick={() => openTrip(trip)}
+                          className="inline-flex items-center gap-1 text-xs font-semibold text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-lg transition-colors"
+                        >
+                          ▶ ดูเส้นทางย้อนหลัง
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {selectedTrip && (

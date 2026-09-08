@@ -89,49 +89,69 @@ export default function VehiclesPage() {
   const filteredVehicles = filterVehicles(vehicles, searchQuery, routeFilter, statusFilter);
 
   const getStatusBadge = (status: string) => {
-    const map: Record<string, string> = {
-      'in_transit': 'bg-green-100 text-green-800',
-      'idle': 'bg-yellow-100 text-yellow-800',
-      'offline': 'bg-gray-100 text-gray-800',
-    };
-    const color = map[status?.toLowerCase()] || 'bg-gray-100 text-gray-800';
-    return <span className={`px-2 py-1 rounded-full text-xs font-medium ${color}`}>{status}</span>;
+    switch (status?.toLowerCase()) {
+      case 'in_transit':
+        return (
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+            กำลังวิ่ง (In Transit)
+          </span>
+        );
+      case 'idle':
+        return (
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200">
+            <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+            จอดรอ (Idle)
+          </span>
+        );
+      default:
+        return (
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-600 border border-slate-200">
+            <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
+            ออฟไลน์ (Offline)
+          </span>
+        );
+    }
   };
 
   return (
-    <div className="p-6">
-      <div className="flex justify-between items-center mb-6">
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Vehicle Management</h1>
-          <p className="text-sm text-gray-500">Total Vehicles: {vehicles.length}</p>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+            จัดการยานพาหนะ (Vehicle Fleet)
+          </h1>
+          <p className="text-xs sm:text-sm text-slate-500 mt-1">
+            ลงทะเบียนรถรับ-ส่ง จัดการสายที่สังกัด Device API Key และส่งคำสั่งควบคุมระยะไกล
+          </p>
         </div>
         <button
           onClick={() => { setSelectedVehicle(null); setIsVehicleModalOpen(true); }}
-          className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+          className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-xl hover:bg-blue-700 active:bg-blue-800 text-xs sm:text-sm font-semibold transition-all shadow-xs shadow-blue-600/20 w-fit"
         >
-          <Plus className="w-4 h-4 mr-2" />
-          Add Vehicle
+          <Plus className="w-4 h-4" />
+          <span>เพิ่มรถใหม่ (Add Vehicle)</span>
         </button>
       </div>
 
-      <div className="bg-white p-4 rounded-lg shadow-sm border mb-6 flex flex-col md:flex-row gap-4">
+      <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-2xs flex flex-col md:flex-row gap-3.5">
         <div className="flex-1 relative">
-          <Search className="absolute left-3 top-2.5 text-gray-400 w-5 h-5" />
+          <Search className="absolute left-3.5 top-2.5 text-slate-400 w-4 h-4" />
           <input
             type="text"
-            placeholder="Search plate or model..."
+            placeholder="ค้นหาทะเบียน หรือรุ่นรถ..."
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 outline-none"
+            className="w-full pl-10 pr-4 py-2 bg-slate-50/50 border border-slate-300 rounded-xl text-xs sm:text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 focus:bg-white transition-all"
           />
         </div>
         <select
           value={routeFilter}
           onChange={e => setRouteFilter(e.target.value)}
-          className="border rounded-md px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500"
+          className="border border-slate-300 rounded-xl px-3 py-2 text-xs sm:text-sm text-slate-800 bg-slate-50/50 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 focus:bg-white transition-all min-w-[150px]"
         >
-          <option value="all">All Routes</option>
-          <option value="unassigned">Unassigned</option>
+          <option value="all">ทุกเส้นทาง (All Routes)</option>
+          <option value="unassigned">ยังไม่กำหนดสาย</option>
           {routes.map(r => (
             <option key={r.id} value={r.id}>{r.name}</option>
           ))}
@@ -139,40 +159,44 @@ export default function VehiclesPage() {
         <select
           value={statusFilter}
           onChange={e => setStatusFilter(e.target.value)}
-          className="border rounded-md px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500"
+          className="border border-slate-300 rounded-xl px-3 py-2 text-xs sm:text-sm text-slate-800 bg-slate-50/50 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 focus:bg-white transition-all min-w-[130px]"
         >
-          <option value="all">All Statuses</option>
-          <option value="online">Online</option>
-          <option value="offline">Offline</option>
-          <option value="in_transit">In Transit</option>
-          <option value="idle">Idle</option>
+          <option value="all">ทุกสถานะ (All Status)</option>
+          <option value="online">ออนไลน์ (Online)</option>
+          <option value="offline">ออฟไลน์ (Offline)</option>
+          <option value="in_transit">กำลังวิ่ง (In Transit)</option>
+          <option value="idle">จอดรอ (Idle)</option>
         </select>
       </div>
 
-      {error && <div className="bg-red-50 text-red-600 p-4 rounded-md mb-6">{error}</div>}
+      {error && (
+        <div className="bg-rose-50 border border-rose-200 text-rose-700 p-4 rounded-xl text-xs sm:text-sm">
+          {error}
+        </div>
+      )}
 
-      <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
+      <div className="bg-white rounded-2xl border border-slate-200/80 shadow-2xs overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
-            <thead className="bg-gray-50 border-b">
+          <table className="w-full text-left text-xs sm:text-sm">
+            <thead className="bg-slate-50/80 border-b border-slate-200/80 text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
               <tr>
-                <th className="px-4 py-3 font-medium text-gray-700">Plate Number</th>
-                <th className="px-4 py-3 font-medium text-gray-700">Model</th>
-                <th className="px-4 py-3 font-medium text-gray-700">Assigned Route</th>
-                <th className="px-4 py-3 font-medium text-gray-700">Status</th>
-                <th className="px-4 py-3 font-medium text-gray-700">Device API Key</th>
-                <th className="px-4 py-3 font-medium text-gray-700">Last Seen</th>
-                <th className="px-4 py-3 font-medium text-gray-700">Actions</th>
+                <th className="py-3.5 px-4">ทะเบียนรถ</th>
+                <th className="py-3.5 px-4">รุ่นรถ</th>
+                <th className="py-3.5 px-4">สายที่สังกัด</th>
+                <th className="py-3.5 px-4">สถานะ</th>
+                <th className="py-3.5 px-4">Device API Key</th>
+                <th className="py-3.5 px-4">พิกัดล่าสุด</th>
+                <th className="py-3.5 px-4 text-right">การกระทำ</th>
               </tr>
             </thead>
-            <tbody className="divide-y">
+            <tbody className="divide-y divide-slate-100">
               {loading ? (
-                <tr><td colSpan={7} className="px-4 py-8 text-center text-gray-500">Loading...</td></tr>
+                <tr><td colSpan={7} className="px-4 py-12 text-center text-slate-400">กำลังโหลดรายชื่อรถ...</td></tr>
               ) : filteredVehicles.length === 0 ? (
-                <tr><td colSpan={7} className="px-4 py-8 text-center text-gray-500">No vehicles found.</td></tr>
+                <tr><td colSpan={7} className="px-4 py-12 text-center text-slate-400">ไม่พบรถที่ตรงกับเงื่อนไขการค้นหา</td></tr>
               ) : (
                 filteredVehicles.map(v => (
-                  <tr key={v.id} className="hover:bg-gray-50">
+                  <tr key={v.id} className="hover:bg-slate-50/70 transition-colors">
                     <td className="px-4 py-3 font-medium">{v.plate_number}</td>
                     <td className="px-4 py-3 text-gray-600">{v.model || '-'}</td>
                     <td className="px-4 py-3 text-gray-600">

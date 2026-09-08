@@ -88,118 +88,240 @@ export default function PublicLiveTrackingPage() {
     };
   }, []);
 
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
   const filteredVehicles = filterVehicles(vehicles, selectedRouteId, searchQuery);
 
+  const activeVehiclesCount = vehicles.filter(v => v.status === 'in_transit').length;
+
   return (
-    <div className="flex flex-col h-screen bg-gray-50 overflow-hidden">
+    <div className="flex flex-col h-screen bg-slate-50 overflow-hidden">
       {/* Navbar */}
-      <header className="bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between z-10 shrink-0">
-        <div className="flex items-center gap-2">
-          <div className="bg-blue-600 p-2 rounded-lg">
-            <Bus className="w-5 h-5 text-white" />
+      <header className="bg-white border-b border-slate-200 px-4 py-3 flex items-center justify-between z-20 shrink-0">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+            className="p-2 -ml-1.5 rounded-lg text-slate-600 hover:bg-slate-100 md:hidden transition-colors"
+            aria-label="Toggle vehicles menu"
+          >
+            <Menu className="w-5 h-5" />
+          </button>
+
+          <div className="flex items-center gap-2.5">
+            <div className="bg-blue-600 p-2 rounded-xl text-white shadow-sm shadow-blue-500/20">
+              <Bus className="w-5 h-5" />
+            </div>
+            <div>
+              <h1 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight leading-tight">
+                Shuttle Live Tracker
+              </h1>
+              <p className="text-xs text-slate-500 hidden sm:block">
+                ระบบติดตามพิกัดรถรับ-ส่งแบบเรียลไทม์
+              </p>
+            </div>
           </div>
-          <h1 className="text-xl font-bold text-gray-900 hidden sm:block">Shuttle Live Tracker</h1>
-          <h1 className="text-xl font-bold text-gray-900 sm:hidden">Tracker</h1>
         </div>
 
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-gray-100 border border-gray-200 text-sm font-medium">
-            {isConnected ? (
-              <>
-                <Wifi className="w-4 h-4 text-green-500" />
-                <span className="text-green-700 hidden sm:inline">Live</span>
-              </>
-            ) : (
-              <>
-                <WifiOff className="w-4 h-4 text-red-500" />
-                <span className="text-red-700 hidden sm:inline">Disconnected</span>
-              </>
-            )}
+        <div className="flex items-center gap-3 sm:gap-4">
+          {/* Active Fleet Counter Pill */}
+          <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-100 text-xs font-medium text-slate-700">
+            <span className="w-2 h-2 rounded-full bg-emerald-500" />
+            <span>กำลังวิ่ง: <strong className="text-slate-900 font-semibold">{activeVehiclesCount}</strong> / {vehicles.length} คัน</span>
           </div>
-          <Link href="/login" className="flex items-center gap-2 px-4 py-2 bg-gray-900 text-white rounded-md text-sm font-medium hover:bg-gray-800 transition-colors">
-            <LayoutDashboard className="w-4 h-4" />
+
+          {/* Connection Status Badge */}
+          <div className="flex items-center gap-2 px-2.5 py-1 text-xs font-medium text-slate-600">
+            <span className={`w-2 h-2 rounded-full ${isConnected ? 'bg-emerald-500' : 'bg-rose-500'}`} />
+            <span>{isConnected ? 'Live Sync' : 'Disconnected'}</span>
+          </div>
+
+          {/* Admin Portal Button */}
+          <Link
+            href="/login"
+            className="flex items-center gap-1.5 px-3.5 py-1.5 bg-slate-900 text-white rounded-xl text-xs sm:text-sm font-medium hover:bg-slate-800 active:bg-slate-950 transition-all shadow-xs"
+          >
+            <LayoutDashboard className="w-4 h-4 text-slate-300" />
             <span className="hidden sm:inline">Admin Portal</span>
           </Link>
         </div>
       </header>
 
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1 overflow-hidden relative">
+        {/* Mobile Backdrop Overlay */}
+        {isSidebarOpen && (
+          <div
+            className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-30 md:hidden"
+            onClick={() => setIsSidebarOpen(false)}
+          />
+        )}
+
         {/* Sidebar */}
-        <aside className="w-80 bg-white border-r border-gray-200 flex flex-col z-10 hidden md:flex shrink-0">
-          <div className="p-4 border-b border-gray-100 flex flex-col gap-4 shrink-0">
+        <aside
+          className={`
+            fixed md:relative inset-y-0 left-0 z-40 md:z-10
+            w-80 sm:w-88 bg-white border-r border-slate-200/90
+            flex flex-col shrink-0 shadow-xl md:shadow-none
+            transform transition-transform duration-200 ease-in-out
+            ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
+          `}
+        >
+          {/* Filters Area */}
+          <div className="p-4 border-b border-slate-100 flex flex-col gap-3.5 shrink-0">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Route</label>
-              <select 
-                value={selectedRouteId || 'all'} 
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                  สายรถ (Route)
+                </label>
+                <span className="text-xs text-slate-500">
+                  {routes.length} เส้นทาง
+                </span>
+              </div>
+              <select
+                value={selectedRouteId || 'all'}
                 onChange={(e) => setSelectedRouteId(e.target.value)}
-                className="w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                className="w-full bg-white border border-slate-300 rounded-xl py-2 px-3 text-xs sm:text-sm text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 transition-all"
               >
-                <option value="all">All Routes</option>
+                <option value="all">ทุกเส้นทาง (All Routes)</option>
                 {routes.map(r => (
                   <option key={r.id} value={r.id}>{r.name}</option>
                 ))}
               </select>
             </div>
-            
+
             <div>
-              <div className="relative rounded-md shadow-sm">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Search className="h-4 w-4 text-gray-400" />
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
+                  <Search className="h-4 w-4" />
                 </div>
                 <input
                   type="text"
-                  placeholder="Search plate number..."
+                  placeholder="ค้นหาทะเบียนรถ เช่น AB-1234..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="focus:ring-blue-500 focus:border-blue-500 block w-full pl-10 sm:text-sm border-gray-300 rounded-md py-2 px-3 border"
+                  className="w-full pl-9 pr-8 py-2 bg-white border border-slate-300 rounded-xl text-xs sm:text-sm text-slate-900 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 transition-all"
                 />
+                {searchQuery && (
+                  <button
+                    onClick={() => setSearchQuery('')}
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-xs text-slate-500 hover:text-slate-700"
+                  >
+                    ×
+                  </button>
+                )}
               </div>
             </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto p-2">
+          {/* Vehicle List */}
+          <div className="flex-1 overflow-y-auto p-3 space-y-2.5">
             {filteredVehicles.length === 0 ? (
-              <div className="text-center py-10 text-gray-500 text-sm">
-                No vehicles found for selected filters.
+              <div className="py-12 px-4 text-center">
+                <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center mx-auto mb-3 text-slate-400">
+                  <Bus className="w-6 h-6" />
+                </div>
+                <p className="text-sm font-semibold text-slate-700">ไม่พบรถตามตัวกรอง</p>
+                <p className="text-xs text-slate-500 mt-1 max-w-xs mx-auto">
+                  ลองเปลี่ยนคำค้นหา หรือเลือกดูทุกเส้นทาง
+                </p>
+                {(selectedRouteId !== 'all' || searchQuery) && (
+                  <button
+                    onClick={() => { setSelectedRouteId('all'); setSearchQuery(''); }}
+                    className="mt-4 px-3 py-1.5 text-xs font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors"
+                  >
+                    รีเซ็ตตัวกรองทั้งหมด
+                  </button>
+                )}
               </div>
             ) : (
-              filteredVehicles.map(vehicle => (
-                <div 
-                  key={vehicle.id}
-                  onClick={() => setSelectedVehicleId(vehicle.id)}
-                  className={`p-3 mb-2 rounded-lg border cursor-pointer transition-colors ${selectedVehicleId === vehicle.id ? 'bg-blue-50 border-blue-200' : 'bg-white border-gray-100 hover:bg-gray-50'}`}
-                >
-                  <div className="flex justify-between items-start mb-1">
-                    <span className="font-bold text-gray-900">{vehicle.plate_number}</span>
-                    <span className={`text-xs px-2 py-1 rounded-full font-medium ${
-                      vehicle.status === 'in_transit' ? 'bg-green-100 text-green-800' :
-                      vehicle.status === 'idle' ? 'bg-amber-100 text-amber-800' :
-                      'bg-gray-100 text-gray-800'
-                    }`}>
-                      {vehicle.status === 'in_transit' ? 'In Transit' : vehicle.status === 'idle' ? 'Idle' : 'Offline'}
-                    </span>
+              filteredVehicles.map(vehicle => {
+                const isSelected = selectedVehicleId === vehicle.id;
+                const route = routes.find(r => r.id === vehicle.current_route_id);
+
+                return (
+                  <div
+                    key={vehicle.id}
+                    onClick={() => {
+                      setSelectedVehicleId(vehicle.id);
+                      if (window.innerWidth < 768) setIsSidebarOpen(false);
+                    }}
+                    className={`p-3.5 rounded-xl border transition-all cursor-pointer ${
+                      isSelected
+                        ? 'bg-blue-50/90 border-blue-400 ring-2 ring-blue-500/20'
+                        : 'bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50/70'
+                    }`}
+                  >
+                    <div className="flex justify-between items-start mb-1.5">
+                      <div className="flex items-center gap-2">
+                        <div className={`p-1.5 rounded-lg ${isSelected ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600'}`}>
+                          <Bus className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <span className="font-bold text-sm text-slate-900 leading-none">
+                            {vehicle.plate_number}
+                          </span>
+                          <span className="block text-xs text-slate-500 mt-0.5">
+                            {vehicle.model || 'รถรับส่งทั่วไป'}
+                          </span>
+                        </div>
+                      </div>
+
+                      <span className={`inline-flex items-center gap-1 text-xs px-2.5 py-0.5 rounded-full font-medium ${
+                        vehicle.status === 'in_transit'
+                          ? 'bg-emerald-100/80 text-emerald-800'
+                          : vehicle.status === 'idle'
+                          ? 'bg-amber-100/80 text-amber-800'
+                          : 'bg-slate-100 text-slate-700'
+                      }`}>
+                        <span className={`w-1.5 h-1.5 rounded-full ${
+                          vehicle.status === 'in_transit'
+                            ? 'bg-emerald-500'
+                            : vehicle.status === 'idle'
+                            ? 'bg-amber-500'
+                            : 'bg-slate-400'
+                        }`} />
+                        {vehicle.status === 'in_transit' ? 'กำลังวิ่ง' : vehicle.status === 'idle' ? 'จอดรอ' : 'ออฟไลน์'}
+                      </span>
+                    </div>
+
+                    {/* Route Info */}
+                    <div className="mt-2 flex items-center gap-1.5 text-xs text-slate-600">
+                      <span className="w-2 h-2 rounded-full" style={{ backgroundColor: route?.color || '#3b82f6' }} />
+                      <span className="truncate">{route?.name || 'ยังไม่กำหนดสาย'}</span>
+                    </div>
+
+                    {/* Speed & Last Update */}
+                    <div className="flex justify-between items-center mt-2 pt-2 border-t border-slate-100 text-xs text-slate-500 font-mono">
+                      <span className="tabular-nums font-medium text-slate-700">
+                        {formatSpeed(vehicle.last_speed)}
+                      </span>
+                      <span className="tabular-nums">
+                        {vehicle.last_seen_at ? new Date(vehicle.last_seen_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'ไม่ระบุเวลา'}
+                      </span>
+                    </div>
                   </div>
-                  <div className="text-sm text-gray-500">
-                    Route: {routes.find(r => r.id === vehicle.current_route_id)?.name || 'N/A'}
-                  </div>
-                  <div className="flex justify-between items-center mt-2 text-xs text-gray-400">
-                    <span>Speed: {formatSpeed(vehicle.last_speed)}</span>
-                    <span>{vehicle.last_seen_at ? new Date(vehicle.last_seen_at).toLocaleTimeString() : 'N/A'}</span>
-                  </div>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
         </aside>
 
         {/* Map Area */}
         <main className="flex-1 relative z-0">
-          <MapWrapper 
+          <MapWrapper
             vehicles={vehicles}
             routes={routes}
             selectedVehicleId={selectedVehicleId}
             onVehicleClick={(id) => setSelectedVehicleId(id)}
           />
+
+          {/* Floating Mobile Toggle Button */}
+          <button
+            onClick={() => setIsSidebarOpen(true)}
+            className="md:hidden absolute bottom-5 left-4 z-20 flex items-center gap-2 px-4 py-2.5 bg-slate-900/90 backdrop-blur-md text-white rounded-full shadow-lg text-xs font-semibold hover:bg-slate-900 transition-transform active:scale-95"
+          >
+            <Bus className="w-4 h-4" />
+            <span>ดูรายการรถ ({filteredVehicles.length})</span>
+          </button>
         </main>
       </div>
     </div>

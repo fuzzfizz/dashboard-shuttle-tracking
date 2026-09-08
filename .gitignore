@@ -20,6 +20,7 @@ Thumbs.db
 .obsidian/
 
 # AI & Agent artifacts
+.agent/
 .superpowers/
 .gemini/
 .claude/
