@@ -1,6 +1,6 @@
 {
   "name": "shuttle-tracking-backend",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Shuttle Tracking Dashboard Backend",
   "type": "module",
   "main": "src/server.js",
