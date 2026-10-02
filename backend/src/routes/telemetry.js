@@ -197,7 +197,7 @@ export default async function telemetryRoutes(fastify, opts) {
             speed: finalSpeed,
             heading: finalHeading,
             status: finalAcc === false ? 'offline' : 'online',
-            updated_at: finalTimestamp?.toISOString ? finalTimestamp.toISOString() : new Date(finalTimestamp).toISOString(),
+            updated_at: finalTimestamp || new Date().toISOString(),
           }).catch(() => {});
         }
 
