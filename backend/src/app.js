@@ -11,6 +11,7 @@ import routesRoutes from './routes/routes.js';
 import reportsRoutes from './routes/reports.js';
 import websocketPlugin from './plugins/websocket.js';
 import { createRedisClient, createNullRedisClient } from './services/redis-client.js';
+import { VehicleCache } from './services/vehicle-cache.js';
 
 export function buildApp(opts = {}) {
   const app = Fastify({
@@ -39,6 +40,15 @@ export function buildApp(opts = {}) {
 
   if (!app.hasDecorator('redis')) {
     app.decorate('redis', redisClient);
+  }
+
+  // Vehicle State Cache Decorator
+  const vehicleCache = opts.vehicleCache || new VehicleCache({
+    redisClient,
+    logger: app.log,
+  });
+  if (!app.hasDecorator('vehicleCache')) {
+    app.decorate('vehicleCache', vehicleCache);
   }
 
   app.addHook('onClose', async () => {

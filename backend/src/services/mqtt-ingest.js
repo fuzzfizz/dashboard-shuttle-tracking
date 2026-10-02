@@ -35,6 +35,7 @@ export class MqttIngestService {
     this.onBroadcastStatus = options.onBroadcastStatus;
     this.onTripEvent = options.onTripEvent;
     this.onCommandResponse = options.onCommandResponse;
+    this.vehicleCache = options.vehicleCache;
     const isTest =
       process.env.NODE_ENV === 'test' ||
       Boolean(process.env.NODE_TEST_CONTEXT) ||
@@ -230,6 +231,17 @@ export class MqttIngestService {
       });
     }
 
+    if (this.vehicleCache) {
+      this.vehicleCache.updatePosition(vehicle.id, {
+        lat,
+        lng,
+        speed,
+        heading,
+        status: acc === false ? 'offline' : 'online',
+        updated_at: timestamp.toISOString()
+      }).catch(() => {});
+    }
+
     if (this.onTripEvent && result?.trip) {
       if (result.isAccOff) {
         this.onTripEvent('trip:completed', {
@@ -306,6 +318,13 @@ export class MqttIngestService {
         last_seen_at: isoTimestamp,
         reason: payload.reason
       });
+    }
+
+    if (this.vehicleCache) {
+      this.vehicleCache.updatePosition(vehicle.id, {
+        status,
+        updated_at: isoTimestamp
+      }).catch(() => {});
     }
   }
 

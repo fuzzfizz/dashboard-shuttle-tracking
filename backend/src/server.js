@@ -23,6 +23,7 @@ async function start() {
       app.mqttService = createMqttIngestService({
         dbClient: defaultDb,
         logger: app.log,
+        vehicleCache: app.vehicleCache,
         onBroadcastLocation: (payload) => app.broadcaster?.broadcastLocation(payload),
         onBroadcastStatus: (payload) => app.broadcaster?.broadcastStatus(payload),
         onTripEvent: (eventName, payload) => app.broadcaster?.broadcastTripEvent(eventName, payload),

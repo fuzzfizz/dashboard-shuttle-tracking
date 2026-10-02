@@ -19,12 +19,31 @@ export default async function vehicleRoutes(fastify, options) {
       GROUP BY v.id, r.name
     `);
     
-    const data = rows.map(v => ({
-      ...v,
-      today_total_km: Number(v.today_total_km || 0),
-      today_total_trips: Number(v.today_total_trips || 0),
-      current_trip_km: Number(v.current_trip_km || 0)
-    }));
+    let cacheMap = null;
+    if (fastify.vehicleCache?.isReady?.()) {
+      try {
+        cacheMap = await fastify.vehicleCache.getMap();
+      } catch {
+        // fallback to db only
+      }
+    }
+
+    const data = rows.map(v => {
+      const cached = cacheMap?.get(Number(v.id));
+      return {
+        ...v,
+        today_total_km: Number(v.today_total_km || 0),
+        today_total_trips: Number(v.today_total_trips || 0),
+        current_trip_km: Number(v.current_trip_km || 0),
+        ...(cached ? {
+          lat: cached.lat ?? v.lat,
+          lng: cached.lng ?? v.lng,
+          speed: cached.speed ?? v.speed,
+          heading: cached.heading ?? v.heading,
+          status: cached.status ?? v.status,
+        } : {})
+      };
+    });
 
     return { success: true, data };
   });
@@ -35,7 +54,28 @@ export default async function vehicleRoutes(fastify, options) {
     if (rows.length === 0) {
       return reply.code(404).send({ success: false, error: { code: 'NOT_FOUND', message: 'Vehicle not found' } });
     }
-    return { success: true, data: rows[0] };
+    const vehicle = rows[0];
+    if (fastify.vehicleCache?.isReady?.()) {
+      try {
+        const cached = await fastify.vehicleCache.get(id);
+        if (cached) {
+          return {
+            success: true,
+            data: {
+              ...vehicle,
+              lat: cached.lat ?? vehicle.lat,
+              lng: cached.lng ?? vehicle.lng,
+              speed: cached.speed ?? vehicle.speed,
+              heading: cached.heading ?? vehicle.heading,
+              status: cached.status ?? vehicle.status,
+            }
+          };
+        }
+      } catch {
+        // fallback to db
+      }
+    }
+    return { success: true, data: vehicle };
   });
 
   fastify.post('/', {

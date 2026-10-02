@@ -189,6 +189,18 @@ export default async function telemetryRoutes(fastify, opts) {
           status: finalAcc === false ? 'offline' : 'online',
         });
 
+        const vehicleCache = fastify.vehicleCache || request.server.vehicleCache;
+        if (vehicleCache) {
+          vehicleCache.updatePosition(request.vehicle.id, {
+            lat,
+            lng: finalLng,
+            speed: finalSpeed,
+            heading: finalHeading,
+            status: finalAcc === false ? 'offline' : 'online',
+            updated_at: finalTimestamp?.toISOString ? finalTimestamp.toISOString() : new Date(finalTimestamp).toISOString(),
+          }).catch(() => {});
+        }
+
         if (result?.trip) {
           if (result.isAccOff) {
             broadcaster.broadcastTripEvent('trip:completed', {
