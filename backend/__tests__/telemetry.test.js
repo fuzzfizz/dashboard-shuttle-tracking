@@ -883,6 +883,12 @@ describe('HTTP Telemetry API & Batch Flush Endpoints', () => {
       assert.equal(vehicle.last_lng, 100.5382);
       assert.equal(vehicle.last_speed_kmh, 40);
       assert.equal(vehicle.last_seen_at, t3);
+
+      // Verify newest point in batch was broadcast to live WebSocket listeners
+      assert.equal(broadcastedLocations.length, 1);
+      assert.equal(broadcastedLocations[0].vehicle_id, VEHICLE_ID);
+      assert.equal(broadcastedLocations[0].lat, 13.7649);
+      assert.equal(broadcastedLocations[0].lng, 100.5382);
     });
 
     it('triggers broadcastTripEvent on new trip start and completion accurately without spamming', async () => {

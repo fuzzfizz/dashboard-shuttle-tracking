@@ -352,6 +352,44 @@ export default async function telemetryRoutes(fastify, opts) {
         }
       }
 
+      // Broadcast newest point from batch to WebSocket and update live Redis cache
+      if (sortedPoints.length > 0) {
+        const lastPt = sortedPoints[sortedPoints.length - 1];
+        const lastLng = lastPt.lng !== undefined ? lastPt.lng : lastPt.lon;
+        const lastSpeed = Number(lastPt.speed);
+        const lastHeading = lastPt.heading !== undefined ? Number(lastPt.heading) : 0;
+        const lastAcc = lastPt.acc !== undefined ? Boolean(lastPt.acc) : true;
+        const lastTsVal = validateTimestamp(lastPt.timestamp !== undefined ? lastPt.timestamp : lastPt.ts);
+        const lastTimestamp = lastTsVal.dateObj ? lastTsVal.dateObj.toISOString() : new Date().toISOString();
+
+        const broadcaster = fastify.broadcaster || request.server.broadcaster;
+        if (broadcaster) {
+          broadcaster.broadcastLocation({
+            vehicle_id: request.vehicle.id,
+            plate_number: request.vehicle.plate_number,
+            lat: lastPt.lat,
+            lng: lastLng,
+            speed_kmh: lastSpeed,
+            heading: lastHeading,
+            timestamp: lastTimestamp,
+            trip_id: latestTripId,
+            status: lastAcc === false ? 'offline' : 'online',
+          });
+        }
+
+        const vehicleCache = fastify.vehicleCache || request.server.vehicleCache;
+        if (vehicleCache) {
+          vehicleCache.updatePosition(request.vehicle.id, {
+            lat: lastPt.lat,
+            lng: lastLng,
+            speed: lastSpeed,
+            heading: lastHeading,
+            status: lastAcc === false ? 'offline' : 'online',
+            updated_at: lastTimestamp,
+          }).catch(() => {});
+        }
+      }
+
       return reply.code(200).send({
         success: true,
         data: {
