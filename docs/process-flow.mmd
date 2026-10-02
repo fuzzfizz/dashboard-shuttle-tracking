@@ -1,0 +1,41 @@
+flowchart TD
+    %% Hardware Layer
+    subgraph HW["1. ฮาร์ดแวร์บนรถ (Vehicle IoT Box)"]
+        GPS["🛰️ GPS Module (อ่านพิกัด Lat, Lng, Speed)"]
+        MCU["📟 MCU / ESP32 (แปลงเป็น JSON Data)"]
+        GPS -->|NMEA Data| MCU
+    end
+
+    %% Network & Broker
+    subgraph BROKER["2. ตัวกลางรับส่งข้อมูล (Message Broker)"]
+        MQTT["📡 Eclipse Mosquitto Broker (Port 1883)\nTopic: vehicles/{id}/telemetry"]
+    end
+
+    %% Backend & Processing
+    subgraph BACKEND["3. แบ็กเอนด์และระบบประมวลผล (Backend Processing)"]
+        INGEST["⚡ MQTT Ingest Service\n(ตรวจเช็กความถูกต้อง/กรอง Noise)"]
+        CALC["📏 Distance & Trip Engine\n(คำนวณระยะทาง Haversine & เช็กจุดจอด)"]
+        BROADCASTER["📢 WebSocket Broadcaster Service"]
+        
+        INGEST --> CALC
+        CALC --> BROADCASTER
+    end
+
+    %% Database
+    subgraph STORAGE["4. ฐานข้อมูลเชิงพื้นที่ (Spatial Database)"]
+        DB[("🐘 PostgreSQL 16 + PostGIS 3.4\n- gps_points (Partitioned)\n- trips & vehicles")]
+    end
+
+    %% Frontend & Clients
+    subgraph CLIENT["5. เว็บแดชบอร์ด (Next.js 15 Web Dashboard)"]
+        WS_SUB["🔌 WebSocket Client (/ws/public, /ws)"]
+        MAP["🗺️ Interactive Map (Leaflet.js)\nหมุดรถขยับสด & สรุปข้อมูล"]
+        WS_SUB --> MAP
+    end
+
+    %% Connections
+    MCU -->|"MQTT QoS 1 (4G/LTE)"| MQTT
+    MCU -.->|"HTTP POST Fallback (Port 3000)"| INGEST
+    MQTT -->|Subscribe Telemetry| INGEST
+    CALC -->|บันทึกพิกัดและประวัติการวิ่ง| DB
+    BROADCASTER -->|"WebSocket Stream (Real-time Push)"| WS_SUB
