@@ -18,6 +18,12 @@ export interface Vehicle {
   last_heading?: number | null;
   last_seen_at?: string | null;
   created_at: string;
+  name?: string;
+  route_id?: string | null;
+  route_name?: string;
+  today_total_km?: number;
+  today_total_trips?: number;
+  current_trip_km?: number;
 }
 
 export interface RouteStop {

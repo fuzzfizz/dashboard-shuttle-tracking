@@ -41,3 +41,56 @@ export function updateVehicleLocation(
   };
   return newVehicles;
 }
+
+export function formatDistance(km?: number | null): string {
+  if (km === null || km === undefined || isNaN(km) || km <= 0) {
+    return '0.0 กม.';
+  }
+  return `${Number(km).toFixed(1)} กม.`;
+}
+
+export function filterFleet(
+  vehicles: any[] | null | undefined,
+  query: string = '',
+  status: string = 'all',
+  routeId: string | null = 'all'
+): any[] {
+  if (!Array.isArray(vehicles)) return [];
+
+  const q = (query || '').trim().toLowerCase();
+  const normalizedStatusFilter = (status || 'all').trim().toLowerCase().replace(/\s+/g, '_');
+  const targetRoute = routeId || 'all';
+
+  return vehicles.filter(v => {
+    if (!v) return false;
+
+    // Status filter
+    if (normalizedStatusFilter !== 'all' && normalizedStatusFilter !== '') {
+      const vStatus = (v.status || '').toLowerCase().replace(/\s+/g, '_');
+      if (vStatus !== normalizedStatusFilter) {
+        return false;
+      }
+    }
+
+    // Route filter
+    const vehicleRouteId = v.route_id ?? v.current_route_id ?? null;
+    if (targetRoute !== 'all' && targetRoute !== '') {
+      if (targetRoute === 'unassigned') {
+        if (vehicleRouteId) return false;
+      } else if (vehicleRouteId !== targetRoute) {
+        return false;
+      }
+    }
+
+    // Search query filter
+    if (q) {
+      const matchPlate = v.plate_number ? String(v.plate_number).toLowerCase().includes(q) : false;
+      const matchModel = v.model ? String(v.model).toLowerCase().includes(q) : false;
+      const matchName = v.name ? String(v.name).toLowerCase().includes(q) : false;
+      const matchRoute = v.route_name ? String(v.route_name).toLowerCase().includes(q) : false;
+      return matchPlate || matchModel || matchName || matchRoute;
+    }
+
+    return true;
+  });
+}
