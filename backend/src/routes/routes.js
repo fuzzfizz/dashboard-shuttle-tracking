@@ -1,9 +1,7 @@
 export default async function routesRoutes(fastify, options) {
   const { db } = fastify;
 
-  fastify.get('/', {
-    preValidation: [fastify.authenticate]
-  }, async (request, reply) => {
+  fastify.get('/', async (request, reply) => {
     const { rows } = await db.query(`
       SELECT r.*, COUNT(rs.id) as stop_count
       FROM routes r
@@ -15,9 +13,7 @@ export default async function routesRoutes(fastify, options) {
     return { success: true, data: rows };
   });
 
-  fastify.get('/:id', {
-    preValidation: [fastify.authenticate]
-  }, async (request, reply) => {
+  fastify.get('/:id', async (request, reply) => {
     const { id } = request.params;
     
     const { rows } = await db.query(`

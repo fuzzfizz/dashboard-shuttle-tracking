@@ -3,9 +3,7 @@ import crypto from 'crypto';
 export default async function vehicleRoutes(fastify, options) {
   const { db } = fastify;
 
-  fastify.get('/', {
-    preValidation: [fastify.authenticate]
-  }, async (request, reply) => {
+  fastify.get('/', async (request, reply) => {
     const { rows } = await db.query(`
       SELECT 
         v.*, 
@@ -31,9 +29,7 @@ export default async function vehicleRoutes(fastify, options) {
     return { success: true, data };
   });
 
-  fastify.get('/:id', {
-    preValidation: [fastify.authenticate]
-  }, async (request, reply) => {
+  fastify.get('/:id', async (request, reply) => {
     const { id } = request.params;
     const { rows } = await db.query('SELECT * FROM vehicles WHERE id = $1 AND is_active = true', [id]);
     if (rows.length === 0) {
