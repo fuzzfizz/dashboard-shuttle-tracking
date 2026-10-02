@@ -32,6 +32,20 @@ services:
       - mosq_data:/mosquitto/data
       - mosq_log:/mosquitto/log
 
+  redis:
+    image: redis:7-alpine
+    container_name: shuttle-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
   api:
     build:
       context: ./backend
@@ -45,12 +59,15 @@ services:
       PORT: 3000
       DATABASE_URL: postgres://shuttle:shuttle_secret_dev@postgres:5432/shuttle_tracking
       MQTT_BROKER_URL: mqtt://mosquitto:1883
+      REDIS_URL: redis://redis:6379
       JWT_SECRET: shuttle_jwt_super_secret_key_2026
     depends_on:
       postgres:
         condition: service_healthy
       mosquitto:
         condition: service_started
+      redis:
+        condition: service_healthy
 
   frontend:
     build:
@@ -70,3 +87,4 @@ volumes:
   pg_data:
   mosq_data:
   mosq_log:
+  redis_data:

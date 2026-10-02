@@ -12,6 +12,7 @@ export const config = {
   JWT_SECRET: process.env.JWT_SECRET || 'shuttle_jwt_super_secret_key_2026',
   JWT_EXPIRES_IN: process.env.JWT_EXPIRES_IN || '24h',
   MQTT_BROKER_URL: process.env.MQTT_BROKER_URL || 'mqtt://localhost:1883',
+  REDIS_URL: process.env.REDIS_URL || 'redis://localhost:6379',
   CORS_ORIGIN: process.env.CORS_ORIGIN || true,
 };
 
