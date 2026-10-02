@@ -10,6 +10,7 @@ import tripsRoutes from './routes/trips.js';
 import routesRoutes from './routes/routes.js';
 import reportsRoutes from './routes/reports.js';
 import websocketPlugin from './plugins/websocket.js';
+import { createRedisClient, createNullRedisClient } from './services/redis-client.js';
 
 export function buildApp(opts = {}) {
   const app = Fastify({
@@ -23,6 +24,29 @@ export function buildApp(opts = {}) {
     app.decorate('db', db);
   }
 
+  // Redis Decorator
+  let redisClient = opts.redis;
+  if (!redisClient) {
+    if (config.NODE_ENV === 'test' && !opts.enableRedis) {
+      redisClient = createNullRedisClient();
+    } else {
+      redisClient = createRedisClient({
+        url: opts.redisUrl || config.REDIS_URL,
+        logger: app.log,
+      });
+    }
+  }
+
+  if (!app.hasDecorator('redis')) {
+    app.decorate('redis', redisClient);
+  }
+
+  app.addHook('onClose', async () => {
+    if (redisClient?.close) {
+      await redisClient.close();
+    }
+  });
+
   // Register CORS
   app.register(fastifyCors, {
     origin: opts.corsOrigin ?? config.CORS_ORIGIN,
@@ -34,7 +58,7 @@ export function buildApp(opts = {}) {
   });
 
   // Register WebSocket Plugin
-  app.register(websocketPlugin);
+  app.register(websocketPlugin, { redisClient });
 
   // Health check endpoint
   app.get('/health', async (request, reply) => {

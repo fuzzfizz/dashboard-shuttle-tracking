@@ -3,7 +3,8 @@ import fastifyWebsocket from '@fastify/websocket';
 import BroadcasterService from '../services/broadcaster.js';
 
 async function websocketPlugin(fastify, options) {
-  const broadcaster = new BroadcasterService();
+  const redisClient = options.redisClient || (fastify.hasDecorator('redis') ? fastify.redis : null);
+  const broadcaster = new BroadcasterService(redisClient);
   
   // Decorate fastify with broadcaster
   fastify.decorate('broadcaster', broadcaster);
