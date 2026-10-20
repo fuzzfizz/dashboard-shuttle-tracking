@@ -14,3 +14,7 @@ dist/
 Thumbs.db
 .vscode/
 .idea/
+.superpowers/
+*.png
+*.patch
+
