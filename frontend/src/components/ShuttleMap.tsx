@@ -3,9 +3,23 @@ import { MapContainer, TileLayer, Marker, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import { TelemetryPayload } from '../types/telemetry';
 
-// CartoDB Positron clean light tile layer
-const CARTO_POSITRON_URL = 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
-const CARTO_ATTRIBUTION = '&copy; <a href="https://carto.com/">CARTO</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>';
+// OpenStreetMap standard tile layer (100% free, no API key, no watermark)
+const OSM_URL = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+const OSM_ATTRIBUTION = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
+
+// CartoDB Positron with optional API key
+const cartoKey = import.meta.env.VITE_CARTO_API_KEY;
+const customTileUrl = import.meta.env.VITE_TILE_URL;
+
+const tileUrl = customTileUrl
+  ? customTileUrl
+  : cartoKey
+    ? `https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png?key=${cartoKey}`
+    : OSM_URL;
+
+const tileAttribution = cartoKey
+  ? '&copy; <a href="https://carto.com/">CARTO</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+  : OSM_ATTRIBUTION;
 
 interface ShuttleMapProps {
   telemetry: TelemetryPayload | null;
@@ -62,8 +76,8 @@ export const ShuttleMap: React.FC<ShuttleMapProps> = ({
         className="w-full h-full"
       >
         <TileLayer
-          attribution={CARTO_ATTRIBUTION}
-          url={CARTO_POSITRON_URL}
+          attribution={tileAttribution}
+          url={tileUrl}
           maxZoom={19}
         />
         {telemetry && (
