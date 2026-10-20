@@ -14,7 +14,14 @@ dist/
 Thumbs.db
 .vscode/
 .idea/
+# AI & Agent artifacts
 .superpowers/
+.agent/
+.claude/
+.gemini/
+docs/superpowers/
 *.png
 *.patch
+*.diff
+
 
