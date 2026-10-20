@@ -1,6 +1,6 @@
 # Shuttle Fleet Tracking Dashboard (Real-Time Hardware Gateway)
 
-A minimalist, high-performance real-time shuttle tracking dashboard designed for hardware and IoT fleet testing. Connects directly to a public MQTT broker over WebSockets with zero backend installation needed.
+A minimalist, high-performance real-time shuttle tracking dashboard designed for hardware and IoT fleet testing. Connects directly to MQTT brokers over WebSockets without requiring a local backend server.
 
 ---
 
@@ -21,16 +21,28 @@ cd tools
 npm install
 npm run simulate
 ```
-You will immediately see the shuttle move across the map and live telemetry update on the HUD card.
+
+---
+
+## Configuration & Environment Variables
+
+Copy `frontend/.env.example` to `frontend/.env` (or set in Vercel Environment Variables):
+
+| Variable | Description | Default (Testing) |
+| :--- | :--- | :--- |
+| `VITE_MQTT_BROKER_URL` | WebSocket URL to MQTT broker | `wss://broker.emqx.io:8084/mqtt` |
+| `VITE_MQTT_TOPIC` | Subscription topic pattern | `shuttle/fleet/v1/+/telemetry` |
+| `VITE_MQTT_USERNAME` | *(Optional)* Broker username | - |
+| `VITE_MQTT_PASSWORD` | *(Optional)* Broker password | - |
 
 ---
 
 ## Hardware Configuration (ESP32 / GSM Module)
 
-Configure your device's MQTT client with:
-- **Broker Host:** `broker.emqx.io` (or `broker.hivemq.com`)
-- **Port:** `1883` (Standard TCP MQTT, unauthenticated)
-- **Topic:** `shuttle/fleet/v1/shuttle-01/telemetry`
+Configure your device firmware to publish telemetry to:
+- **Broker Host:** `<YOUR_BROKER_HOST>` *(e.g. `broker.emqx.io` for development)*
+- **Port:** `1883` (TCP) or `8883` (TCP with TLS)
+- **Topic:** `shuttle/fleet/v1/<VEHICLE_ID>/telemetry`
 - **Payload Format (JSON):**
 ```json
 {
@@ -42,6 +54,18 @@ Configure your device's MQTT client with:
   "timestamp": 1729412400000
 }
 ```
+
+---
+
+## Security & Privacy Notice
+
+> [!WARNING]
+> **Do not use public MQTT brokers for production or real-world passenger/vehicle tracking.**
+> - Public test brokers (such as `broker.emqx.io` or `broker.hivemq.com`) are unencrypted/shared environments where anyone can view or publish data to public topics.
+> - For production deployments:
+>   1. Deploy a private MQTT broker (e.g., Mosquitto with SSL/TLS, AWS IoT, or private EMQX cluster).
+>   2. Enable client authentication (username/password or client certificates).
+>   3. Store all sensitive URLs, credentials, and unique vehicle IDs inside environment variables (`.env` or Vercel Secrets) and never commit them to public version control.
 
 ---
 

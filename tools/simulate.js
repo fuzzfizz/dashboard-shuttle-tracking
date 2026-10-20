@@ -1,8 +1,8 @@
 import mqtt from 'mqtt';
 
-const BROKER = 'mqtt://broker.emqx.io:1883';
-const VEHICLE_ID = 'shuttle-01';
-const TOPIC = `shuttle/fleet/v1/${VEHICLE_ID}/telemetry`;
+const BROKER = process.env.MQTT_BROKER || 'mqtt://broker.emqx.io:1883';
+const VEHICLE_ID = process.env.VEHICLE_ID || 'shuttle-01';
+const TOPIC = process.env.MQTT_TOPIC || `shuttle/fleet/v1/${VEHICLE_ID}/telemetry`;
 
 console.log(`Connecting to ${BROKER}...`);
 const client = mqtt.connect(BROKER, {
