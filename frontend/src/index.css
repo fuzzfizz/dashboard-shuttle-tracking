@@ -17,3 +17,9 @@ html, body, #root {
   width: 100%;
   background-color: #f8fafc;
 }
+
+/* Leaflet marker transparent background fix */
+.custom-vehicle-marker {
+  background: transparent !important;
+  border: none !important;
+}

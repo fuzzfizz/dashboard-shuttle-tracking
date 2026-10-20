@@ -1,0 +1,11 @@
+{
+  "name": "shuttle-telemetry-tools",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "simulate": "node simulate.js"
+  },
+  "dependencies": {
+    "mqtt": "^5.10.1"
+  }
+}
