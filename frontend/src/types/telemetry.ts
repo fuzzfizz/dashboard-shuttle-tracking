@@ -12,4 +12,6 @@ export interface TelemetryPayload {
 export interface UseShuttleTelemetryOptions {
   brokerUrl?: string;
   topic?: string;
+  username?: string;
+  password?: string;
 }

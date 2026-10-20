@@ -3,12 +3,16 @@ import mqtt, { MqttClient } from 'mqtt';
 import { ConnectionStatus, TelemetryPayload, UseShuttleTelemetryOptions } from '../types/telemetry';
 import { parseTelemetryPayload } from '../services/telemetryParser';
 
-const DEFAULT_BROKER = 'wss://broker.emqx.io:8084/mqtt';
-const DEFAULT_TOPIC = 'shuttle/fleet/v1/+/telemetry';
+const DEFAULT_BROKER = import.meta.env.VITE_MQTT_BROKER_URL || 'wss://broker.emqx.io:8084/mqtt';
+const DEFAULT_TOPIC = import.meta.env.VITE_MQTT_TOPIC || 'shuttle/fleet/v1/+/telemetry';
+const DEFAULT_USERNAME = import.meta.env.VITE_MQTT_USERNAME;
+const DEFAULT_PASSWORD = import.meta.env.VITE_MQTT_PASSWORD;
 
 export function useShuttleTelemetry(options: UseShuttleTelemetryOptions = {}) {
   const brokerUrl = options.brokerUrl || DEFAULT_BROKER;
   const topic = options.topic || DEFAULT_TOPIC;
+  const username = options.username || DEFAULT_USERNAME;
+  const password = options.password || DEFAULT_PASSWORD;
 
   const [status, setStatus] = useState<ConnectionStatus>('connecting');
   const [telemetry, setTelemetry] = useState<TelemetryPayload | null>(null);
@@ -21,6 +25,8 @@ export function useShuttleTelemetry(options: UseShuttleTelemetryOptions = {}) {
       clean: true,
       connectTimeout: 8000,
       reconnectPeriod: 3000,
+      ...(username ? { username } : {}),
+      ...(password ? { password } : {}),
     });
 
     client.on('connect', () => {
