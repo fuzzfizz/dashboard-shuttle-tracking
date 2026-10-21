@@ -74,10 +74,20 @@ client.on('message', async (_topic, message) => {
         lastTime: pointTimestamp,
         pendingDistanceKm: 0,
         maxSpeedKmh: numericSpeed,
+        currentDate: today,
         lastFlushTime: now,
+        isFlushing: false,
       };
       vehicleState.set(vehicle_id, state);
     } else {
+      // Midnight rollover for max speed tracking
+      if (state.currentDate !== today) {
+        state.currentDate = today;
+        state.maxSpeedKmh = numericSpeed;
+      } else {
+        state.maxSpeedKmh = Math.max(state.maxSpeedKmh, numericSpeed);
+      }
+
       const dist = haversineDistance(state.lastLat, state.lastLng, lat, lng);
 
       // Filter jitter (< 8m when speed < 1.5 km/h) & teleport (> 150 km/h)
@@ -92,45 +102,57 @@ client.on('message', async (_topic, message) => {
       state.lastLng = lng;
       state.lastSpeed = numericSpeed;
       state.lastTime = pointTimestamp;
-      state.maxSpeedKmh = Math.max(state.maxSpeedKmh, numericSpeed);
     }
 
-    // Flush batch to Supabase every 5 seconds per vehicle
-    if (now - state.lastFlushTime >= 5000 && state.pendingDistanceKm > 0) {
+    // Flush batch to Supabase every 5 seconds per vehicle (with concurrency lock)
+    if (!state.isFlushing && now - state.lastFlushTime >= 5000 && state.pendingDistanceKm > 0) {
+      state.isFlushing = true;
       const distanceToFlush = state.pendingDistanceKm;
       state.pendingDistanceKm = 0;
       state.lastFlushTime = now;
 
-      // Upsert daily metrics
-      const { data: existing, error: fetchErr } = await supabase
-        .from('daily_vehicle_metrics')
-        .select('total_distance_km, max_speed_kmh')
-        .eq('vehicle_id', vehicle_id)
-        .eq('date', today)
-        .maybeSingle();
+      try {
+        // Upsert daily metrics
+        const { data: existing, error: fetchErr } = await supabase
+          .from('daily_vehicle_metrics')
+          .select('total_distance_km, max_speed_kmh')
+          .eq('vehicle_id', vehicle_id)
+          .eq('date', today)
+          .maybeSingle();
 
-      if (fetchErr) {
-        console.warn(`[Worker] Warning fetching current metrics for ${vehicle_id}:`, fetchErr.message);
-      }
+        if (fetchErr) {
+          console.error(`[Worker Error] Failed to fetch current metrics for ${vehicle_id}:`, fetchErr.message);
+          // Restore uncommitted distance to avoid data loss
+          state.pendingDistanceKm += distanceToFlush;
+          return;
+        }
 
-      const existingDistance = Number(existing?.total_distance_km) || 0;
-      const existingMaxSpeed = Number(existing?.max_speed_kmh) || 0;
+        const existingDistance = Number(existing?.total_distance_km) || 0;
+        const existingMaxSpeed = Number(existing?.max_speed_kmh) || 0;
 
-      const newTotalDistance = Math.round((existingDistance + distanceToFlush) * 100) / 100;
-      const newMaxSpeed = Math.max(existingMaxSpeed, Math.round(state.maxSpeedKmh * 10) / 10);
+        const newTotalDistance = Math.round((existingDistance + distanceToFlush) * 100) / 100;
+        const newMaxSpeed = Math.max(existingMaxSpeed, Math.round(state.maxSpeedKmh * 10) / 10);
 
-      const { error: upsertErr } = await supabase.from('daily_vehicle_metrics').upsert({
-        vehicle_id,
-        date: today,
-        total_distance_km: newTotalDistance,
-        max_speed_kmh: newMaxSpeed,
-        last_updated_at: new Date().toISOString(),
-      });
+        const { error: upsertErr } = await supabase.from('daily_vehicle_metrics').upsert({
+          vehicle_id,
+          date: today,
+          total_distance_km: newTotalDistance,
+          max_speed_kmh: newMaxSpeed,
+          last_updated_at: new Date().toISOString(),
+        });
 
-      if (upsertErr) {
-        console.error(`[Worker Error] Failed to upsert metrics for ${vehicle_id}:`, upsertErr.message);
-      } else {
-        console.log(`[Worker] Updated ${vehicle_id}: +${distanceToFlush.toFixed(3)} km (Total: ${newTotalDistance} km)`);
+        if (upsertErr) {
+          console.error(`[Worker Error] Failed to upsert metrics for ${vehicle_id}:`, upsertErr.message);
+          // Restore uncommitted distance on upsert failure
+          state.pendingDistanceKm += distanceToFlush;
+        } else {
+          console.log(`[Worker] Updated ${vehicle_id}: +${distanceToFlush.toFixed(3)} km (Total: ${newTotalDistance} km)`);
+        }
+      } catch (flushErr) {
+        console.error(`[Worker Error] Unexpected error during flush for ${vehicle_id}:`, flushErr.message);
+        state.pendingDistanceKm += distanceToFlush;
+      } finally {
+        state.isFlushing = false;
       }
     }
   } catch (err) {
@@ -141,3 +163,17 @@ client.on('message', async (_topic, message) => {
 client.on('error', (err) => {
   console.error('[Worker] MQTT client error:', err.message);
 });
+
+// Graceful shutdown
+const shutdown = () => {
+  console.log('\n[Worker] Gracefully shutting down ingestion pipeline...');
+  client.end(false, () => {
+    console.log('[Worker] Disconnected from MQTT broker. Goodbye.');
+    process.exit(0);
+  });
+  // Force exit fallback if broker disconnect hangs
+  setTimeout(() => process.exit(0), 1500).unref();
+};
+
+process.on('SIGINT', shutdown);
+process.on('SIGTERM', shutdown);
