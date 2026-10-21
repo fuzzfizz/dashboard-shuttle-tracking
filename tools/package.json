@@ -3,9 +3,12 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "simulate": "node simulate.js"
+    "simulate": "node simulate.js",
+    "worker": "node worker.js"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.118.0",
+    "dotenv": "^18.0.8",
     "mqtt": "^5.10.1"
   }
 }
