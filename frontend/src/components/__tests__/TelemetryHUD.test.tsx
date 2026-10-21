@@ -24,6 +24,7 @@ describe('TelemetryHUD', () => {
     expect(screen.getByText('32.4')).toBeInTheDocument();
     expect(screen.getByText(/km\/h/i)).toBeInTheDocument();
     expect(screen.getByText('90°')).toBeInTheDocument();
+    expect(screen.queryByText('Signal Lost')).toBeNull();
   });
 
   it('renders disconnected state appropriately', () => {
@@ -58,5 +59,51 @@ describe('TelemetryHUD', () => {
     expect(screen.getByText('Overview (2 online)')).toBeInTheDocument();
     expect(screen.getByText(/Broker: connected/i)).toBeInTheDocument();
     expect(screen.getAllByText('--')).toHaveLength(2);
+  });
+
+  it('renders overview mode with calculated fleetStats and latest heartbeat', () => {
+    const fleetStats = {
+      totalVehicles: 3,
+      onlineVehicles: 2,
+      averageSpeed: 24.6,
+    };
+    const latestHeartbeat = Date.now() - 2000; // 2s ago
+
+    render(
+      <TelemetryHUD
+        telemetry={null}
+        status="connected"
+        lastSeen={latestHeartbeat}
+        fleetStats={fleetStats}
+      />
+    );
+
+    expect(screen.getByText('Overview (2 online)')).toBeInTheDocument();
+    expect(screen.getByText('24.6')).toBeInTheDocument();
+    expect(screen.getByText('2s ago')).toBeInTheDocument();
+    expect(screen.queryByText('Signal Lost')).toBeNull();
+  });
+
+  it('renders Signal Lost badge when focused vehicle is offline', () => {
+    const telemetry = {
+      vehicle_id: 'shuttle-09',
+      lat: 13.7563,
+      lng: 100.5018,
+      speed: 0,
+      heading: 0,
+      timestamp: Date.now() - 25000,
+    };
+
+    render(
+      <TelemetryHUD
+        telemetry={telemetry}
+        status="connected"
+        lastSeen={Date.now() - 25000}
+        isOnline={false}
+      />
+    );
+
+    expect(screen.getByText('shuttle-09')).toBeInTheDocument();
+    expect(screen.getByText('Signal Lost')).toBeInTheDocument();
   });
 });

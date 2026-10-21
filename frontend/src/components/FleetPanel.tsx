@@ -8,6 +8,7 @@ interface FleetPanelProps {
   lastSeenMap: Record<string, number>;
   selectedVehicleId: string | null;
   onSelectVehicle: (vehicleId: string | null) => void;
+  now?: number;
 }
 
 export const FleetPanel: React.FC<FleetPanelProps> = ({
@@ -15,6 +16,7 @@ export const FleetPanel: React.FC<FleetPanelProps> = ({
   lastSeenMap,
   selectedVehicleId,
   onSelectVehicle,
+  now,
 }) => {
   const [collapsed, setCollapsed] = useState(false);
   const vehicleList = Object.values(vehicles);
@@ -75,7 +77,7 @@ export const FleetPanel: React.FC<FleetPanelProps> = ({
               </div>
             ) : (
               vehicleList.map((vehicle) => {
-                const status = computeVehicleStatus(vehicle, lastSeenMap[vehicle.vehicle_id] || 0);
+                const status = computeVehicleStatus(vehicle, lastSeenMap[vehicle.vehicle_id] || 0, now);
                 const isSelected = selectedVehicleId === vehicle.vehicle_id;
 
                 return (

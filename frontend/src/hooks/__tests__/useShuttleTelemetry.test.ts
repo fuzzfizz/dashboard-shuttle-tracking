@@ -130,4 +130,18 @@ describe('useShuttleTelemetry', () => {
     expect(result.current.telemetry?.vehicle_id).toBe('shuttle-02');
     expect(result.current.lastSeen).toBe(result.current.lastSeenMap['shuttle-02']);
   });
+
+  it('provides a 1-second interval clock tick (now)', () => {
+    vi.useFakeTimers();
+    const { result } = renderHook(() => useShuttleTelemetry());
+    const initialNow = result.current.now;
+    expect(typeof initialNow).toBe('number');
+
+    act(() => {
+      vi.advanceTimersByTime(1000);
+    });
+
+    expect(result.current.now).toBeGreaterThanOrEqual(initialNow + 1000);
+    vi.useRealTimers();
+  });
 });

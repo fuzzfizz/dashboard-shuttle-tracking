@@ -1,9 +1,14 @@
 import { render } from '@testing-library/react';
-import { describe, it, expect, vi } from 'vitest';
-import { ShuttleMap } from '../ShuttleMap';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import L from 'leaflet';
+import { ShuttleMap, escapeHtml, createVehicleIcon } from '../ShuttleMap';
 import { FleetMap } from '../../types/telemetry';
 
 describe('ShuttleMap', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   it('renders map container without crashing', () => {
     const { container } = render(<ShuttleMap vehicles={{}} selectedVehicleId={null} />);
     expect(container.querySelector('.leaflet-container')).not.toBeNull();
@@ -45,5 +50,97 @@ describe('ShuttleMap', () => {
     };
     const { container } = render(<ShuttleMap telemetry={telemetry} />);
     expect(container.querySelector('.leaflet-container')).not.toBeNull();
+  });
+
+  it('safely escapes special characters in escapeHtml to prevent DOM XSS', () => {
+    expect(escapeHtml('&<>"\'')).toBe('&amp;&lt;&gt;&quot;&#39;');
+    expect(escapeHtml('shuttle-01')).toBe('shuttle-01');
+  });
+
+  it('properly escapes vehicle ID badge to protect against DOM XSS', () => {
+    const xssPayload = '<img src=x onerror=alert(1)>';
+    const icon = createVehicleIcon(0, false, xssPayload, true);
+    expect(icon.options.html).toContain('&lt;img src=x onerror=alert(1)&gt;');
+    expect(icon.options.html).not.toContain('<img src=x onerror=alert(1)>');
+
+    const vehicles: FleetMap = {
+      [xssPayload]: {
+        vehicle_id: xssPayload,
+        lat: 13.7563,
+        lng: 100.5018,
+        speed: 20,
+        heading: 0,
+        timestamp: Date.now(),
+      },
+    };
+    const { container } = render(<ShuttleMap vehicles={vehicles} />);
+    expect(container.innerHTML).not.toContain('<img src=x onerror=alert(1)>');
+  });
+
+  it('dims marker styling and disables pulse animation when vehicle is offline', () => {
+    const onlineIcon = createVehicleIcon(90, false, 'EV-01', true);
+    expect(onlineIcon.options.html).toContain('stroke="#10b981"');
+    expect(onlineIcon.options.html).toContain('border: 2.5px solid #ffffff');
+    expect(onlineIcon.options.html).toContain('animation: pulse');
+    expect(onlineIcon.options.html).toContain('opacity: 1');
+
+    const offlineIcon = createVehicleIcon(90, false, 'EV-01', false);
+    expect(offlineIcon.options.html).toContain('stroke="#475569"');
+    expect(offlineIcon.options.html).toContain('border: 2.5px solid #94a3b8');
+    expect(offlineIcon.options.html).not.toContain('animation: pulse');
+    expect(offlineIcon.options.html).toContain('opacity: 0.6');
+
+    // Selected vehicle offline
+    const selectedOfflineIcon = createVehicleIcon(90, true, 'EV-01', false);
+    expect(selectedOfflineIcon.options.html).toContain('border: 2.5px solid #94a3b8');
+    expect(selectedOfflineIcon.options.html).toContain('stroke="#475569"');
+    expect(selectedOfflineIcon.options.html).not.toContain('animation: pulse');
+  });
+
+  it('stabilizes camera in overview mode and prevents fitBounds thrashing', () => {
+    const fitBoundsSpy = vi.spyOn(L.Map.prototype, 'fitBounds').mockImplementation(() => ({} as any));
+    const panToSpy = vi.spyOn(L.Map.prototype, 'panTo').mockImplementation(() => ({} as any));
+
+    const fleetA: FleetMap = {
+      'EV-01': { vehicle_id: 'EV-01', lat: 13.75, lng: 100.5, speed: 20, timestamp: 1000 },
+      'EV-02': { vehicle_id: 'EV-02', lat: 13.76, lng: 100.51, speed: 25, timestamp: 1000 },
+    };
+
+    // 1. Initial mount with 2 vehicles triggers fitBounds once
+    const { rerender } = render(<ShuttleMap vehicles={fleetA} selectedVehicleId={null} />);
+    expect(fitBoundsSpy).toHaveBeenCalledTimes(1);
+
+    // 2. Continuous telemetry packet with unchanged vehicle count in overview mode:
+    // Should NOT trigger fitBounds again
+    const fleetAUpdated: FleetMap = {
+      'EV-01': { vehicle_id: 'EV-01', lat: 13.7505, lng: 100.5005, speed: 22, timestamp: 2000 },
+      'EV-02': { vehicle_id: 'EV-02', lat: 13.7605, lng: 100.5105, speed: 27, timestamp: 2000 },
+    };
+    rerender(<ShuttleMap vehicles={fleetAUpdated} selectedVehicleId={null} />);
+    expect(fitBoundsSpy).toHaveBeenCalledTimes(1);
+
+    // 3. User switches to Focus Mode on EV-01: triggers panTo
+    rerender(<ShuttleMap vehicles={fleetAUpdated} selectedVehicleId="EV-01" />);
+    expect(panToSpy).toHaveBeenCalledWith([13.7505, 100.5005], expect.any(Object));
+
+    // 4. Focus Mode same coordinates: panTo not called again
+    const panToCount = panToSpy.mock.calls.length;
+    rerender(<ShuttleMap vehicles={fleetAUpdated} selectedVehicleId="EV-01" />);
+    expect(panToSpy).toHaveBeenCalledTimes(panToCount);
+
+    // 5. User switches from Focus Mode back to Overview Mode: triggers fitBounds
+    rerender(<ShuttleMap vehicles={fleetAUpdated} selectedVehicleId={null} />);
+    expect(fitBoundsSpy).toHaveBeenCalledTimes(2);
+
+    // 6. Fleet size changes (vehicle added): triggers fitBounds
+    const fleetB: FleetMap = {
+      ...fleetAUpdated,
+      'EV-03': { vehicle_id: 'EV-03', lat: 13.77, lng: 100.52, speed: 18, timestamp: 2000 },
+    };
+    rerender(<ShuttleMap vehicles={fleetB} selectedVehicleId={null} />);
+    expect(fitBoundsSpy).toHaveBeenCalledTimes(3);
+
+    fitBoundsSpy.mockRestore();
+    panToSpy.mockRestore();
   });
 });

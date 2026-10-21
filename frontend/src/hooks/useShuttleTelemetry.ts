@@ -18,6 +18,14 @@ export function useShuttleTelemetry(options: UseShuttleTelemetryOptions = {}) {
   const [vehicles, setVehicles] = useState<FleetMap>({});
   const [lastSeenMap, setLastSeenMap] = useState<Record<string, number>>({});
   const [selectedVehicleId, setSelectedVehicleId] = useState<string | null>(null);
+  const [now, setNow] = useState<number>(Date.now());
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setNow(Date.now());
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   useEffect(() => {
     setStatus('connecting');
@@ -43,14 +51,15 @@ export function useShuttleTelemetry(options: UseShuttleTelemetryOptions = {}) {
     client.on('message', (_topic, message) => {
       const parsed = parseTelemetryPayload(message.toString());
       if (parsed) {
-        const now = Date.now();
+        const timestamp = Date.now();
+        setNow(timestamp);
         setVehicles((prev) => ({
           ...prev,
           [parsed.vehicle_id]: parsed,
         }));
         setLastSeenMap((prev) => ({
           ...prev,
-          [parsed.vehicle_id]: now,
+          [parsed.vehicle_id]: timestamp,
         }));
       }
     });
@@ -87,5 +96,6 @@ export function useShuttleTelemetry(options: UseShuttleTelemetryOptions = {}) {
     setSelectedVehicleId,
     telemetry,
     lastSeen,
+    now,
   };
 }

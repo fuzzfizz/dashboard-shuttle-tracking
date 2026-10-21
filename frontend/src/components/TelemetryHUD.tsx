@@ -1,12 +1,15 @@
 import React from 'react';
 import { Gauge, Radio, Clock, Compass, Bus } from 'lucide-react';
-import { ConnectionStatus, TelemetryPayload } from '../types/telemetry';
+import { ConnectionStatus, FleetStats, TelemetryPayload } from '../types/telemetry';
 
-interface TelemetryHUDProps {
+export interface TelemetryHUDProps {
   telemetry: TelemetryPayload | null;
   status: ConnectionStatus;
   lastSeen: number | null;
   totalVehicles?: number;
+  fleetStats?: FleetStats;
+  isOnline?: boolean;
+  now?: number;
 }
 
 export const TelemetryHUD: React.FC<TelemetryHUDProps> = ({
@@ -14,6 +17,9 @@ export const TelemetryHUD: React.FC<TelemetryHUDProps> = ({
   status,
   lastSeen,
   totalVehicles = 0,
+  fleetStats,
+  isOnline,
+  now,
 }) => {
   const getStatusColor = (s: ConnectionStatus) => {
     switch (s) {
@@ -29,7 +35,8 @@ export const TelemetryHUD: React.FC<TelemetryHUDProps> = ({
 
   const formatLastSeen = (timestamp: number | null) => {
     if (!timestamp) return 'Never';
-    const seconds = Math.floor((Date.now() - timestamp) / 1000);
+    const currentTime = now ?? Date.now();
+    const seconds = Math.max(0, Math.floor((currentTime - timestamp) / 1000));
     if (seconds < 2) return 'Just now';
     if (seconds < 60) return `${seconds}s ago`;
     return `${Math.floor(seconds / 60)}m ago`;
@@ -51,9 +58,18 @@ export const TelemetryHUD: React.FC<TelemetryHUDProps> = ({
               <Radio className="w-3.5 h-3.5" />
               <span>Broker: {status}</span>
             </div>
-            <div className="text-sm font-bold tracking-tight text-white flex items-center gap-1 mt-0.5">
+            <div className="text-sm font-bold tracking-tight text-white flex items-center gap-1.5 mt-0.5">
               <Bus className="w-4 h-4 text-emerald-400" />
-              <span>{telemetry ? telemetry.vehicle_id : `Overview (${totalVehicles} online)`}</span>
+              <span>
+                {telemetry
+                  ? telemetry.vehicle_id
+                  : `Overview (${fleetStats?.onlineVehicles ?? totalVehicles ?? 0} online)`}
+              </span>
+              {telemetry && isOnline === false && (
+                <span className="text-[10px] uppercase font-mono font-bold px-1.5 py-0.5 rounded bg-rose-500/20 text-rose-300 border border-rose-500/40">
+                  Signal Lost
+                </span>
+              )}
             </div>
           </div>
         </div>
@@ -68,7 +84,11 @@ export const TelemetryHUD: React.FC<TelemetryHUDProps> = ({
             <div>
               <div className="text-[10px] uppercase font-mono tracking-wider text-slate-400">Speed</div>
               <div className="text-lg font-bold font-mono text-white leading-none">
-                {telemetry ? telemetry.speed.toFixed(1) : '--'}
+                {telemetry
+                  ? telemetry.speed.toFixed(1)
+                  : fleetStats?.averageSpeed !== undefined
+                    ? fleetStats.averageSpeed.toFixed(1)
+                    : '--'}
                 <span className="text-xs font-normal text-slate-400 ml-1">km/h</span>
               </div>
             </div>

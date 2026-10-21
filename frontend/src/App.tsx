@@ -3,6 +3,7 @@ import { ShuttleMap, DEFAULT_CENTER } from './components/ShuttleMap';
 import { TelemetryHUD } from './components/TelemetryHUD';
 import { FleetPanel } from './components/FleetPanel';
 import { Bus } from 'lucide-react';
+import { calculateFleetStats, computeVehicleStatus } from './services/fleetStatus';
 
 export function App() {
   const {
@@ -11,7 +12,23 @@ export function App() {
     lastSeenMap,
     selectedVehicleId,
     setSelectedVehicleId,
+    now,
   } = useShuttleTelemetry();
+
+  const fleetStats = calculateFleetStats(vehicles, lastSeenMap, now);
+  const lastSeenValues = Object.values(lastSeenMap);
+  const latestFleetHeartbeat =
+    lastSeenValues.length > 0 ? Math.max(...lastSeenValues) : null;
+
+  const selectedVehicle = selectedVehicleId ? (vehicles[selectedVehicleId] ?? null) : null;
+  const isOnline =
+    selectedVehicle && selectedVehicleId
+      ? computeVehicleStatus(selectedVehicle, lastSeenMap[selectedVehicleId] || 0, now).isOnline
+      : undefined;
+
+  const activeLastSeen = selectedVehicleId
+    ? (lastSeenMap[selectedVehicleId] ?? null)
+    : latestFleetHeartbeat;
 
   return (
     <div className="relative w-screen h-screen overflow-hidden bg-slate-900 select-none">
@@ -32,19 +49,25 @@ export function App() {
         lastSeenMap={lastSeenMap}
         selectedVehicleId={selectedVehicleId}
         onSelectVehicle={setSelectedVehicleId}
+        now={now}
       />
 
       {/* Floating HUD Card */}
       <TelemetryHUD
-        telemetry={selectedVehicleId ? (vehicles[selectedVehicleId] ?? null) : null}
+        telemetry={selectedVehicle}
         status={status}
-        lastSeen={selectedVehicleId ? (lastSeenMap[selectedVehicleId] ?? null) : null}
-        totalVehicles={Object.keys(vehicles).length}
+        lastSeen={activeLastSeen}
+        totalVehicles={fleetStats.totalVehicles}
+        fleetStats={fleetStats}
+        isOnline={isOnline}
+        now={now}
       />
 
       {/* Interactive Map */}
       <ShuttleMap
         vehicles={vehicles}
+        lastSeenMap={lastSeenMap}
+        now={now}
         selectedVehicleId={selectedVehicleId}
         onSelectVehicle={setSelectedVehicleId}
         defaultCenter={DEFAULT_CENTER}
