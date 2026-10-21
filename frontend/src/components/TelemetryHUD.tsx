@@ -1,115 +1,106 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
+import { Gauge, Radio, Clock, Compass, Bus } from 'lucide-react';
 import { ConnectionStatus, TelemetryPayload } from '../types/telemetry';
-import { Radio, Navigation, Gauge, Clock } from 'lucide-react';
 
 interface TelemetryHUDProps {
   telemetry: TelemetryPayload | null;
   status: ConnectionStatus;
   lastSeen: number | null;
+  totalVehicles?: number;
 }
 
-export const TelemetryHUD: React.FC<TelemetryHUDProps> = ({ telemetry, status, lastSeen }) => {
-  const [secondsAgo, setSecondsAgo] = useState<number | null>(null);
-
-  useEffect(() => {
-    if (!lastSeen) {
-      setSecondsAgo(null);
-      return;
-    }
-    const updateTime = () => {
-      setSecondsAgo(Math.floor((Date.now() - lastSeen) / 1000));
-    };
-    updateTime();
-    const interval = setInterval(updateTime, 1000);
-    return () => clearInterval(interval);
-  }, [lastSeen]);
-
-  const getStatusColor = () => {
-    switch (status) {
+export const TelemetryHUD: React.FC<TelemetryHUDProps> = ({
+  telemetry,
+  status,
+  lastSeen,
+  totalVehicles = 0,
+}) => {
+  const getStatusColor = (s: ConnectionStatus) => {
+    switch (s) {
       case 'connected':
-        return { dot: 'bg-emerald-500 animate-pulse', text: 'text-emerald-700', label: 'Online' };
+        return 'bg-emerald-500 text-emerald-700 border-emerald-200';
       case 'connecting':
-        return { dot: 'bg-amber-500 animate-ping', text: 'text-amber-700', label: 'Connecting' };
+        return 'bg-amber-500 text-amber-700 border-amber-200 animate-pulse';
       case 'disconnected':
       case 'error':
-      default:
-        return { dot: 'bg-rose-500', text: 'text-rose-700', label: 'Disconnected' };
+        return 'bg-rose-500 text-rose-700 border-rose-200';
     }
   };
 
-  const statusConfig = getStatusColor();
+  const formatLastSeen = (timestamp: number | null) => {
+    if (!timestamp) return 'Never';
+    const seconds = Math.floor((Date.now() - timestamp) / 1000);
+    if (seconds < 2) return 'Just now';
+    if (seconds < 60) return `${seconds}s ago`;
+    return `${Math.floor(seconds / 60)}m ago`;
+  };
 
   return (
-    <div className="absolute top-4 right-4 z-[1000] w-80 bg-white/95 backdrop-blur-sm border border-slate-200/80 rounded-xl shadow-lg p-4 text-slate-800 transition-all duration-300">
-      {/* Header & Status */}
-      <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-3">
-        <div className="flex items-center gap-2">
-          <div className="p-1.5 bg-slate-100 rounded-lg text-slate-600">
-            <Radio className="w-4 h-4" />
+    <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-[1000] w-[92vw] max-w-xl">
+      <div className="bg-slate-900/90 backdrop-blur-md border border-slate-800 text-white px-5 py-4 rounded-2xl shadow-2xl flex flex-wrap items-center justify-between gap-4">
+        {/* Status & Vehicle Info */}
+        <div className="flex items-center gap-3">
+          <div className="relative flex h-3 w-3">
+            {status === 'connected' && (
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+            )}
+            <span className={`relative inline-flex rounded-full h-3 w-3 ${getStatusColor(status).split(' ')[0]}`}></span>
           </div>
           <div>
-            <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-400">Telemetry Feed</h2>
-            <p className="text-sm font-bold text-slate-900 tracking-tight">
-              {telemetry ? telemetry.vehicle_id.toUpperCase() : 'NO VEHICLE'}
-            </p>
-          </div>
-        </div>
-        <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200/60 rounded-full px-2.5 py-1">
-          <span className={`w-2 h-2 rounded-full ${statusConfig.dot}`} />
-          <span className={`text-xs font-medium ${statusConfig.text}`}>{statusConfig.label}</span>
-        </div>
-      </div>
-
-      {telemetry ? (
-        <div className="space-y-3">
-          {/* Speed Display */}
-          <div className="bg-slate-50 rounded-lg p-3 border border-slate-100 flex items-center justify-between">
-            <div className="flex items-center gap-2 text-slate-500">
-              <Gauge className="w-4 h-4 text-slate-400" />
-              <span className="text-xs font-medium">Speed</span>
+            <div className="text-xs font-mono uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+              <Radio className="w-3.5 h-3.5" />
+              <span>Broker: {status}</span>
             </div>
-            <div className="text-right">
-              <span className="text-2xl font-bold font-mono text-slate-900">{telemetry.speed.toFixed(1)}</span>
-              <span className="text-xs font-medium text-slate-500 ml-1">km/h</span>
+            <div className="text-sm font-bold tracking-tight text-white flex items-center gap-1 mt-0.5">
+              <Bus className="w-4 h-4 text-emerald-400" />
+              <span>{telemetry ? telemetry.vehicle_id : `Overview (${totalVehicles} online)`}</span>
             </div>
           </div>
+        </div>
 
-          {/* Coordinates & Heading */}
-          <div className="grid grid-cols-2 gap-2 text-xs">
-            <div className="bg-slate-50 rounded-lg p-2.5 border border-slate-100">
-              <span className="text-slate-400 block mb-0.5 font-medium">Coordinates</span>
-              <span className="font-mono font-medium text-slate-700 block truncate">
-                {telemetry.lat.toFixed(4)}, {telemetry.lng.toFixed(4)}
-              </span>
+        {/* Telemetry Metrics */}
+        <div className="flex items-center gap-6 border-l border-slate-800 pl-6">
+          {/* Speed */}
+          <div className="flex items-center gap-2.5">
+            <div className="p-2 bg-slate-800/80 rounded-xl text-emerald-400">
+              <Gauge className="w-5 h-5" />
             </div>
-            <div className="bg-slate-50 rounded-lg p-2.5 border border-slate-100">
-              <span className="text-slate-400 block mb-0.5 font-medium">Heading</span>
-              <div className="flex items-center gap-1 font-mono font-medium text-slate-700">
-                <Navigation
-                  className="w-3.5 h-3.5 text-slate-500 transition-transform duration-300"
-                  style={{ transform: `rotate(${telemetry.heading || 0}deg)` }}
-                />
-                <span>{Math.round(telemetry.heading || 0)}°</span>
+            <div>
+              <div className="text-[10px] uppercase font-mono tracking-wider text-slate-400">Speed</div>
+              <div className="text-lg font-bold font-mono text-white leading-none">
+                {telemetry ? telemetry.speed.toFixed(1) : '--'}
+                <span className="text-xs font-normal text-slate-400 ml-1">km/h</span>
               </div>
             </div>
           </div>
 
-          {/* Last Seen Footer */}
-          <div className="flex items-center justify-between text-[11px] text-slate-400 pt-1">
-            <span className="flex items-center gap-1">
-              <Clock className="w-3 h-3" /> Last packet
-            </span>
-            <span className="font-medium text-slate-600">
-              {secondsAgo === null || secondsAgo === 0 ? 'Just now' : `${secondsAgo}s ago`}
-            </span>
+          {/* Heading */}
+          <div className="hidden sm:flex items-center gap-2.5">
+            <div className="p-2 bg-slate-800/80 rounded-xl text-sky-400">
+              <Compass className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="text-[10px] uppercase font-mono tracking-wider text-slate-400">Heading</div>
+              <div className="text-lg font-bold font-mono text-white leading-none">
+                {telemetry?.heading !== undefined ? `${telemetry.heading}°` : '--'}
+              </div>
+            </div>
+          </div>
+
+          {/* Last Seen */}
+          <div className="flex items-center gap-2.5">
+            <div className="p-2 bg-slate-800/80 rounded-xl text-amber-400">
+              <Clock className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="text-[10px] uppercase font-mono tracking-wider text-slate-400">Heartbeat</div>
+              <div className="text-xs font-bold font-mono text-white leading-none">
+                {formatLastSeen(lastSeen)}
+              </div>
+            </div>
           </div>
         </div>
-      ) : (
-        <div className="py-6 text-center text-slate-400">
-          <p className="text-xs">Waiting for device telemetry...</p>
-          <p className="text-[11px] text-slate-400 mt-1 font-mono">Topic: shuttle/fleet/v1/+/telemetry</p>
-        </div>
-      )}
+      </div>
     </div>
   );
 };

@@ -20,6 +20,8 @@ const tileAttribution = cartoKey
   ? '&copy; <a href="https://carto.com/">CARTO</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
   : OSM_ATTRIBUTION;
 
+export const DEFAULT_CENTER: [number, number] = [13.7563, 100.5018];
+
 interface ShuttleMapProps {
   vehicles?: FleetMap;
   selectedVehicleId?: string | null;
@@ -94,7 +96,7 @@ export const ShuttleMap: React.FC<ShuttleMapProps> = ({
   selectedVehicleId = null,
   onSelectVehicle,
   telemetry,
-  defaultCenter = [13.7563, 100.5018],
+  defaultCenter = DEFAULT_CENTER,
   zoom = 15,
 }) => {
   // Merge backward compatibility prop telemetry if vehicles is empty

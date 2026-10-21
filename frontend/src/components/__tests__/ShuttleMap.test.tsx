@@ -6,7 +6,7 @@ import { FleetMap } from '../../types/telemetry';
 describe('ShuttleMap', () => {
   it('renders map container without crashing', () => {
     const { container } = render(<ShuttleMap vehicles={{}} selectedVehicleId={null} />);
-    expect(container.querySelector('.leaflet-container')).toBeDefined();
+    expect(container.querySelector('.leaflet-container')).not.toBeNull();
   });
 
   it('renders with multiple vehicles provided', () => {
@@ -31,7 +31,7 @@ describe('ShuttleMap', () => {
     const { container } = render(
       <ShuttleMap vehicles={vehicles} selectedVehicleId={null} onSelectVehicle={vi.fn()} />
     );
-    expect(container.querySelector('.leaflet-container')).toBeDefined();
+    expect(container.querySelector('.leaflet-container')).not.toBeNull();
   });
 
   it('maintains backward compatibility with telemetry prop', () => {
@@ -44,6 +44,6 @@ describe('ShuttleMap', () => {
       timestamp: 1713600000000,
     };
     const { container } = render(<ShuttleMap telemetry={telemetry} />);
-    expect(container.querySelector('.leaflet-container')).toBeDefined();
+    expect(container.querySelector('.leaflet-container')).not.toBeNull();
   });
 });

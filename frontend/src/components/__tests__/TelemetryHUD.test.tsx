@@ -5,8 +5,9 @@ import { TelemetryHUD } from '../TelemetryHUD';
 describe('TelemetryHUD', () => {
   it('renders connecting state when no telemetry received yet', () => {
     render(<TelemetryHUD telemetry={null} status="connecting" lastSeen={null} />);
-    expect(screen.getByText(/Connecting/i)).toBeInTheDocument();
-    expect(screen.getByText(/Waiting for device telemetry/i)).toBeInTheDocument();
+    expect(screen.getByText(/Broker: connecting/i)).toBeInTheDocument();
+    expect(screen.getByText('Overview (0 online)')).toBeInTheDocument();
+    expect(screen.getByText('Never')).toBeInTheDocument();
   });
 
   it('renders vehicle speed and ID when telemetry is provided', () => {
@@ -19,16 +20,16 @@ describe('TelemetryHUD', () => {
       timestamp: Date.now(),
     };
     render(<TelemetryHUD telemetry={telemetry} status="connected" lastSeen={Date.now()} />);
-    expect(screen.getByText('SHUTTLE-01')).toBeInTheDocument();
+    expect(screen.getByText('shuttle-01')).toBeInTheDocument();
     expect(screen.getByText('32.4')).toBeInTheDocument();
     expect(screen.getByText(/km\/h/i)).toBeInTheDocument();
-    expect(screen.getByText(/13.7563, 100.5018/i)).toBeInTheDocument();
+    expect(screen.getByText('90°')).toBeInTheDocument();
   });
 
   it('renders disconnected state appropriately', () => {
     render(<TelemetryHUD telemetry={null} status="disconnected" lastSeen={null} />);
-    expect(screen.getByText(/Disconnected/i)).toBeInTheDocument();
-    expect(screen.getByText('NO VEHICLE')).toBeInTheDocument();
+    expect(screen.getByText(/Broker: disconnected/i)).toBeInTheDocument();
+    expect(screen.getByText('Overview (0 online)')).toBeInTheDocument();
   });
 
   it('renders last packet relative time correctly', () => {
@@ -43,5 +44,19 @@ describe('TelemetryHUD', () => {
     };
     render(<TelemetryHUD telemetry={telemetry} status="connected" lastSeen={pastTime} />);
     expect(screen.getByText(/5s ago/i)).toBeInTheDocument();
+  });
+
+  it('renders fleet overview mode with total vehicles', () => {
+    render(
+      <TelemetryHUD
+        telemetry={null}
+        status="connected"
+        lastSeen={Date.now()}
+        totalVehicles={2}
+      />
+    );
+    expect(screen.getByText('Overview (2 online)')).toBeInTheDocument();
+    expect(screen.getByText(/Broker: connected/i)).toBeInTheDocument();
+    expect(screen.getAllByText('--')).toHaveLength(2);
   });
 });

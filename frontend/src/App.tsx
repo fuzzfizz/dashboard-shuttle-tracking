@@ -1,10 +1,19 @@
 import { useShuttleTelemetry } from './hooks/useShuttleTelemetry';
 import { ShuttleMap } from './components/ShuttleMap';
 import { TelemetryHUD } from './components/TelemetryHUD';
+import { FleetPanel } from './components/FleetPanel';
 import { Bus } from 'lucide-react';
 
 export function App() {
-  const { status, telemetry, lastSeen } = useShuttleTelemetry();
+  const {
+    status,
+    vehicles,
+    lastSeenMap,
+    selectedVehicleId,
+    setSelectedVehicleId,
+    telemetry,
+    lastSeen,
+  } = useShuttleTelemetry();
 
   return (
     <div className="relative w-screen h-screen overflow-hidden bg-slate-900 select-none">
@@ -15,15 +24,34 @@ export function App() {
         </div>
         <div>
           <h1 className="text-xs font-bold uppercase tracking-wider text-slate-800">Shuttle Tracker</h1>
-          <p className="text-[10px] text-slate-400 font-mono">Live Hardware Gateway</p>
+          <p className="text-[10px] text-slate-400 font-mono">Multi-Vehicle Fleet Gateway</p>
         </div>
       </div>
 
+      {/* Fleet Overview & Selector Panel */}
+      <FleetPanel
+        vehicles={vehicles}
+        lastSeenMap={lastSeenMap}
+        selectedVehicleId={selectedVehicleId}
+        onSelectVehicle={setSelectedVehicleId}
+      />
+
       {/* Floating HUD Card */}
-      <TelemetryHUD telemetry={telemetry} status={status} lastSeen={lastSeen} />
+      <TelemetryHUD
+        telemetry={selectedVehicleId ? vehicles[selectedVehicleId] || null : telemetry}
+        status={status}
+        lastSeen={lastSeen}
+        totalVehicles={Object.keys(vehicles).length}
+      />
 
       {/* Interactive Map */}
-      <ShuttleMap telemetry={telemetry} defaultCenter={[13.7563, 100.5018]} zoom={15} />
+      <ShuttleMap
+        vehicles={vehicles}
+        selectedVehicleId={selectedVehicleId}
+        onSelectVehicle={setSelectedVehicleId}
+        defaultCenter={[13.7563, 100.5018]}
+        zoom={14}
+      />
     </div>
   );
 }
