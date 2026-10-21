@@ -1,0 +1,465 @@
+﻿cfed469 fix: show overview stats in TelemetryHUD when in overview mode
+29aaa6d feat: integrate FleetPanel and multi-vehicle HUD into App
+ frontend/src/App.tsx                               |  36 ++++-
+ frontend/src/__tests__/App.test.tsx                |   9 +-
+ frontend/src/components/ShuttleMap.tsx             |   4 +-
+ frontend/src/components/TelemetryHUD.tsx           | 149 ++++++++++-----------
+ .../src/components/__tests__/ShuttleMap.test.tsx   |   6 +-
+ .../src/components/__tests__/TelemetryHUD.test.tsx |  27 +++-
+ 6 files changed, 133 insertions(+), 98 deletions(-)
+diff --git a/frontend/src/App.tsx b/frontend/src/App.tsx
+index 5cd68fb..9c7d4a6 100644
+--- a/frontend/src/App.tsx
++++ b/frontend/src/App.tsx
+@@ -1,31 +1,57 @@
+ import { useShuttleTelemetry } from './hooks/useShuttleTelemetry';
+-import { ShuttleMap } from './components/ShuttleMap';
++import { ShuttleMap, DEFAULT_CENTER } from './components/ShuttleMap';
+ import { TelemetryHUD } from './components/TelemetryHUD';
++import { FleetPanel } from './components/FleetPanel';
+ import { Bus } from 'lucide-react';
+ 
+ export function App() {
+-  const { status, telemetry, lastSeen } = useShuttleTelemetry();
++  const {
++    status,
++    vehicles,
++    lastSeenMap,
++    selectedVehicleId,
++    setSelectedVehicleId,
++  } = useShuttleTelemetry();
+ 
+   return (
+     <div className="relative w-screen h-screen overflow-hidden bg-slate-900 select-none">
+       {/* Top minimal header brand */}
+       <div className="absolute top-4 left-4 z-[1000] flex items-center gap-2.5 bg-white/95 backdrop-blur-sm border border-slate-200/80 px-3.5 py-2 rounded-xl shadow-md">
+         <div className="p-1.5 bg-slate-900 text-white rounded-lg">
+           <Bus className="w-4 h-4" />
+         </div>
+         <div>
+           <h1 className="text-xs font-bold uppercase tracking-wider text-slate-800">Shuttle Tracker</h1>
+-          <p className="text-[10px] text-slate-400 font-mono">Live Hardware Gateway</p>
++          <p className="text-[10px] text-slate-400 font-mono">Multi-Vehicle Fleet Gateway</p>
+         </div>
+       </div>
+ 
++      {/* Fleet Overview & Selector Panel */}
++      <FleetPanel
++        vehicles={vehicles}
++        lastSeenMap={lastSeenMap}
++        selectedVehicleId={selectedVehicleId}
++        onSelectVehicle={setSelectedVehicleId}
++      />
++
+       {/* Floating HUD Card */}
+-      <TelemetryHUD telemetry={telemetry} status={status} lastSeen={lastSeen} />
++      <TelemetryHUD
++        telemetry={selectedVehicleId ? (vehicles[selectedVehicleId] ?? null) : null}
++        status={status}
++        lastSeen={selectedVehicleId ? (lastSeenMap[selectedVehicleId] ?? null) : null}
++        totalVehicles={Object.keys(vehicles).length}
++      />
+ 
+       {/* Interactive Map */}
+-      <ShuttleMap telemetry={telemetry} defaultCenter={[13.7563, 100.5018]} zoom={15} />
++      <ShuttleMap
++        vehicles={vehicles}
++        selectedVehicleId={selectedVehicleId}
++        onSelectVehicle={setSelectedVehicleId}
++        defaultCenter={DEFAULT_CENTER}
++        zoom={14}
++      />
+     </div>
+   );
+ }
+ 
+ export default App;
+diff --git a/frontend/src/__tests__/App.test.tsx b/frontend/src/__tests__/App.test.tsx
+index be5a1f0..d33f39e 100644
+--- a/frontend/src/__tests__/App.test.tsx
++++ b/frontend/src/__tests__/App.test.tsx
+@@ -1,12 +1,13 @@
+ import { render, screen } from '@testing-library/react';
+ import { describe, it, expect } from 'vitest';
+ import { App } from '../App';
+ 
+ describe('App Integration', () => {
+-  it('renders top brand header and HUD without crashing', () => {
+-    render(<App />);
++  it('renders top brand header, Fleet Status, and map without crashing', () => {
++    const { container } = render(<App />);
+     expect(screen.getByText('Shuttle Tracker')).toBeInTheDocument();
+-    expect(screen.getByText('Live Hardware Gateway')).toBeInTheDocument();
+-    expect(screen.getByText(/Telemetry Feed/i)).toBeInTheDocument();
++    expect(screen.getByText('Multi-Vehicle Fleet Gateway')).toBeInTheDocument();
++    expect(screen.getByText('Fleet Status')).toBeInTheDocument();
++    expect(container.querySelector('.leaflet-container')).not.toBeNull();
+   });
+ });
+diff --git a/frontend/src/components/ShuttleMap.tsx b/frontend/src/components/ShuttleMap.tsx
+index eb9ce76..28d57c0 100644
+--- a/frontend/src/components/ShuttleMap.tsx
++++ b/frontend/src/components/ShuttleMap.tsx
+@@ -13,20 +13,22 @@ const customTileUrl = import.meta.env.VITE_TILE_URL;
+ const tileUrl = customTileUrl
+   ? customTileUrl
+   : cartoKey
+     ? `https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png?key=${cartoKey}`
+     : OSM_URL;
+ 
+ const tileAttribution = cartoKey
+   ? '&copy; <a href="https://carto.com/">CARTO</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+   : OSM_ATTRIBUTION;
+ 
++export const DEFAULT_CENTER: [number, number] = [13.7563, 100.5018];
++
+ interface ShuttleMapProps {
+   vehicles?: FleetMap;
+   selectedVehicleId?: string | null;
+   onSelectVehicle?: (vehicleId: string) => void;
+   telemetry?: TelemetryPayload | null;
+   defaultCenter?: [number, number];
+   zoom?: number;
+ }
+ 
+ // Camera auto controller: handles overview (fitBounds) or focused tracking (panTo)
+@@ -87,21 +89,21 @@ function createVehicleIcon(heading: number = 0, isSelected: boolean = false, veh
+     iconSize: [44, 44],
+     iconAnchor: [22, 22],
+   });
+ }
+ 
+ export const ShuttleMap: React.FC<ShuttleMapProps> = ({
+   vehicles = {},
+   selectedVehicleId = null,
+   onSelectVehicle,
+   telemetry,
+-  defaultCenter = [13.7563, 100.5018],
++  defaultCenter = DEFAULT_CENTER,
+   zoom = 15,
+ }) => {
+   // Merge backward compatibility prop telemetry if vehicles is empty
+   const effectiveVehicles: FleetMap =
+     Object.keys(vehicles).length > 0
+       ? vehicles
+       : telemetry
+         ? { [telemetry.vehicle_id]: telemetry }
+         : {};
+ 
+diff --git a/frontend/src/components/TelemetryHUD.tsx b/frontend/src/components/TelemetryHUD.tsx
+index 61c440d..06ee9c7 100644
+--- a/frontend/src/components/TelemetryHUD.tsx
++++ b/frontend/src/components/TelemetryHUD.tsx
+@@ -1,115 +1,106 @@
+-import React, { useEffect, useState } from 'react';
++import React from 'react';
++import { Gauge, Radio, Clock, Compass, Bus } from 'lucide-react';
+ import { ConnectionStatus, TelemetryPayload } from '../types/telemetry';
+-import { Radio, Navigation, Gauge, Clock } from 'lucide-react';
+ 
+ interface TelemetryHUDProps {
+   telemetry: TelemetryPayload | null;
+   status: ConnectionStatus;
+   lastSeen: number | null;
++  totalVehicles?: number;
+ }
+ 
+-export const TelemetryHUD: React.FC<TelemetryHUDProps> = ({ telemetry, status, lastSeen }) => {
+-  const [secondsAgo, setSecondsAgo] = useState<number | null>(null);
+-
+-  useEffect(() => {
+-    if (!lastSeen) {
+-      setSecondsAgo(null);
+-      return;
+-    }
+-    const updateTime = () => {
+-      setSecondsAgo(Math.floor((Date.now() - lastSeen) / 1000));
+-    };
+-    updateTime();
+-    const interval = setInterval(updateTime, 1000);
+-    return () => clearInterval(interval);
+-  }, [lastSeen]);
+-
+-  const getStatusColor = () => {
+-    switch (status) {
++export const TelemetryHUD: React.FC<TelemetryHUDProps> = ({
++  telemetry,
++  status,
++  lastSeen,
++  totalVehicles = 0,
++}) => {
++  const getStatusColor = (s: ConnectionStatus) => {
++    switch (s) {
+       case 'connected':
+-        return { dot: 'bg-emerald-500 animate-pulse', text: 'text-emerald-700', label: 'Online' };
++        return 'bg-emerald-500 text-emerald-700 border-emerald-200';
+       case 'connecting':
+-        return { dot: 'bg-amber-500 animate-ping', text: 'text-amber-700', label: 'Connecting' };
++        return 'bg-amber-500 text-amber-700 border-amber-200 animate-pulse';
+       case 'disconnected':
+       case 'error':
+-      default:
+-        return { dot: 'bg-rose-500', text: 'text-rose-700', label: 'Disconnected' };
++        return 'bg-rose-500 text-rose-700 border-rose-200';
+     }
+   };
+ 
+-  const statusConfig = getStatusColor();
++  const formatLastSeen = (timestamp: number | null) => {
++    if (!timestamp) return 'Never';
++    const seconds = Math.floor((Date.now() - timestamp) / 1000);
++    if (seconds < 2) return 'Just now';
++    if (seconds < 60) return `${seconds}s ago`;
++    return `${Math.floor(seconds / 60)}m ago`;
++  };
+ 
+   return (
+-    <div className="absolute top-4 right-4 z-[1000] w-80 bg-white/95 backdrop-blur-sm border border-slate-200/80 rounded-xl shadow-lg p-4 text-slate-800 transition-all duration-300">
+-      {/* Header & Status */}
+-      <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-3">
+-        <div className="flex items-center gap-2">
+-          <div className="p-1.5 bg-slate-100 rounded-lg text-slate-600">
+-            <Radio className="w-4 h-4" />
++    <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-[1000] w-[92vw] max-w-xl">
++      <div className="bg-slate-900/90 backdrop-blur-md border border-slate-800 text-white px-5 py-4 rounded-2xl shadow-2xl flex flex-wrap items-center justify-between gap-4">
++        {/* Status & Vehicle Info */}
++        <div className="flex items-center gap-3">
++          <div className="relative flex h-3 w-3">
++            {status === 'connected' && (
++              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
++            )}
++            <span className={`relative inline-flex rounded-full h-3 w-3 ${getStatusColor(status).split(' ')[0]}`}></span>
+           </div>
+           <div>
+-            <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-400">Telemetry Feed</h2>
+-            <p className="text-sm font-bold text-slate-900 tracking-tight">
+-              {telemetry ? telemetry.vehicle_id.toUpperCase() : 'NO VEHICLE'}
+-            </p>
++            <div className="text-xs font-mono uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
++              <Radio className="w-3.5 h-3.5" />
++              <span>Broker: {status}</span>
++            </div>
++            <div className="text-sm font-bold tracking-tight text-white flex items-center gap-1 mt-0.5">
++              <Bus className="w-4 h-4 text-emerald-400" />
++              <span>{telemetry ? telemetry.vehicle_id : `Overview (${totalVehicles} online)`}</span>
++            </div>
+           </div>
+         </div>
+-        <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200/60 rounded-full px-2.5 py-1">
+-          <span className={`w-2 h-2 rounded-full ${statusConfig.dot}`} />
+-          <span className={`text-xs font-medium ${statusConfig.text}`}>{statusConfig.label}</span>
+-        </div>
+-      </div>
+ 
+-      {telemetry ? (
+-        <div className="space-y-3">
+-          {/* Speed Display */}
+-          <div className="bg-slate-50 rounded-lg p-3 border border-slate-100 flex items-center justify-between">
+-            <div className="flex items-center gap-2 text-slate-500">
+-              <Gauge className="w-4 h-4 text-slate-400" />
+-              <span className="text-xs font-medium">Speed</span>
++        {/* Telemetry Metrics */}
++        <div className="flex items-center gap-6 border-l border-slate-800 pl-6">
++          {/* Speed */}
++          <div className="flex items-center gap-2.5">
++            <div className="p-2 bg-slate-800/80 rounded-xl text-emerald-400">
++              <Gauge className="w-5 h-5" />
+             </div>
+-            <div className="text-right">
+-              <span className="text-2xl font-bold font-mono text-slate-900">{telemetry.speed.toFixed(1)}</span>
+-              <span className="text-xs font-medium text-slate-500 ml-1">km/h</span>
++            <div>
++              <div className="text-[10px] uppercase font-mono tracking-wider text-slate-400">Speed</div>
++              <div className="text-lg font-bold font-mono text-white leading-none">
++                {telemetry ? telemetry.speed.toFixed(1) : '--'}
++                <span className="text-xs font-normal text-slate-400 ml-1">km/h</span>
++              </div>
+             </div>
+           </div>
+ 
+-          {/* Coordinates & Heading */}
+-          <div className="grid grid-cols-2 gap-2 text-xs">
+-            <div className="bg-slate-50 rounded-lg p-2.5 border border-slate-100">
+-              <span className="text-slate-400 block mb-0.5 font-medium">Coordinates</span>
+-              <span className="font-mono font-medium text-slate-700 block truncate">
+-                {telemetry.lat.toFixed(4)}, {telemetry.lng.toFixed(4)}
+-              </span>
++          {/* Heading */}
++          <div className="hidden sm:flex items-center gap-2.5">
++            <div className="p-2 bg-slate-800/80 rounded-xl text-sky-400">
++              <Compass className="w-5 h-5" />
+             </div>
+-            <div className="bg-slate-50 rounded-lg p-2.5 border border-slate-100">
+-              <span className="text-slate-400 block mb-0.5 font-medium">Heading</span>
+-              <div className="flex items-center gap-1 font-mono font-medium text-slate-700">
+-                <Navigation
+-                  className="w-3.5 h-3.5 text-slate-500 transition-transform duration-300"
+-                  style={{ transform: `rotate(${telemetry.heading || 0}deg)` }}
+-                />
+-                <span>{Math.round(telemetry.heading || 0)}┬░</span>
++            <div>
++              <div className="text-[10px] uppercase font-mono tracking-wider text-slate-400">Heading</div>
++              <div className="text-lg font-bold font-mono text-white leading-none">
++                {telemetry?.heading !== undefined ? `${telemetry.heading}┬░` : '--'}
+               </div>
+             </div>
+           </div>
+ 
+-          {/* Last Seen Footer */}
+-          <div className="flex items-center justify-between text-[11px] text-slate-400 pt-1">
+-            <span className="flex items-center gap-1">
+-              <Clock className="w-3 h-3" /> Last packet
+-            </span>
+-            <span className="font-medium text-slate-600">
+-              {secondsAgo === null || secondsAgo === 0 ? 'Just now' : `${secondsAgo}s ago`}
+-            </span>
++          {/* Last Seen */}
++          <div className="flex items-center gap-2.5">
++            <div className="p-2 bg-slate-800/80 rounded-xl text-amber-400">
++              <Clock className="w-5 h-5" />
++            </div>
++            <div>
++              <div className="text-[10px] uppercase font-mono tracking-wider text-slate-400">Heartbeat</div>
++              <div className="text-xs font-bold font-mono text-white leading-none">
++                {formatLastSeen(lastSeen)}
++              </div>
++            </div>
+           </div>
+         </div>
+-      ) : (
+-        <div className="py-6 text-center text-slate-400">
+-          <p className="text-xs">Waiting for device telemetry...</p>
+-          <p className="text-[11px] text-slate-400 mt-1 font-mono">Topic: shuttle/fleet/v1/+/telemetry</p>
+-        </div>
+-      )}
++      </div>
+     </div>
+   );
+ };
+diff --git a/frontend/src/components/__tests__/ShuttleMap.test.tsx b/frontend/src/components/__tests__/ShuttleMap.test.tsx
+index afcd7ba..303f395 100644
+--- a/frontend/src/components/__tests__/ShuttleMap.test.tsx
++++ b/frontend/src/components/__tests__/ShuttleMap.test.tsx
+@@ -1,19 +1,19 @@
+ import { render } from '@testing-library/react';
+ import { describe, it, expect, vi } from 'vitest';
+ import { ShuttleMap } from '../ShuttleMap';
+ import { FleetMap } from '../../types/telemetry';
+ 
+ describe('ShuttleMap', () => {
+   it('renders map container without crashing', () => {
+     const { container } = render(<ShuttleMap vehicles={{}} selectedVehicleId={null} />);
+-    expect(container.querySelector('.leaflet-container')).toBeDefined();
++    expect(container.querySelector('.leaflet-container')).not.toBeNull();
+   });
+ 
+   it('renders with multiple vehicles provided', () => {
+     const vehicles: FleetMap = {
+       'EV-01': {
+         vehicle_id: 'EV-01',
+         lat: 13.7563,
+         lng: 100.5018,
+         speed: 25.5,
+         heading: 90,
+@@ -24,26 +24,26 @@ describe('ShuttleMap', () => {
+         lat: 13.7600,
+         lng: 100.5100,
+         speed: 15.0,
+         heading: 180,
+         timestamp: 1713600000000,
+       },
+     };
+     const { container } = render(
+       <ShuttleMap vehicles={vehicles} selectedVehicleId={null} onSelectVehicle={vi.fn()} />
+     );
+-    expect(container.querySelector('.leaflet-container')).toBeDefined();
++    expect(container.querySelector('.leaflet-container')).not.toBeNull();
+   });
+ 
+   it('maintains backward compatibility with telemetry prop', () => {
+     const telemetry = {
+       vehicle_id: 'EV-01',
+       lat: 13.7563,
+       lng: 100.5018,
+       speed: 25.5,
+       heading: 90,
+       timestamp: 1713600000000,
+     };
+     const { container } = render(<ShuttleMap telemetry={telemetry} />);
+-    expect(container.querySelector('.leaflet-container')).toBeDefined();
++    expect(container.querySelector('.leaflet-container')).not.toBeNull();
+   });
+ });
+diff --git a/frontend/src/components/__tests__/TelemetryHUD.test.tsx b/frontend/src/components/__tests__/TelemetryHUD.test.tsx
+index 42078c5..2174a15 100644
+--- a/frontend/src/components/__tests__/TelemetryHUD.test.tsx
++++ b/frontend/src/components/__tests__/TelemetryHUD.test.tsx
+@@ -1,47 +1,62 @@
+ import { render, screen } from '@testing-library/react';
+ import { describe, it, expect } from 'vitest';
+ import { TelemetryHUD } from '../TelemetryHUD';
+ 
+ describe('TelemetryHUD', () => {
+   it('renders connecting state when no telemetry received yet', () => {
+     render(<TelemetryHUD telemetry={null} status="connecting" lastSeen={null} />);
+-    expect(screen.getByText(/Connecting/i)).toBeInTheDocument();
+-    expect(screen.getByText(/Waiting for device telemetry/i)).toBeInTheDocument();
++    expect(screen.getByText(/Broker: connecting/i)).toBeInTheDocument();
++    expect(screen.getByText('Overview (0 online)')).toBeInTheDocument();
++    expect(screen.getByText('Never')).toBeInTheDocument();
+   });
+ 
+   it('renders vehicle speed and ID when telemetry is provided', () => {
+     const telemetry = {
+       vehicle_id: 'shuttle-01',
+       lat: 13.7563,
+       lng: 100.5018,
+       speed: 32.4,
+       heading: 90,
+       timestamp: Date.now(),
+     };
+     render(<TelemetryHUD telemetry={telemetry} status="connected" lastSeen={Date.now()} />);
+-    expect(screen.getByText('SHUTTLE-01')).toBeInTheDocument();
++    expect(screen.getByText('shuttle-01')).toBeInTheDocument();
+     expect(screen.getByText('32.4')).toBeInTheDocument();
+     expect(screen.getByText(/km\/h/i)).toBeInTheDocument();
+-    expect(screen.getByText(/13.7563, 100.5018/i)).toBeInTheDocument();
++    expect(screen.getByText('90┬░')).toBeInTheDocument();
+   });
+ 
+   it('renders disconnected state appropriately', () => {
+     render(<TelemetryHUD telemetry={null} status="disconnected" lastSeen={null} />);
+-    expect(screen.getByText(/Disconnected/i)).toBeInTheDocument();
+-    expect(screen.getByText('NO VEHICLE')).toBeInTheDocument();
++    expect(screen.getByText(/Broker: disconnected/i)).toBeInTheDocument();
++    expect(screen.getByText('Overview (0 online)')).toBeInTheDocument();
+   });
+ 
+   it('renders last packet relative time correctly', () => {
+     const pastTime = Date.now() - 5000;
+     const telemetry = {
+       vehicle_id: 'shuttle-02',
+       lat: 13.7563,
+       lng: 100.5018,
+       speed: 0,
+       heading: 180,
+       timestamp: pastTime,
+     };
+     render(<TelemetryHUD telemetry={telemetry} status="connected" lastSeen={pastTime} />);
+     expect(screen.getByText(/5s ago/i)).toBeInTheDocument();
+   });
++
++  it('renders fleet overview mode with total vehicles', () => {
++    render(
++      <TelemetryHUD
++        telemetry={null}
++        status="connected"
++        lastSeen={Date.now()}
++        totalVehicles={2}
++      />
++    );
++    expect(screen.getByText('Overview (2 online)')).toBeInTheDocument();
++    expect(screen.getByText(/Broker: connected/i)).toBeInTheDocument();
++    expect(screen.getAllByText('--')).toHaveLength(2);
++  });
+ });
