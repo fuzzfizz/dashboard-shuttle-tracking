@@ -1,7 +1,10 @@
+import { useState } from 'react';
 import { useShuttleTelemetry } from './hooks/useShuttleTelemetry';
+import { useDailyMetrics } from './hooks/useDailyMetrics';
 import { ShuttleMap, DEFAULT_CENTER } from './components/ShuttleMap';
 import { TelemetryHUD } from './components/TelemetryHUD';
 import { FleetPanel } from './components/FleetPanel';
+import { DailyMetricsModal } from './components/DailyMetricsModal';
 import { Bus } from 'lucide-react';
 import { calculateFleetStats, computeVehicleStatus } from './services/fleetStatus';
 
@@ -14,6 +17,9 @@ export function App() {
     setSelectedVehicleId,
     now,
   } = useShuttleTelemetry();
+
+  const { dailyMetrics, totalFleetDistanceKm } = useDailyMetrics(vehicles);
+  const [isAnalyticsOpen, setIsAnalyticsOpen] = useState(false);
 
   const fleetStats = calculateFleetStats(vehicles, lastSeenMap, now);
   const lastSeenValues = Object.values(lastSeenMap);
@@ -50,6 +56,8 @@ export function App() {
         selectedVehicleId={selectedVehicleId}
         onSelectVehicle={setSelectedVehicleId}
         now={now}
+        dailyMetrics={dailyMetrics}
+        onOpenAnalytics={() => setIsAnalyticsOpen(true)}
       />
 
       {/* Floating HUD Card */}
@@ -72,6 +80,14 @@ export function App() {
         onSelectVehicle={setSelectedVehicleId}
         defaultCenter={DEFAULT_CENTER}
         zoom={14}
+      />
+
+      {/* Daily Metrics Analytics Modal */}
+      <DailyMetricsModal
+        isOpen={isAnalyticsOpen}
+        onClose={() => setIsAnalyticsOpen(false)}
+        dailyMetrics={dailyMetrics}
+        totalFleetDistanceKm={totalFleetDistanceKm}
       />
     </div>
   );

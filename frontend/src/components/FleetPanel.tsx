@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { Bus, Layers, Navigation, ChevronRight, ChevronDown, Radio } from 'lucide-react';
+import { Bus, Layers, Navigation, ChevronRight, ChevronDown, Radio, BarChart3 } from 'lucide-react';
 import { FleetMap } from '../types/telemetry';
+import { DailyMetricsMap } from '../types/metrics';
 import { computeVehicleStatus } from '../services/fleetStatus';
 
 interface FleetPanelProps {
@@ -9,6 +10,8 @@ interface FleetPanelProps {
   selectedVehicleId: string | null;
   onSelectVehicle: (vehicleId: string | null) => void;
   now?: number;
+  dailyMetrics?: DailyMetricsMap;
+  onOpenAnalytics?: () => void;
 }
 
 export const FleetPanel: React.FC<FleetPanelProps> = ({
@@ -17,6 +20,8 @@ export const FleetPanel: React.FC<FleetPanelProps> = ({
   selectedVehicleId,
   onSelectVehicle,
   now,
+  dailyMetrics,
+  onOpenAnalytics,
 }) => {
   const [collapsed, setCollapsed] = useState(false);
   const vehicleList = Object.values(vehicles);
@@ -38,13 +43,25 @@ export const FleetPanel: React.FC<FleetPanelProps> = ({
               </p>
             </div>
           </div>
-          <button
-            onClick={() => setCollapsed(!collapsed)}
-            aria-label={collapsed ? 'Expand panel' : 'Collapse panel'}
-            className="p-1 hover:bg-slate-200/60 rounded-lg text-slate-400 hover:text-slate-600 transition-colors"
-          >
-            {collapsed ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-          </button>
+          <div className="flex items-center gap-1">
+            {onOpenAnalytics && (
+              <button
+                onClick={onOpenAnalytics}
+                aria-label="Analytics"
+                title="Daily Fleet Analytics"
+                className="p-1 hover:bg-slate-200/60 rounded-lg text-slate-500 hover:text-emerald-600 transition-colors"
+              >
+                <BarChart3 className="w-4 h-4" />
+              </button>
+            )}
+            <button
+              onClick={() => setCollapsed(!collapsed)}
+              aria-label={collapsed ? 'Expand panel' : 'Collapse panel'}
+              className="p-1 hover:bg-slate-200/60 rounded-lg text-slate-400 hover:text-slate-600 transition-colors"
+            >
+              {collapsed ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+            </button>
+          </div>
         </div>
 
         {!collapsed && (
@@ -79,46 +96,56 @@ export const FleetPanel: React.FC<FleetPanelProps> = ({
               vehicleList.map((vehicle) => {
                 const status = computeVehicleStatus(vehicle, lastSeenMap[vehicle.vehicle_id] || 0, now);
                 const isSelected = selectedVehicleId === vehicle.vehicle_id;
+                const distanceKm = dailyMetrics?.[vehicle.vehicle_id]?.total_distance_km ?? 0;
 
                 return (
                   <div
                     key={vehicle.vehicle_id}
                     onClick={() => onSelectVehicle(vehicle.vehicle_id)}
-                    className={`group cursor-pointer flex items-center justify-between p-2.5 rounded-xl border transition-all ${
+                    className={`group cursor-pointer p-2.5 rounded-xl border transition-all ${
                       isSelected
                         ? 'border-emerald-500 bg-emerald-50/60 shadow-sm'
                         : 'border-slate-100 hover:border-slate-200 hover:bg-slate-50/80'
                     }`}
                   >
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <span className="relative flex h-2.5 w-2.5">
-                        {status.isOnline && (
-                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                        )}
-                        <span
-                          className={`relative inline-flex rounded-full h-2.5 w-2.5 ${
-                            status.isOnline ? 'bg-emerald-500' : 'bg-amber-400'
-                          }`}
-                        ></span>
-                      </span>
-                      <div className="truncate">
-                        <div className="text-xs font-bold text-slate-800 truncate">
-                          {vehicle.vehicle_id}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <span className="relative flex h-2.5 w-2.5">
+                          {status.isOnline && (
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                          )}
+                          <span
+                            className={`relative inline-flex rounded-full h-2.5 w-2.5 ${
+                              status.isOnline ? 'bg-emerald-500' : 'bg-amber-400'
+                            }`}
+                          ></span>
+                        </span>
+                        <div className="truncate">
+                          <div className="text-xs font-bold text-slate-800 truncate">
+                            {vehicle.vehicle_id}
+                          </div>
+                          <div className="text-[10px] text-slate-400 font-mono flex items-center gap-1">
+                            <Navigation className="w-2.5 h-2.5" />
+                            <span>{vehicle.heading ?? 0}°</span>
+                          </div>
                         </div>
-                        <div className="text-[10px] text-slate-400 font-mono flex items-center gap-1">
-                          <Navigation className="w-2.5 h-2.5" />
-                          <span>{vehicle.heading ?? 0}°</span>
+                      </div>
+
+                      <div className="text-right">
+                        <div className="text-xs font-mono font-bold text-slate-900">
+                          {vehicle.speed.toFixed(1)} km/h
+                        </div>
+                        <div className="text-[9px] text-slate-400">
+                          {status.isOnline ? 'Live' : 'Stale'}
                         </div>
                       </div>
                     </div>
 
-                    <div className="text-right">
-                      <div className="text-xs font-mono font-bold text-slate-900">
-                        {vehicle.speed.toFixed(1)} km/h
-                      </div>
-                      <div className="text-[9px] text-slate-400">
-                        {status.isOnline ? 'Live' : 'Stale'}
-                      </div>
+                    <div className="mt-1.5 pt-1.5 border-t border-slate-100/80 flex items-center justify-between text-[10px] font-mono">
+                      <span className="text-slate-400">Daily Dist</span>
+                      <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 font-semibold border border-emerald-100/60">
+                        📍 {distanceKm.toFixed(1)} km
+                      </span>
                     </div>
                   </div>
                 );

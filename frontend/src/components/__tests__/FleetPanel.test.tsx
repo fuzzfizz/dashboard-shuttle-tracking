@@ -2,6 +2,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { FleetPanel } from '../FleetPanel';
 import { FleetMap } from '../../types/telemetry';
+import { DailyMetricsMap } from '../../types/metrics';
 
 describe('FleetPanel', () => {
   const mockFleet: FleetMap = {
@@ -28,6 +29,18 @@ describe('FleetPanel', () => {
     'shuttle-02': Date.now(),
   };
 
+  const mockDailyMetrics: DailyMetricsMap = {
+    'shuttle-01': {
+      vehicle_id: 'shuttle-01',
+      date: '2026-10-21',
+      total_distance_km: 12.34,
+      max_speed_kmh: 40,
+      avg_speed_kmh: 20,
+      active_minutes: 30,
+      last_updated_at: '',
+    },
+  };
+
   it('renders vehicle list correctly', () => {
     render(
       <FleetPanel
@@ -41,6 +54,39 @@ describe('FleetPanel', () => {
     expect(screen.getByText('shuttle-01')).toBeDefined();
     expect(screen.getByText('shuttle-02')).toBeDefined();
     expect(screen.getByText('32.5 km/h')).toBeDefined();
+    expect(screen.getAllByText('📍 0.0 km')).toHaveLength(2);
+  });
+
+  it('renders daily distance badges when dailyMetrics are provided', () => {
+    render(
+      <FleetPanel
+        vehicles={mockFleet}
+        lastSeenMap={lastSeenMap}
+        selectedVehicleId={null}
+        onSelectVehicle={vi.fn()}
+        dailyMetrics={mockDailyMetrics}
+      />
+    );
+
+    expect(screen.getByText('📍 12.3 km')).toBeDefined();
+    expect(screen.getByText('📍 0.0 km')).toBeDefined();
+  });
+
+  it('triggers onOpenAnalytics when analytics button is clicked', () => {
+    const onOpenAnalytics = vi.fn();
+    render(
+      <FleetPanel
+        vehicles={mockFleet}
+        lastSeenMap={lastSeenMap}
+        selectedVehicleId={null}
+        onSelectVehicle={vi.fn()}
+        onOpenAnalytics={onOpenAnalytics}
+      />
+    );
+
+    const analyticsBtn = screen.getByRole('button', { name: /analytics/i });
+    fireEvent.click(analyticsBtn);
+    expect(onOpenAnalytics).toHaveBeenCalledTimes(1);
   });
 
   it('triggers onSelectVehicle when vehicle card is clicked', () => {
