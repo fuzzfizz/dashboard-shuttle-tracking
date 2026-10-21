@@ -54,8 +54,11 @@ export function calculateDistanceIncrement(
     return 0;
   }
 
-  // 2. Reject GPS teleport glitch if implied speed exceeds threshold
+  // 2. Reject GPS teleport glitch if implied speed exceeds threshold or impossible jump at same millisecond
   const timeElapsedHours = Math.abs(curr.timestamp - prev.timestamp) / 3600000;
+  if (timeElapsedHours === 0 && rawDistanceKm > JITTER_THRESHOLD_KM) {
+    return 0;
+  }
   if (timeElapsedHours > 0) {
     const impliedSpeed = rawDistanceKm / timeElapsedHours;
     if (impliedSpeed > MAX_VALID_SPEED_KMH) {

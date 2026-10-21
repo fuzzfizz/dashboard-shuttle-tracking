@@ -1,0 +1,352 @@
+﻿bfe2f9f feat: add supabase migration schema and resilient client configuration
+ docs/migrations/001_daily_metrics_and_logs.sql     |  45 +++++++++
+ frontend/package-lock.json                         | 102 +++++++++++++++++++++
+ frontend/package.json                              |   1 +
+ .../src/services/__tests__/supabaseClient.test.ts  |  43 +++++++++
+ frontend/src/services/supabaseClient.ts            |  26 ++++++
+ frontend/src/types/metrics.ts                      |  11 +++
+ 6 files changed, 228 insertions(+)
+diff --git a/docs/migrations/001_daily_metrics_and_logs.sql b/docs/migrations/001_daily_metrics_and_logs.sql
+new file mode 100644
+index 0000000..7ee9261
+--- /dev/null
++++ b/docs/migrations/001_daily_metrics_and_logs.sql
+@@ -0,0 +1,45 @@
++-- 1. Daily Vehicle Metrics Table
++CREATE TABLE IF NOT EXISTS daily_vehicle_metrics (
++    vehicle_id VARCHAR(64) NOT NULL,
++    date DATE NOT NULL DEFAULT CURRENT_DATE,
++    total_distance_km NUMERIC(8, 2) NOT NULL DEFAULT 0.00,
++    max_speed_kmh NUMERIC(5, 2) NOT NULL DEFAULT 0.00,
++    avg_speed_kmh NUMERIC(5, 2) NOT NULL DEFAULT 0.00,
++    active_minutes INT NOT NULL DEFAULT 0,
++    last_updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
++    PRIMARY KEY (vehicle_id, date)
++);
++
++CREATE INDEX IF NOT EXISTS idx_daily_metrics_date ON daily_vehicle_metrics (date DESC);
++
++-- 2. Telemetry Logs Table
++CREATE TABLE IF NOT EXISTS telemetry_logs (
++    id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
++    vehicle_id VARCHAR(64) NOT NULL,
++    lat DOUBLE PRECISION NOT NULL,
++    lng DOUBLE PRECISION NOT NULL,
++    speed NUMERIC(5, 2) NOT NULL DEFAULT 0.00,
++    heading NUMERIC(5, 2) DEFAULT 0.00,
++    recorded_at TIMESTAMPTZ NOT NULL,
++    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
++);
++
++CREATE INDEX IF NOT EXISTS idx_telemetry_logs_vehicle_time ON telemetry_logs (vehicle_id, recorded_at DESC);
++
++-- 3. Row Level Security (RLS)
++ALTER TABLE daily_vehicle_metrics ENABLE ROW LEVEL SECURITY;
++ALTER TABLE telemetry_logs ENABLE ROW LEVEL SECURITY;
++
++CREATE POLICY "Public read daily_vehicle_metrics"
++    ON daily_vehicle_metrics FOR SELECT USING (true);
++
++CREATE POLICY "Public read telemetry_logs"
++    ON telemetry_logs FOR SELECT USING (true);
++
++CREATE POLICY "Service write daily_vehicle_metrics"
++    ON daily_vehicle_metrics FOR ALL
++    USING (auth.role() = 'service_role' OR auth.role() = 'authenticated');
++
++CREATE POLICY "Service write telemetry_logs"
++    ON telemetry_logs FOR INSERT
++    WITH CHECK (auth.role() = 'service_role' OR auth.role() = 'authenticated');
+diff --git a/frontend/package-lock.json b/frontend/package-lock.json
+index 570a072..48a1a1f 100644
+--- a/frontend/package-lock.json
++++ b/frontend/package-lock.json
+@@ -1,20 +1,21 @@
+ {
+   "name": "shuttle-tracking-frontend",
+   "version": "1.0.0",
+   "lockfileVersion": 3,
+   "requires": true,
+   "packages": {
+     "": {
+       "name": "shuttle-tracking-frontend",
+       "version": "1.0.0",
+       "dependencies": {
++        "@supabase/supabase-js": "^2.118.0",
+         "clsx": "^2.1.1",
+         "leaflet": "^1.9.4",
+         "lucide-react": "^0.453.0",
+         "mqtt": "^5.10.1",
+         "react": "^18.3.1",
+         "react-dom": "^18.3.1",
+         "react-leaflet": "^4.2.1",
+         "tailwind-merge": "^2.5.4"
+       },
+       "devDependencies": {
+@@ -1379,20 +1380,112 @@
+       "cpu": [
+         "x64"
+       ],
+       "dev": true,
+       "license": "MIT",
+       "optional": true,
+       "os": [
+         "win32"
+       ]
+     },
++    "node_modules/@supabase/auth-js": {
++      "version": "2.118.0",
++      "resolved": "https://registry.npmjs.org/@supabase/auth-js/-/auth-js-2.118.0.tgz",
++      "integrity": "sha512-xWfPXyhS2KDSfAneMtI6p/tBnbdiz/5vaRKXEqUfzfC9WCniKr2Ds5o5G7RIGig0bom4z6wUY9zaV07WDVTfnQ==",
++      "license": "MIT",
++      "dependencies": {
++        "tslib": "2.8.1"
++      },
++      "engines": {
++        "node": ">=22.0.0"
++      }
++    },
++    "node_modules/@supabase/functions-js": {
++      "version": "2.118.0",
++      "resolved": "https://registry.npmjs.org/@supabase/functions-js/-/functions-js-2.118.0.tgz",
++      "integrity": "sha512-4ofletPa/noKAU6KHeqsd3FztGzRPUEJRey1MKY0o+PIHaVePqRPShIXtl37gcVyIWaFM+zNg6r9zh0uUSFOSA==",
++      "license": "MIT",
++      "dependencies": {
++        "tslib": "2.8.1"
++      },
++      "engines": {
++        "node": ">=22.0.0"
++      }
++    },
++    "node_modules/@supabase/phoenix": {
++      "version": "0.4.5",
++      "resolved": "https://registry.npmjs.org/@supabase/phoenix/-/phoenix-0.4.5.tgz",
++      "integrity": "sha512-aAn9H9ovVyeApKy11OWOrrOGq8DV68yWeH4ud2lN9fzn4aO8Zb5GLL9m1pUg9nLqIcT+ZDfAcsZe0E/nqdv2lw==",
++      "license": "MIT"
++    },
++    "node_modules/@supabase/postgrest-js": {
++      "version": "2.118.0",
++      "resolved": "https://registry.npmjs.org/@supabase/postgrest-js/-/postgrest-js-2.118.0.tgz",
++      "integrity": "sha512-JXy+37KPApHsyotaQACovv/Jy9E22rfiWLRuT+2UjoEAcAIelDFIrsF/FY47Dy19mO7lI0Tq+zDCX8oJ2Ozfiw==",
++      "license": "MIT",
++      "dependencies": {
++        "tslib": "2.8.1"
++      },
++      "engines": {
++        "node": ">=22.0.0"
++      }
++    },
++    "node_modules/@supabase/realtime-js": {
++      "version": "2.118.0",
++      "resolved": "https://registry.npmjs.org/@supabase/realtime-js/-/realtime-js-2.118.0.tgz",
++      "integrity": "sha512-pzCIEWjqD5/xqEZQerpt+q9rsgYkcrkgCJgf0W2ULqC4fYUeB/p9CFa3t9vn+IVh6dMN9r4ZCE262lZvUC+Bfw==",
++      "license": "MIT",
++      "dependencies": {
++        "@supabase/phoenix": "0.4.5",
++        "tslib": "2.8.1"
++      },
++      "engines": {
++        "node": ">=22.0.0"
++      }
++    },
++    "node_modules/@supabase/storage-js": {
++      "version": "2.118.0",
++      "resolved": "https://registry.npmjs.org/@supabase/storage-js/-/storage-js-2.118.0.tgz",
++      "integrity": "sha512-5MNkKt2Moy7Jud/sPX7/28BwdDxZMCVHGJT00b8op3KRa9LKSjOAYU5IcfGWIstaasAqY8GkbA6oI3IRDgB1YQ==",
++      "license": "MIT",
++      "dependencies": {
++        "iceberg-js": "^0.8.1",
++        "tslib": "2.8.1"
++      },
++      "engines": {
++        "node": ">=22.0.0"
++      }
++    },
++    "node_modules/@supabase/supabase-js": {
++      "version": "2.118.0",
++      "resolved": "https://registry.npmjs.org/@supabase/supabase-js/-/supabase-js-2.118.0.tgz",
++      "integrity": "sha512-FxI8UXMVC2UG7IkeiI8fuQZqq2oI3JeSuN8MPIC2RLVaoEAxKS0nqE6kii9Ewpq8f9gNPM6git1Y8f0vN/QLFw==",
++      "license": "MIT",
++      "dependencies": {
++        "@supabase/auth-js": "2.118.0",
++        "@supabase/functions-js": "2.118.0",
++        "@supabase/postgrest-js": "2.118.0",
++        "@supabase/realtime-js": "2.118.0",
++        "@supabase/storage-js": "2.118.0"
++      },
++      "engines": {
++        "node": ">=22.0.0"
++      },
++      "peerDependencies": {
++        "@opentelemetry/api": ">=1.0.0"
++      },
++      "peerDependenciesMeta": {
++        "@opentelemetry/api": {
++          "optional": true
++        }
++      }
++    },
+     "node_modules/@testing-library/dom": {
+       "version": "10.4.2",
+       "resolved": "https://registry.npmjs.org/@testing-library/dom/-/dom-10.4.2.tgz",
+       "integrity": "sha512-yzr2S9HyAIdhz2/6qHgbs665Q7PKVcDF05vsOlHPxG1mo36gKVesdYVeDLnXgfjJ03CrKRk08knc6+E/9m8v2Q==",
+       "dev": true,
+       "license": "MIT",
+       "peer": true,
+       "dependencies": {
+         "@babel/code-frame": "^7.10.4",
+         "@babel/runtime": "^7.12.5",
+@@ -2803,20 +2896,29 @@
+       "dev": true,
+       "license": "MIT",
+       "dependencies": {
+         "agent-base": "^7.1.2",
+         "debug": "4"
+       },
+       "engines": {
+         "node": ">= 14"
+       }
+     },
++    "node_modules/iceberg-js": {
++      "version": "0.8.1",
++      "resolved": "https://registry.npmjs.org/iceberg-js/-/iceberg-js-0.8.1.tgz",
++      "integrity": "sha512-1dhVQZXhcHje7798IVM+xoo/1ZdVfzOMIc8/rgVSijRK38EDqOJoGula9N/8ZI5RD8QTxNQtK/Gozpr+qUqRRA==",
++      "license": "MIT",
++      "engines": {
++        "node": ">=20.0.0"
++      }
++    },
+     "node_modules/iconv-lite": {
+       "version": "0.6.3",
+       "resolved": "https://registry.npmjs.org/iconv-lite/-/iconv-lite-0.6.3.tgz",
+       "integrity": "sha512-4fCk79wshMdzMp2rH06qWrJE4iolqLhCUH+OiuIgU++RB0+94NlDL81atO7GX55uUKueo0txHNtvEyI6D7WdMw==",
+       "dev": true,
+       "license": "MIT",
+       "dependencies": {
+         "safer-buffer": ">= 2.1.2 < 3.0.0"
+       },
+       "engines": {
+diff --git a/frontend/package.json b/frontend/package.json
+index 032e4aa..b7fe890 100644
+--- a/frontend/package.json
++++ b/frontend/package.json
+@@ -2,20 +2,21 @@
+   "name": "shuttle-tracking-frontend",
+   "private": true,
+   "version": "1.0.0",
+   "type": "module",
+   "scripts": {
+     "dev": "vite",
+     "build": "tsc && vite build",
+     "test": "vitest run"
+   },
+   "dependencies": {
++    "@supabase/supabase-js": "^2.118.0",
+     "clsx": "^2.1.1",
+     "leaflet": "^1.9.4",
+     "lucide-react": "^0.453.0",
+     "mqtt": "^5.10.1",
+     "react": "^18.3.1",
+     "react-dom": "^18.3.1",
+     "react-leaflet": "^4.2.1",
+     "tailwind-merge": "^2.5.4"
+   },
+   "devDependencies": {
+diff --git a/frontend/src/services/__tests__/supabaseClient.test.ts b/frontend/src/services/__tests__/supabaseClient.test.ts
+new file mode 100644
+index 0000000..35955f4
+--- /dev/null
++++ b/frontend/src/services/__tests__/supabaseClient.test.ts
+@@ -0,0 +1,43 @@
++import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
++import { isSupabaseConfigured, getSupabaseClient } from '../supabaseClient';
++
++describe('supabaseClient', () => {
++  beforeEach(() => {
++    vi.unstubAllEnvs();
++  });
++
++  afterEach(() => {
++    vi.unstubAllEnvs();
++  });
++
++  it('returns false and null client when environment variables are not set', () => {
++    vi.stubEnv('VITE_SUPABASE_URL', '');
++    vi.stubEnv('VITE_SUPABASE_ANON_KEY', '');
++    expect(isSupabaseConfigured()).toBe(false);
++    expect(getSupabaseClient()).toBeNull();
++  });
++
++  it('returns false when URL does not start with http', () => {
++    vi.stubEnv('VITE_SUPABASE_URL', 'invalid-url');
++    vi.stubEnv('VITE_SUPABASE_ANON_KEY', 'anon-key-123');
++    expect(isSupabaseConfigured()).toBe(false);
++    expect(getSupabaseClient()).toBeNull();
++  });
++
++  it('returns false when anon key is missing', () => {
++    vi.stubEnv('VITE_SUPABASE_URL', 'https://example.supabase.co');
++    vi.stubEnv('VITE_SUPABASE_ANON_KEY', '');
++    expect(isSupabaseConfigured()).toBe(false);
++    expect(getSupabaseClient()).toBeNull();
++  });
++
++  it('returns true and creates client instance when environment variables are valid', () => {
++    vi.stubEnv('VITE_SUPABASE_URL', 'https://example.supabase.co');
++    vi.stubEnv('VITE_SUPABASE_ANON_KEY', 'anon-key-123');
++    expect(isSupabaseConfigured()).toBe(true);
++    const client = getSupabaseClient();
++    expect(client).not.toBeNull();
++    // Subsequent calls return memoized instance
++    expect(getSupabaseClient()).toBe(client);
++  });
++});
+diff --git a/frontend/src/services/supabaseClient.ts b/frontend/src/services/supabaseClient.ts
+new file mode 100644
+index 0000000..e27fdb3
+--- /dev/null
++++ b/frontend/src/services/supabaseClient.ts
+@@ -0,0 +1,26 @@
++import { createClient, SupabaseClient } from '@supabase/supabase-js';
++
++const getSupabaseUrl = (): string | undefined => import.meta.env?.VITE_SUPABASE_URL;
++const getSupabaseAnonKey = (): string | undefined => import.meta.env?.VITE_SUPABASE_ANON_KEY;
++
++export const isSupabaseConfigured = (): boolean => {
++  const url = getSupabaseUrl();
++  const key = getSupabaseAnonKey();
++  return Boolean(url && key && typeof url === 'string' && url.startsWith('http'));
++};
++
++let clientInstance: SupabaseClient | null = null;
++
++export function getSupabaseClient(): SupabaseClient | null {
++  if (!isSupabaseConfigured()) {
++    return null;
++  }
++  const url = getSupabaseUrl();
++  const key = getSupabaseAnonKey();
++  if (!clientInstance && url && key) {
++    clientInstance = createClient(url, key, {
++      auth: { persistSession: false },
++    });
++  }
++  return clientInstance;
++}
+diff --git a/frontend/src/types/metrics.ts b/frontend/src/types/metrics.ts
+new file mode 100644
+index 0000000..6e8efd3
+--- /dev/null
++++ b/frontend/src/types/metrics.ts
+@@ -0,0 +1,11 @@
++export interface DailyVehicleMetric {
++  vehicle_id: string;
++  date: string; // 'YYYY-MM-DD'
++  total_distance_km: number;
++  max_speed_kmh: number;
++  avg_speed_kmh: number;
++  active_minutes: number;
++  last_updated_at: string;
++}
++
++export type DailyMetricsMap = Record<string, DailyVehicleMetric>;

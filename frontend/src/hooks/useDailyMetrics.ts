@@ -95,15 +95,20 @@ export function useDailyMetrics(vehicles: FleetMap) {
         const nowIso = new Date().toISOString();
 
         for (const [vehicleId, { distance, maxSpeed }] of Object.entries(updates)) {
-          const existing = prev[vehicleId] || {
-            vehicle_id: vehicleId,
-            date: todayStr,
-            total_distance_km: 0,
-            max_speed_kmh: 0,
-            avg_speed_kmh: 0,
-            active_minutes: 0,
-            last_updated_at: nowIso,
-          };
+          const rawExisting = prev[vehicleId];
+          const isSameDay = rawExisting && rawExisting.date === todayStr;
+
+          const existing = isSameDay
+            ? rawExisting
+            : {
+                vehicle_id: vehicleId,
+                date: todayStr,
+                total_distance_km: 0,
+                max_speed_kmh: 0,
+                avg_speed_kmh: 0,
+                active_minutes: 0,
+                last_updated_at: nowIso,
+              };
 
           const updatedDistance = Math.round((existing.total_distance_km + distance) * 100) / 100;
           const updatedMaxSpeed = Math.max(existing.max_speed_kmh, maxSpeed);

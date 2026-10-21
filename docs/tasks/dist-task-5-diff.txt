@@ -1,0 +1,481 @@
+﻿2838125 fix(tools): enhance worker reliability with flush lock, error retry, and date rollover
+69c72f0 feat(tools): add background MQTT ingestion worker for Supabase persistence
+ tools/README.md         |  42 ++++++++++--
+ tools/package-lock.json | 118 +++++++++++++++++++++++++++++++
+ tools/package.json      |   5 +-
+ tools/worker.js         | 179 ++++++++++++++++++++++++++++++++++++++++++++++++
+ 4 files changed, 339 insertions(+), 5 deletions(-)
+diff --git a/tools/README.md b/tools/README.md
+index 5cd1107..7659ef4 100644
+--- a/tools/README.md
++++ b/tools/README.md
+@@ -1,29 +1,63 @@
+-# Telemetry Simulator & Hardware Guide
++# Telemetry Tools & Hardware Guide
+ 
+-### Running the Simulator
+-To test the web map without hardware:
++This directory contains standalone tools for fleet simulation, testing, and background data ingestion into Supabase.
++
++---
++
++### 1. Background MQTT Ingestion Worker (`worker.js`)
++The ingestion worker connects to the MQTT broker, consumes real-time telemetry packets from all shuttles (`shuttle/fleet/v1/+/telemetry`), calculates incremental Haversine distance with GPS jitter & teleport glitch rejection, and batches daily mileage and speed metrics directly into Supabase (`daily_vehicle_metrics`).
++
++#### Environment Setup
++Create a `.env` file in the `tools` directory (or export environment variables):
++```env
++# Supabase Configuration (Required for persistence)
++SUPABASE_URL=https://<your-project-id>.supabase.co
++SUPABASE_SERVICE_ROLE_KEY=your-supabase-service-role-key-here
++
++# MQTT Broker Configuration (Optional, defaults to public broker)
++MQTT_BROKER=mqtt://broker.emqx.io:1883
++MQTT_TOPIC=shuttle/fleet/v1/+/telemetry
++```
++
++#### Running the Worker
++```bash
++cd tools
++npm install
++npm run worker
++```
++
++#### Processing Features:
++- **Haversine Distance**: Computes great-circle distance between successive GPS pings.
++- **Jitter Filtering**: Rejects stationary GPS drift (< 8 meters when vehicle speed is under 1.5 km/h).
++- **Teleport Glitch Filter**: Rejects erroneous GPS jumps where implied travel speed exceeds 150 km/h.
++- **Throttled Batching**: Batches accumulated distance per vehicle and upserts to `daily_vehicle_metrics` every 5 seconds, avoiding database write contention.
++
++---
++
++### 2. Telemetry Simulator (`simulate.js`)
++To test the web map and worker without physical hardware:
+ ```bash
+ cd tools
+ npm install
+ npm run simulate
+ ```
+ 
+ You can optionally specify your own broker or vehicle ID via environment variables:
+ ```bash
+ # Example with custom vehicle and private broker
+ VEHICLE_ID=shuttle-vip-01 MQTT_BROKER=mqtt://my-broker.domain:1883 npm run simulate
+ ```
+ 
+ ---
+ 
+-### Hardware Firmware Configuration (ESP32 / GSM)
++### 3. Hardware Firmware Configuration (ESP32 / GSM)
+ - **Protocol:** MQTT (TCP)
+ - **Host:** `<BROKER_HOST>` (Default testing: `broker.emqx.io`)
+ - **Port:** `1883` (Standard MQTT) or `8883` (MQTT with TLS)
+ - **Topic:** `shuttle/fleet/v1/<VEHICLE_ID>/telemetry`
+ - **Format:** JSON matching:
+ ```json
+ {
+   "vehicle_id": "YOUR_VEHICLE_ID",
+   "lat": 13.7563,
+   "lng": 100.5018,
+diff --git a/tools/package-lock.json b/tools/package-lock.json
+index 055dccb..7edf062 100644
+--- a/tools/package-lock.json
++++ b/tools/package-lock.json
+@@ -1,32 +1,126 @@
+ {
+   "name": "shuttle-telemetry-tools",
+   "version": "1.0.0",
+   "lockfileVersion": 3,
+   "requires": true,
+   "packages": {
+     "": {
+       "name": "shuttle-telemetry-tools",
+       "version": "1.0.0",
+       "dependencies": {
++        "@supabase/supabase-js": "^2.118.0",
++        "dotenv": "^18.0.8",
+         "mqtt": "^5.10.1"
+       }
+     },
+     "node_modules/@babel/runtime": {
+       "version": "7.29.10",
+       "resolved": "https://registry.npmjs.org/@babel/runtime/-/runtime-7.29.10.tgz",
+       "integrity": "sha512-NpugTzbKgGrNe45Ui32cN8vCFFMxVtP/9rtfwv0nP5FRDAjvYBxJcLVpYA9mr1jxP6cnIT7x9LUzuDTbWYYNRA==",
+       "license": "MIT",
+       "engines": {
+         "node": ">=6.9.0"
+       }
+     },
++    "node_modules/@supabase/auth-js": {
++      "version": "2.118.0",
++      "resolved": "https://registry.npmjs.org/@supabase/auth-js/-/auth-js-2.118.0.tgz",
++      "integrity": "sha512-xWfPXyhS2KDSfAneMtI6p/tBnbdiz/5vaRKXEqUfzfC9WCniKr2Ds5o5G7RIGig0bom4z6wUY9zaV07WDVTfnQ==",
++      "license": "MIT",
++      "dependencies": {
++        "tslib": "2.8.1"
++      },
++      "engines": {
++        "node": ">=22.0.0"
++      }
++    },
++    "node_modules/@supabase/functions-js": {
++      "version": "2.118.0",
++      "resolved": "https://registry.npmjs.org/@supabase/functions-js/-/functions-js-2.118.0.tgz",
++      "integrity": "sha512-4ofletPa/noKAU6KHeqsd3FztGzRPUEJRey1MKY0o+PIHaVePqRPShIXtl37gcVyIWaFM+zNg6r9zh0uUSFOSA==",
++      "license": "MIT",
++      "dependencies": {
++        "tslib": "2.8.1"
++      },
++      "engines": {
++        "node": ">=22.0.0"
++      }
++    },
++    "node_modules/@supabase/phoenix": {
++      "version": "0.4.5",
++      "resolved": "https://registry.npmjs.org/@supabase/phoenix/-/phoenix-0.4.5.tgz",
++      "integrity": "sha512-aAn9H9ovVyeApKy11OWOrrOGq8DV68yWeH4ud2lN9fzn4aO8Zb5GLL9m1pUg9nLqIcT+ZDfAcsZe0E/nqdv2lw==",
++      "license": "MIT"
++    },
++    "node_modules/@supabase/postgrest-js": {
++      "version": "2.118.0",
++      "resolved": "https://registry.npmjs.org/@supabase/postgrest-js/-/postgrest-js-2.118.0.tgz",
++      "integrity": "sha512-JXy+37KPApHsyotaQACovv/Jy9E22rfiWLRuT+2UjoEAcAIelDFIrsF/FY47Dy19mO7lI0Tq+zDCX8oJ2Ozfiw==",
++      "license": "MIT",
++      "dependencies": {
++        "tslib": "2.8.1"
++      },
++      "engines": {
++        "node": ">=22.0.0"
++      }
++    },
++    "node_modules/@supabase/realtime-js": {
++      "version": "2.118.0",
++      "resolved": "https://registry.npmjs.org/@supabase/realtime-js/-/realtime-js-2.118.0.tgz",
++      "integrity": "sha512-pzCIEWjqD5/xqEZQerpt+q9rsgYkcrkgCJgf0W2ULqC4fYUeB/p9CFa3t9vn+IVh6dMN9r4ZCE262lZvUC+Bfw==",
++      "license": "MIT",
++      "dependencies": {
++        "@supabase/phoenix": "0.4.5",
++        "tslib": "2.8.1"
++      },
++      "engines": {
++        "node": ">=22.0.0"
++      }
++    },
++    "node_modules/@supabase/storage-js": {
++      "version": "2.118.0",
++      "resolved": "https://registry.npmjs.org/@supabase/storage-js/-/storage-js-2.118.0.tgz",
++      "integrity": "sha512-5MNkKt2Moy7Jud/sPX7/28BwdDxZMCVHGJT00b8op3KRa9LKSjOAYU5IcfGWIstaasAqY8GkbA6oI3IRDgB1YQ==",
++      "license": "MIT",
++      "dependencies": {
++        "iceberg-js": "^0.8.1",
++        "tslib": "2.8.1"
++      },
++      "engines": {
++        "node": ">=22.0.0"
++      }
++    },
++    "node_modules/@supabase/supabase-js": {
++      "version": "2.118.0",
++      "resolved": "https://registry.npmjs.org/@supabase/supabase-js/-/supabase-js-2.118.0.tgz",
++      "integrity": "sha512-FxI8UXMVC2UG7IkeiI8fuQZqq2oI3JeSuN8MPIC2RLVaoEAxKS0nqE6kii9Ewpq8f9gNPM6git1Y8f0vN/QLFw==",
++      "license": "MIT",
++      "dependencies": {
++        "@supabase/auth-js": "2.118.0",
++        "@supabase/functions-js": "2.118.0",
++        "@supabase/postgrest-js": "2.118.0",
++        "@supabase/realtime-js": "2.118.0",
++        "@supabase/storage-js": "2.118.0"
++      },
++      "engines": {
++        "node": ">=22.0.0"
++      },
++      "peerDependencies": {
++        "@opentelemetry/api": ">=1.0.0"
++      },
++      "peerDependenciesMeta": {
++        "@opentelemetry/api": {
++          "optional": true
++        }
++      }
++    },
+     "node_modules/@types/node": {
+       "version": "26.6.5",
+       "resolved": "https://registry.npmjs.org/@types/node/-/node-26.6.5.tgz",
+       "integrity": "sha512-uMzsv9stDdofIZBx4UGh4Z9ZgXnGC9seRDscilBcTHAeOFk67MZg/k9bWVfO+bk4qZmG+l52hRnLwUiH2LnJTg==",
+       "license": "MIT",
+       "dependencies": {
+         "undici-types": "~8.9.0"
+       }
+     },
+     "node_modules/@types/readable-stream": {
+@@ -178,20 +272,35 @@
+       },
+       "engines": {
+         "node": ">=6.0"
+       },
+       "peerDependenciesMeta": {
+         "supports-color": {
+           "optional": true
+         }
+       }
+     },
++    "node_modules/dotenv": {
++      "version": "18.0.8",
++      "resolved": "https://registry.npmjs.org/dotenv/-/dotenv-18.0.8.tgz",
++      "integrity": "sha512-2KDeoFoK/zRtcnbunCDlLG5VWVMcyqeQc6iK65o231nfNAcuGrKoqUQfJFUtBI+QlShk5HKIHxwebBtUl3rEfA==",
++      "license": "BSD-2-Clause",
++      "bin": {
++        "dotenv": "dist/index.cjs"
++      },
++      "engines": {
++        "node": ">=12"
++      },
++      "funding": {
++        "url": "https://dotenvx.com"
++      }
++    },
+     "node_modules/event-target-shim": {
+       "version": "5.0.1",
+       "resolved": "https://registry.npmjs.org/event-target-shim/-/event-target-shim-5.0.1.tgz",
+       "integrity": "sha512-i/2XbnSz/uxRCU6+NdVJgKWDTM427+MqYbkQzD321DuCQJUqOuJKIA0IM2+W2xtYHdKOmZ4dR6fExsd4SXL+WQ==",
+       "license": "MIT",
+       "engines": {
+         "node": ">=6"
+       }
+     },
+     "node_modules/events": {
+@@ -215,20 +324,29 @@
+       "engines": {
+         "node": ">=18.2.0"
+       }
+     },
+     "node_modules/help-me": {
+       "version": "5.0.0",
+       "resolved": "https://registry.npmjs.org/help-me/-/help-me-5.0.0.tgz",
+       "integrity": "sha512-7xgomUX6ADmcYzFik0HzAxh/73YlKR9bmFzf51CZwR+b6YtzU2m0u49hQCqV6SvlqIqsaxovfwdvbnsw3b/zpg==",
+       "license": "MIT"
+     },
++    "node_modules/iceberg-js": {
++      "version": "0.8.1",
++      "resolved": "https://registry.npmjs.org/iceberg-js/-/iceberg-js-0.8.1.tgz",
++      "integrity": "sha512-1dhVQZXhcHje7798IVM+xoo/1ZdVfzOMIc8/rgVSijRK38EDqOJoGula9N/8ZI5RD8QTxNQtK/Gozpr+qUqRRA==",
++      "license": "MIT",
++      "engines": {
++        "node": ">=20.0.0"
++      }
++    },
+     "node_modules/ieee754": {
+       "version": "1.2.1",
+       "resolved": "https://registry.npmjs.org/ieee754/-/ieee754-1.2.1.tgz",
+       "integrity": "sha512-dcyqhDvX1C46lXZcVqCpK+FtMRQVdIMN6/Df5js2zouUsqG7I6sFxitIC+7KYK29KdXOLHdu9zL4sFnoVQnqaA==",
+       "funding": [
+         {
+           "type": "github",
+           "url": "https://github.com/sponsors/feross"
+         },
+         {
+diff --git a/tools/package.json b/tools/package.json
+index d8f0e13..1537530 100644
+--- a/tools/package.json
++++ b/tools/package.json
+@@ -1,11 +1,14 @@
+ {
+   "name": "shuttle-telemetry-tools",
+   "version": "1.0.0",
+   "type": "module",
+   "scripts": {
+-    "simulate": "node simulate.js"
++    "simulate": "node simulate.js",
++    "worker": "node worker.js"
+   },
+   "dependencies": {
++    "@supabase/supabase-js": "^2.118.0",
++    "dotenv": "^18.0.8",
+     "mqtt": "^5.10.1"
+   }
+ }
+diff --git a/tools/worker.js b/tools/worker.js
+new file mode 100644
+index 0000000..9ee6c78
+--- /dev/null
++++ b/tools/worker.js
+@@ -0,0 +1,179 @@
++import mqtt from 'mqtt';
++import { createClient } from '@supabase/supabase-js';
++import dotenv from 'dotenv';
++
++dotenv.config();
++
++const BROKER = process.env.MQTT_BROKER || 'mqtt://broker.emqx.io:1883';
++const TOPIC = process.env.MQTT_TOPIC || 'shuttle/fleet/v1/+/telemetry';
++const SUPABASE_URL = process.env.SUPABASE_URL;
++const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY;
++
++if (!SUPABASE_URL || !SUPABASE_KEY) {
++  console.error('[Worker Error] SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY (or SUPABASE_ANON_KEY) must be provided in tools/.env');
++  console.error('Please create a tools/.env file with:');
++  console.error('  SUPABASE_URL=https://<your-project>.supabase.co');
++  console.error('  SUPABASE_SERVICE_ROLE_KEY=<your-service-role-key>');
++  process.exit(1);
++}
++
++const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
++  auth: { persistSession: false },
++});
++
++console.log(`[Worker] Connecting to MQTT broker: ${BROKER}...`);
++const client = mqtt.connect(BROKER, {
++  clientId: `shuttle_ingest_worker_${Math.random().toString(16).slice(2, 8)}`,
++});
++
++// Haversine formula for distance between GPS coordinates in kilometers
++function haversineDistance(lat1, lng1, lat2, lng2) {
++  const toRad = (deg) => (deg * Math.PI) / 180;
++  const dLat = toRad(lat2 - lat1);
++  const dLng = toRad(lng2 - lng1);
++  const a =
++    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
++    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) * Math.sin(dLng / 2);
++  return 6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
++}
++
++// In-memory state tracking per vehicle
++const vehicleState = new Map();
++
++client.on('connect', () => {
++  console.log(`[Worker] Connected to MQTT broker! Subscribing to: ${TOPIC}`);
++  client.subscribe(TOPIC, (err) => {
++    if (err) {
++      console.error('[Worker] Subscribe error:', err.message);
++    } else {
++      console.log('[Worker] Ingestion pipeline is active and listening for telemetry.');
++    }
++  });
++});
++
++client.on('message', async (_topic, message) => {
++  try {
++    const data = JSON.parse(message.toString());
++    const { vehicle_id, lat, lng, speed, timestamp } = data;
++
++    if (!vehicle_id || typeof lat !== 'number' || typeof lng !== 'number') {
++      return;
++    }
++
++    const now = Date.now();
++    const today = new Date().toISOString().split('T')[0];
++    const numericSpeed = typeof speed === 'number' ? speed : 0;
++    const pointTimestamp = typeof timestamp === 'number' ? timestamp : now;
++
++    let state = vehicleState.get(vehicle_id);
++    if (!state) {
++      state = {
++        lastLat: lat,
++        lastLng: lng,
++        lastSpeed: numericSpeed,
++        lastTime: pointTimestamp,
++        pendingDistanceKm: 0,
++        maxSpeedKmh: numericSpeed,
++        currentDate: today,
++        lastFlushTime: now,
++        isFlushing: false,
++      };
++      vehicleState.set(vehicle_id, state);
++    } else {
++      // Midnight rollover for max speed tracking
++      if (state.currentDate !== today) {
++        state.currentDate = today;
++        state.maxSpeedKmh = numericSpeed;
++      } else {
++        state.maxSpeedKmh = Math.max(state.maxSpeedKmh, numericSpeed);
++      }
++
++      const dist = haversineDistance(state.lastLat, state.lastLng, lat, lng);
++
++      // Filter jitter (< 8m when speed < 1.5 km/h) & teleport (> 150 km/h)
++      const elapsedHours = Math.abs(pointTimestamp - state.lastTime) / 3600000;
++      const impliedSpeed = elapsedHours > 0 ? dist / elapsedHours : 0;
++
++      if (!(dist < 0.008 && numericSpeed < 1.5) && impliedSpeed <= 150) {
++        state.pendingDistanceKm += dist;
++      }
++
++      state.lastLat = lat;
++      state.lastLng = lng;
++      state.lastSpeed = numericSpeed;
++      state.lastTime = pointTimestamp;
++    }
++
++    // Flush batch to Supabase every 5 seconds per vehicle (with concurrency lock)
++    if (!state.isFlushing && now - state.lastFlushTime >= 5000 && state.pendingDistanceKm > 0) {
++      state.isFlushing = true;
++      const distanceToFlush = state.pendingDistanceKm;
++      state.pendingDistanceKm = 0;
++      state.lastFlushTime = now;
++
++      try {
++        // Upsert daily metrics
++        const { data: existing, error: fetchErr } = await supabase
++          .from('daily_vehicle_metrics')
++          .select('total_distance_km, max_speed_kmh')
++          .eq('vehicle_id', vehicle_id)
++          .eq('date', today)
++          .maybeSingle();
++
++        if (fetchErr) {
++          console.error(`[Worker Error] Failed to fetch current metrics for ${vehicle_id}:`, fetchErr.message);
++          // Restore uncommitted distance to avoid data loss
++          state.pendingDistanceKm += distanceToFlush;
++          return;
++        }
++
++        const existingDistance = Number(existing?.total_distance_km) || 0;
++        const existingMaxSpeed = Number(existing?.max_speed_kmh) || 0;
++
++        const newTotalDistance = Math.round((existingDistance + distanceToFlush) * 100) / 100;
++        const newMaxSpeed = Math.max(existingMaxSpeed, Math.round(state.maxSpeedKmh * 10) / 10);
++
++        const { error: upsertErr } = await supabase.from('daily_vehicle_metrics').upsert({
++          vehicle_id,
++          date: today,
++          total_distance_km: newTotalDistance,
++          max_speed_kmh: newMaxSpeed,
++          last_updated_at: new Date().toISOString(),
++        });
++
++        if (upsertErr) {
++          console.error(`[Worker Error] Failed to upsert metrics for ${vehicle_id}:`, upsertErr.message);
++          // Restore uncommitted distance on upsert failure
++          state.pendingDistanceKm += distanceToFlush;
++        } else {
++          console.log(`[Worker] Updated ${vehicle_id}: +${distanceToFlush.toFixed(3)} km (Total: ${newTotalDistance} km)`);
++        }
++      } catch (flushErr) {
++        console.error(`[Worker Error] Unexpected error during flush for ${vehicle_id}:`, flushErr.message);
++        state.pendingDistanceKm += distanceToFlush;
++      } finally {
++        state.isFlushing = false;
++      }
++    }
++  } catch (err) {
++    console.error('[Worker] Message processing error:', err.message);
++  }
++});
++
++client.on('error', (err) => {
++  console.error('[Worker] MQTT client error:', err.message);
++});
++
++// Graceful shutdown
++const shutdown = () => {
++  console.log('\n[Worker] Gracefully shutting down ingestion pipeline...');
++  client.end(false, () => {
++    console.log('[Worker] Disconnected from MQTT broker. Goodbye.');
++    process.exit(0);
++  });
++  // Force exit fallback if broker disconnect hangs
++  setTimeout(() => process.exit(0), 1500).unref();
++};
++
++process.on('SIGINT', shutdown);
++process.on('SIGTERM', shutdown);

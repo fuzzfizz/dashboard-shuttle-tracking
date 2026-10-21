@@ -1,0 +1,2035 @@
+﻿2838125 fix(tools): enhance worker reliability with flush lock, error retry, and date rollover
+69c72f0 feat(tools): add background MQTT ingestion worker for Supabase persistence
+5ed7096 feat: display daily distance in FleetPanel and add DailyMetricsModal
+4e77f4f feat: add useDailyMetrics hook with Supabase query and live accumulation
+bfe2f9f feat: add supabase migration schema and resilient client configuration
+aa9fa99 feat: add haversine distance calculator with GPS jitter filtering
+ docs/migrations/001_daily_metrics_and_logs.sql     |  45 ++++
+ frontend/package-lock.json                         | 102 ++++++++
+ frontend/package.json                              |   1 +
+ frontend/src/App.tsx                               |  18 +-
+ frontend/src/__tests__/App.test.tsx                |  16 +-
+ frontend/src/components/DailyMetricsModal.tsx      | 126 ++++++++++
+ frontend/src/components/FleetPanel.tsx             |  93 +++++---
+ .../__tests__/DailyMetricsModal.test.tsx           |  99 ++++++++
+ .../src/components/__tests__/FleetPanel.test.tsx   |  46 ++++
+ .../src/hooks/__tests__/useDailyMetrics.test.ts    | 264 +++++++++++++++++++++
+ frontend/src/hooks/useDailyMetrics.ts              | 134 +++++++++++
+ .../services/__tests__/distanceCalculator.test.ts  |  62 +++++
+ .../src/services/__tests__/supabaseClient.test.ts  |  43 ++++
+ frontend/src/services/distanceCalculator.ts        |  67 ++++++
+ frontend/src/services/supabaseClient.ts            |  26 ++
+ frontend/src/types/metrics.ts                      |  11 +
+ tools/README.md                                    |  42 +++-
+ tools/package-lock.json                            | 118 +++++++++
+ tools/package.json                                 |   5 +-
+ tools/worker.js                                    | 179 ++++++++++++++
+ 20 files changed, 1457 insertions(+), 40 deletions(-)
+diff --git a/docs/migrations/001_daily_metrics_and_logs.sql b/docs/migrations/001_daily_metrics_and_logs.sql
+new file mode 100644
+index 0000000..7ee9261
+--- /dev/null
++++ b/docs/migrations/001_daily_metrics_and_logs.sql
+@@ -0,0 +1,45 @@
++-- 1. Daily Vehicle Metrics Table
++CREATE TABLE IF NOT EXISTS daily_vehicle_metrics (
++    vehicle_id VARCHAR(64) NOT NULL,
++    date DATE NOT NULL DEFAULT CURRENT_DATE,
++    total_distance_km NUMERIC(8, 2) NOT NULL DEFAULT 0.00,
++    max_speed_kmh NUMERIC(5, 2) NOT NULL DEFAULT 0.00,
++    avg_speed_kmh NUMERIC(5, 2) NOT NULL DEFAULT 0.00,
++    active_minutes INT NOT NULL DEFAULT 0,
++    last_updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
++    PRIMARY KEY (vehicle_id, date)
++);
++
++CREATE INDEX IF NOT EXISTS idx_daily_metrics_date ON daily_vehicle_metrics (date DESC);
++
++-- 2. Telemetry Logs Table
++CREATE TABLE IF NOT EXISTS telemetry_logs (
++    id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
++    vehicle_id VARCHAR(64) NOT NULL,
++    lat DOUBLE PRECISION NOT NULL,
++    lng DOUBLE PRECISION NOT NULL,
++    speed NUMERIC(5, 2) NOT NULL DEFAULT 0.00,
++    heading NUMERIC(5, 2) DEFAULT 0.00,
++    recorded_at TIMESTAMPTZ NOT NULL,
++    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
++);
++
++CREATE INDEX IF NOT EXISTS idx_telemetry_logs_vehicle_time ON telemetry_logs (vehicle_id, recorded_at DESC);
++
++-- 3. Row Level Security (RLS)
++ALTER TABLE daily_vehicle_metrics ENABLE ROW LEVEL SECURITY;
++ALTER TABLE telemetry_logs ENABLE ROW LEVEL SECURITY;
++
++CREATE POLICY "Public read daily_vehicle_metrics"
++    ON daily_vehicle_metrics FOR SELECT USING (true);
++
++CREATE POLICY "Public read telemetry_logs"
++    ON telemetry_logs FOR SELECT USING (true);
++
++CREATE POLICY "Service write daily_vehicle_metrics"
++    ON daily_vehicle_metrics FOR ALL
++    USING (auth.role() = 'service_role' OR auth.role() = 'authenticated');
++
++CREATE POLICY "Service write telemetry_logs"
++    ON telemetry_logs FOR INSERT
++    WITH CHECK (auth.role() = 'service_role' OR auth.role() = 'authenticated');
+diff --git a/frontend/package-lock.json b/frontend/package-lock.json
+index 570a072..48a1a1f 100644
+--- a/frontend/package-lock.json
++++ b/frontend/package-lock.json
+@@ -1,20 +1,21 @@
+ {
+   "name": "shuttle-tracking-frontend",
+   "version": "1.0.0",
+   "lockfileVersion": 3,
+   "requires": true,
+   "packages": {
+     "": {
+       "name": "shuttle-tracking-frontend",
+       "version": "1.0.0",
+       "dependencies": {
++        "@supabase/supabase-js": "^2.118.0",
+         "clsx": "^2.1.1",
+         "leaflet": "^1.9.4",
+         "lucide-react": "^0.453.0",
+         "mqtt": "^5.10.1",
+         "react": "^18.3.1",
+         "react-dom": "^18.3.1",
+         "react-leaflet": "^4.2.1",
+         "tailwind-merge": "^2.5.4"
+       },
+       "devDependencies": {
+@@ -1379,20 +1380,112 @@
+       "cpu": [
+         "x64"
+       ],
+       "dev": true,
+       "license": "MIT",
+       "optional": true,
+       "os": [
+         "win32"
+       ]
+     },
++    "node_modules/@supabase/auth-js": {
++      "version": "2.118.0",
++      "resolved": "https://registry.npmjs.org/@supabase/auth-js/-/auth-js-2.118.0.tgz",
++      "integrity": "sha512-xWfPXyhS2KDSfAneMtI6p/tBnbdiz/5vaRKXEqUfzfC9WCniKr2Ds5o5G7RIGig0bom4z6wUY9zaV07WDVTfnQ==",
++      "license": "MIT",
++      "dependencies": {
++        "tslib": "2.8.1"
++      },
++      "engines": {
++        "node": ">=22.0.0"
++      }
++    },
++    "node_modules/@supabase/functions-js": {
++      "version": "2.118.0",
++      "resolved": "https://registry.npmjs.org/@supabase/functions-js/-/functions-js-2.118.0.tgz",
++      "integrity": "sha512-4ofletPa/noKAU6KHeqsd3FztGzRPUEJRey1MKY0o+PIHaVePqRPShIXtl37gcVyIWaFM+zNg6r9zh0uUSFOSA==",
++      "license": "MIT",
++      "dependencies": {
++        "tslib": "2.8.1"
++      },
++      "engines": {
++        "node": ">=22.0.0"
++      }
++    },
++    "node_modules/@supabase/phoenix": {
++      "version": "0.4.5",
++      "resolved": "https://registry.npmjs.org/@supabase/phoenix/-/phoenix-0.4.5.tgz",
++      "integrity": "sha512-aAn9H9ovVyeApKy11OWOrrOGq8DV68yWeH4ud2lN9fzn4aO8Zb5GLL9m1pUg9nLqIcT+ZDfAcsZe0E/nqdv2lw==",
++      "license": "MIT"
++    },
++    "node_modules/@supabase/postgrest-js": {
++      "version": "2.118.0",
++      "resolved": "https://registry.npmjs.org/@supabase/postgrest-js/-/postgrest-js-2.118.0.tgz",
++      "integrity": "sha512-JXy+37KPApHsyotaQACovv/Jy9E22rfiWLRuT+2UjoEAcAIelDFIrsF/FY47Dy19mO7lI0Tq+zDCX8oJ2Ozfiw==",
++      "license": "MIT",
++      "dependencies": {
++        "tslib": "2.8.1"
++      },
++      "engines": {
++        "node": ">=22.0.0"
++      }
++    },
++    "node_modules/@supabase/realtime-js": {
++      "version": "2.118.0",
++      "resolved": "https://registry.npmjs.org/@supabase/realtime-js/-/realtime-js-2.118.0.tgz",
++      "integrity": "sha512-pzCIEWjqD5/xqEZQerpt+q9rsgYkcrkgCJgf0W2ULqC4fYUeB/p9CFa3t9vn+IVh6dMN9r4ZCE262lZvUC+Bfw==",
++      "license": "MIT",
++      "dependencies": {
++        "@supabase/phoenix": "0.4.5",
++        "tslib": "2.8.1"
++      },
++      "engines": {
++        "node": ">=22.0.0"
++      }
++    },
++    "node_modules/@supabase/storage-js": {
++      "version": "2.118.0",
++      "resolved": "https://registry.npmjs.org/@supabase/storage-js/-/storage-js-2.118.0.tgz",
++      "integrity": "sha512-5MNkKt2Moy7Jud/sPX7/28BwdDxZMCVHGJT00b8op3KRa9LKSjOAYU5IcfGWIstaasAqY8GkbA6oI3IRDgB1YQ==",
++      "license": "MIT",
++      "dependencies": {
++        "iceberg-js": "^0.8.1",
++        "tslib": "2.8.1"
++      },
++      "engines": {
++        "node": ">=22.0.0"
++      }
++    },
++    "node_modules/@supabase/supabase-js": {
++      "version": "2.118.0",
++      "resolved": "https://registry.npmjs.org/@supabase/supabase-js/-/supabase-js-2.118.0.tgz",
++      "integrity": "sha512-FxI8UXMVC2UG7IkeiI8fuQZqq2oI3JeSuN8MPIC2RLVaoEAxKS0nqE6kii9Ewpq8f9gNPM6git1Y8f0vN/QLFw==",
++      "license": "MIT",
++      "dependencies": {
++        "@supabase/auth-js": "2.118.0",
++        "@supabase/functions-js": "2.118.0",
++        "@supabase/postgrest-js": "2.118.0",
++        "@supabase/realtime-js": "2.118.0",
++        "@supabase/storage-js": "2.118.0"
++      },
++      "engines": {
++        "node": ">=22.0.0"
++      },
++      "peerDependencies": {
++        "@opentelemetry/api": ">=1.0.0"
++      },
++      "peerDependenciesMeta": {
++        "@opentelemetry/api": {
++          "optional": true
++        }
++      }
++    },
+     "node_modules/@testing-library/dom": {
+       "version": "10.4.2",
+       "resolved": "https://registry.npmjs.org/@testing-library/dom/-/dom-10.4.2.tgz",
+       "integrity": "sha512-yzr2S9HyAIdhz2/6qHgbs665Q7PKVcDF05vsOlHPxG1mo36gKVesdYVeDLnXgfjJ03CrKRk08knc6+E/9m8v2Q==",
+       "dev": true,
+       "license": "MIT",
+       "peer": true,
+       "dependencies": {
+         "@babel/code-frame": "^7.10.4",
+         "@babel/runtime": "^7.12.5",
+@@ -2803,20 +2896,29 @@
+       "dev": true,
+       "license": "MIT",
+       "dependencies": {
+         "agent-base": "^7.1.2",
+         "debug": "4"
+       },
+       "engines": {
+         "node": ">= 14"
+       }
+     },
++    "node_modules/iceberg-js": {
++      "version": "0.8.1",
++      "resolved": "https://registry.npmjs.org/iceberg-js/-/iceberg-js-0.8.1.tgz",
++      "integrity": "sha512-1dhVQZXhcHje7798IVM+xoo/1ZdVfzOMIc8/rgVSijRK38EDqOJoGula9N/8ZI5RD8QTxNQtK/Gozpr+qUqRRA==",
++      "license": "MIT",
++      "engines": {
++        "node": ">=20.0.0"
++      }
++    },
+     "node_modules/iconv-lite": {
+       "version": "0.6.3",
+       "resolved": "https://registry.npmjs.org/iconv-lite/-/iconv-lite-0.6.3.tgz",
+       "integrity": "sha512-4fCk79wshMdzMp2rH06qWrJE4iolqLhCUH+OiuIgU++RB0+94NlDL81atO7GX55uUKueo0txHNtvEyI6D7WdMw==",
+       "dev": true,
+       "license": "MIT",
+       "dependencies": {
+         "safer-buffer": ">= 2.1.2 < 3.0.0"
+       },
+       "engines": {
+diff --git a/frontend/package.json b/frontend/package.json
+index 032e4aa..b7fe890 100644
+--- a/frontend/package.json
++++ b/frontend/package.json
+@@ -2,20 +2,21 @@
+   "name": "shuttle-tracking-frontend",
+   "private": true,
+   "version": "1.0.0",
+   "type": "module",
+   "scripts": {
+     "dev": "vite",
+     "build": "tsc && vite build",
+     "test": "vitest run"
+   },
+   "dependencies": {
++    "@supabase/supabase-js": "^2.118.0",
+     "clsx": "^2.1.1",
+     "leaflet": "^1.9.4",
+     "lucide-react": "^0.453.0",
+     "mqtt": "^5.10.1",
+     "react": "^18.3.1",
+     "react-dom": "^18.3.1",
+     "react-leaflet": "^4.2.1",
+     "tailwind-merge": "^2.5.4"
+   },
+   "devDependencies": {
+diff --git a/frontend/src/App.tsx b/frontend/src/App.tsx
+index 61578c5..0a70f8f 100644
+--- a/frontend/src/App.tsx
++++ b/frontend/src/App.tsx
+@@ -1,27 +1,33 @@
++import { useState } from 'react';
+ import { useShuttleTelemetry } from './hooks/useShuttleTelemetry';
++import { useDailyMetrics } from './hooks/useDailyMetrics';
+ import { ShuttleMap, DEFAULT_CENTER } from './components/ShuttleMap';
+ import { TelemetryHUD } from './components/TelemetryHUD';
+ import { FleetPanel } from './components/FleetPanel';
++import { DailyMetricsModal } from './components/DailyMetricsModal';
+ import { Bus } from 'lucide-react';
+ import { calculateFleetStats, computeVehicleStatus } from './services/fleetStatus';
+ 
+ export function App() {
+   const {
+     status,
+     vehicles,
+     lastSeenMap,
+     selectedVehicleId,
+     setSelectedVehicleId,
+     now,
+   } = useShuttleTelemetry();
+ 
++  const { dailyMetrics, totalFleetDistanceKm } = useDailyMetrics(vehicles);
++  const [isAnalyticsOpen, setIsAnalyticsOpen] = useState(false);
++
+   const fleetStats = calculateFleetStats(vehicles, lastSeenMap, now);
+   const lastSeenValues = Object.values(lastSeenMap);
+   const latestFleetHeartbeat =
+     lastSeenValues.length > 0 ? Math.max(...lastSeenValues) : null;
+ 
+   const selectedVehicle = selectedVehicleId ? (vehicles[selectedVehicleId] ?? null) : null;
+   const isOnline =
+     selectedVehicle && selectedVehicleId
+       ? computeVehicleStatus(selectedVehicle, lastSeenMap[selectedVehicleId] || 0, now).isOnline
+       : undefined;
+@@ -43,20 +49,22 @@ export function App() {
+         </div>
+       </div>
+ 
+       {/* Fleet Overview & Selector Panel */}
+       <FleetPanel
+         vehicles={vehicles}
+         lastSeenMap={lastSeenMap}
+         selectedVehicleId={selectedVehicleId}
+         onSelectVehicle={setSelectedVehicleId}
+         now={now}
++        dailyMetrics={dailyMetrics}
++        onOpenAnalytics={() => setIsAnalyticsOpen(true)}
+       />
+ 
+       {/* Floating HUD Card */}
+       <TelemetryHUD
+         telemetry={selectedVehicle}
+         status={status}
+         lastSeen={activeLastSeen}
+         totalVehicles={fleetStats.totalVehicles}
+         fleetStats={fleetStats}
+         isOnline={isOnline}
+@@ -66,15 +74,23 @@ export function App() {
+       {/* Interactive Map */}
+       <ShuttleMap
+         vehicles={vehicles}
+         lastSeenMap={lastSeenMap}
+         now={now}
+         selectedVehicleId={selectedVehicleId}
+         onSelectVehicle={setSelectedVehicleId}
+         defaultCenter={DEFAULT_CENTER}
+         zoom={14}
+       />
++
++      {/* Daily Metrics Analytics Modal */}
++      <DailyMetricsModal
++        isOpen={isAnalyticsOpen}
++        onClose={() => setIsAnalyticsOpen(false)}
++        dailyMetrics={dailyMetrics}
++        totalFleetDistanceKm={totalFleetDistanceKm}
++      />
+     </div>
+   );
+ }
+ 
+-export default App;
+\ No newline at end of file
++export default App;
+diff --git a/frontend/src/__tests__/App.test.tsx b/frontend/src/__tests__/App.test.tsx
+index d33f39e..08decd9 100644
+--- a/frontend/src/__tests__/App.test.tsx
++++ b/frontend/src/__tests__/App.test.tsx
+@@ -1,13 +1,27 @@
+-import { render, screen } from '@testing-library/react';
++import { render, screen, fireEvent } from '@testing-library/react';
+ import { describe, it, expect } from 'vitest';
+ import { App } from '../App';
+ 
+ describe('App Integration', () => {
+   it('renders top brand header, Fleet Status, and map without crashing', () => {
+     const { container } = render(<App />);
+     expect(screen.getByText('Shuttle Tracker')).toBeInTheDocument();
+     expect(screen.getByText('Multi-Vehicle Fleet Gateway')).toBeInTheDocument();
+     expect(screen.getByText('Fleet Status')).toBeInTheDocument();
+     expect(container.querySelector('.leaflet-container')).not.toBeNull();
+   });
++
++  it('opens and closes DailyMetricsModal when analytics button and close button are clicked', () => {
++    render(<App />);
++
++    expect(screen.queryByText('Daily Fleet Analytics')).not.toBeInTheDocument();
++
++    const analyticsBtn = screen.getByRole('button', { name: /analytics/i });
++    fireEvent.click(analyticsBtn);
++    expect(screen.getByText('Daily Fleet Analytics')).toBeInTheDocument();
++
++    const closeBtn = screen.getByRole('button', { name: /close modal/i });
++    fireEvent.click(closeBtn);
++    expect(screen.queryByText('Daily Fleet Analytics')).not.toBeInTheDocument();
++  });
+ });
+diff --git a/frontend/src/components/DailyMetricsModal.tsx b/frontend/src/components/DailyMetricsModal.tsx
+new file mode 100644
+index 0000000..c1841c5
+--- /dev/null
++++ b/frontend/src/components/DailyMetricsModal.tsx
+@@ -0,0 +1,126 @@
++import React from 'react';
++import { X, Calendar, Route, Gauge, Bus, Clock } from 'lucide-react';
++import { DailyMetricsMap } from '../types/metrics';
++
++interface DailyMetricsModalProps {
++  isOpen: boolean;
++  onClose: () => void;
++  dailyMetrics: DailyMetricsMap;
++  totalFleetDistanceKm: number;
++}
++
++export const DailyMetricsModal: React.FC<DailyMetricsModalProps> = ({
++  isOpen,
++  onClose,
++  dailyMetrics,
++  totalFleetDistanceKm,
++}) => {
++  if (!isOpen) return null;
++
++  const metricList = Object.values(dailyMetrics);
++  const totalVehicles = metricList.length;
++  const maxSpeedOverall = metricList.reduce((max, m) => Math.max(max, m.max_speed_kmh), 0);
++
++  const formatHours = (minutes: number) => {
++    const h = Math.floor(minutes / 60);
++    const m = minutes % 60;
++    return h > 0 ? `${h}h ${m}m` : `${m}m`;
++  };
++
++  return (
++    <div className="fixed inset-0 z-[2000] flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-in fade-in duration-200">
++      <div className="bg-slate-900 border border-slate-800 text-white w-full max-w-xl rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
++        {/* Header */}
++        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800">
++          <div className="flex items-center gap-3">
++            <div className="p-2 bg-emerald-500/10 text-emerald-400 rounded-xl">
++              <Route className="w-5 h-5" />
++            </div>
++            <div>
++              <h2 className="text-sm font-bold tracking-tight text-white">Daily Fleet Analytics</h2>
++              <div className="text-[11px] text-slate-400 font-mono flex items-center gap-1.5 mt-0.5">
++                <Calendar className="w-3.5 h-3.5" />
++                <span>Today ({new Date().toLocaleDateString()})</span>
++              </div>
++            </div>
++          </div>
++          <button
++            onClick={onClose}
++            aria-label="Close modal"
++            className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-xl transition-colors"
++          >
++            <X className="w-5 h-5" />
++          </button>
++        </div>
++
++        {/* Summary Metric Cards */}
++        <div className="grid grid-cols-3 gap-3 p-6 border-b border-slate-800/80 bg-slate-900/50">
++          <div className="bg-slate-800/50 border border-slate-800 p-3.5 rounded-2xl">
++            <div className="text-[10px] font-mono uppercase tracking-wider text-slate-400">Total Distance</div>
++            <div className="text-xl font-bold font-mono text-emerald-400 mt-1">
++              {totalFleetDistanceKm.toFixed(1)} <span className="text-xs font-normal text-slate-400">km</span>
++            </div>
++          </div>
++          <div className="bg-slate-800/50 border border-slate-800 p-3.5 rounded-2xl">
++            <div className="text-[10px] font-mono uppercase tracking-wider text-slate-400">Max Speed</div>
++            <div className="text-xl font-bold font-mono text-sky-400 mt-1">
++              {maxSpeedOverall.toFixed(1)} <span className="text-xs font-normal text-slate-400">km/h</span>
++            </div>
++          </div>
++          <div className="bg-slate-800/50 border border-slate-800 p-3.5 rounded-2xl">
++            <div className="text-[10px] font-mono uppercase tracking-wider text-slate-400">Tracked Units</div>
++            <div className="text-xl font-bold font-mono text-amber-400 mt-1">
++              {totalVehicles} <span className="text-xs font-normal text-slate-400">shuttles</span>
++            </div>
++          </div>
++        </div>
++
++        {/* Vehicles Breakdown Table */}
++        <div className="p-6 overflow-y-auto flex-1">
++          <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">Vehicle Mileage Breakdown</h3>
++          {metricList.length === 0 ? (
++            <div className="py-8 text-center text-slate-500 text-xs">
++              No mileage recorded for today yet. Telemetry will calculate distance as vehicles travel.
++            </div>
++          ) : (
++            <div className="space-y-2">
++              {metricList.map((m) => (
++                <div
++                  key={m.vehicle_id}
++                  className="flex items-center justify-between p-3 rounded-2xl bg-slate-800/40 border border-slate-800/80"
++                >
++                  <div className="flex items-center gap-3">
++                    <div className="p-1.5 bg-slate-800 text-emerald-400 rounded-lg">
++                      <Bus className="w-4 h-4" />
++                    </div>
++                    <div>
++                      <div className="text-xs font-bold text-white font-mono">{m.vehicle_id}</div>
++                      <div className="text-[10px] text-slate-400 flex items-center gap-2 mt-0.5">
++                        <span className="flex items-center gap-0.5">
++                          <Gauge className="w-3 h-3 text-sky-400" />
++                          Max: {m.max_speed_kmh.toFixed(1)} km/h
++                        </span>
++                        {m.active_minutes > 0 && (
++                          <span className="flex items-center gap-0.5">
++                            <Clock className="w-3 h-3 text-amber-400" />
++                            {formatHours(m.active_minutes)}
++                          </span>
++                        )}
++                      </div>
++                    </div>
++                  </div>
++
++                  <div className="text-right">
++                    <div className="text-sm font-bold font-mono text-emerald-400">
++                      {m.total_distance_km.toFixed(2)} km
++                    </div>
++                  </div>
++                </div>
++              ))}
++            </div>
++          )}
++        </div>
++      </div>
++    </div>
++  );
++};
+diff --git a/frontend/src/components/FleetPanel.tsx b/frontend/src/components/FleetPanel.tsx
+index 25a2ec7..a61435c 100644
+--- a/frontend/src/components/FleetPanel.tsx
++++ b/frontend/src/components/FleetPanel.tsx
+@@ -1,29 +1,34 @@
+ import React, { useState } from 'react';
+-import { Bus, Layers, Navigation, ChevronRight, ChevronDown, Radio } from 'lucide-react';
++import { Bus, Layers, Navigation, ChevronRight, ChevronDown, Radio, BarChart3 } from 'lucide-react';
+ import { FleetMap } from '../types/telemetry';
++import { DailyMetricsMap } from '../types/metrics';
+ import { computeVehicleStatus } from '../services/fleetStatus';
+ 
+ interface FleetPanelProps {
+   vehicles: FleetMap;
+   lastSeenMap: Record<string, number>;
+   selectedVehicleId: string | null;
+   onSelectVehicle: (vehicleId: string | null) => void;
+   now?: number;
++  dailyMetrics?: DailyMetricsMap;
++  onOpenAnalytics?: () => void;
+ }
+ 
+ export const FleetPanel: React.FC<FleetPanelProps> = ({
+   vehicles,
+   lastSeenMap,
+   selectedVehicleId,
+   onSelectVehicle,
+   now,
++  dailyMetrics,
++  onOpenAnalytics,
+ }) => {
+   const [collapsed, setCollapsed] = useState(false);
+   const vehicleList = Object.values(vehicles);
+   const totalCount = vehicleList.length;
+ 
+   return (
+     <div className="absolute top-4 right-4 z-[1000] w-72 max-w-[calc(100vw-2rem)] flex flex-col gap-2">
+       <div className="bg-white/95 backdrop-blur-md border border-slate-200/90 rounded-2xl shadow-xl overflow-hidden transition-all duration-300">
+         {/* Panel Header */}
+         <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100 bg-slate-50/50">
+@@ -31,27 +36,39 @@ export const FleetPanel: React.FC<FleetPanelProps> = ({
+             <div className="p-1 bg-emerald-500/10 text-emerald-600 rounded-lg">
+               <Bus className="w-4 h-4" />
+             </div>
+             <div>
+               <h2 className="text-xs font-bold text-slate-800 uppercase tracking-wider">Fleet Status</h2>
+               <p className="text-[10px] text-slate-500 font-medium">
+                 {totalCount} {totalCount === 1 ? 'vehicle' : 'vehicles'} active
+               </p>
+             </div>
+           </div>
+-          <button
+-            onClick={() => setCollapsed(!collapsed)}
+-            aria-label={collapsed ? 'Expand panel' : 'Collapse panel'}
+-            className="p-1 hover:bg-slate-200/60 rounded-lg text-slate-400 hover:text-slate-600 transition-colors"
+-          >
+-            {collapsed ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+-          </button>
++          <div className="flex items-center gap-1">
++            {onOpenAnalytics && (
++              <button
++                onClick={onOpenAnalytics}
++                aria-label="Analytics"
++                title="Daily Fleet Analytics"
++                className="p-1 hover:bg-slate-200/60 rounded-lg text-slate-500 hover:text-emerald-600 transition-colors"
++              >
++                <BarChart3 className="w-4 h-4" />
++              </button>
++            )}
++            <button
++              onClick={() => setCollapsed(!collapsed)}
++              aria-label={collapsed ? 'Expand panel' : 'Collapse panel'}
++              className="p-1 hover:bg-slate-200/60 rounded-lg text-slate-400 hover:text-slate-600 transition-colors"
++            >
++              {collapsed ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
++            </button>
++          </div>
+         </div>
+ 
+         {!collapsed && (
+           <div className="p-2 space-y-1.5 max-h-[60vh] overflow-y-auto">
+             {/* View All / Overview Button */}
+             <button
+               onClick={() => onSelectVehicle(null)}
+               aria-label="All Vehicles (Overview)"
+               className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold transition-all ${
+                 selectedVehicleId === null
+@@ -72,60 +89,70 @@ export const FleetPanel: React.FC<FleetPanelProps> = ({
+             {totalCount === 0 ? (
+               <div className="py-6 px-4 text-center">
+                 <Radio className="w-6 h-6 text-slate-300 mx-auto mb-2 animate-pulse" />
+                 <p className="text-xs text-slate-500 font-medium">Listening for vehicles...</p>
+                 <p className="text-[10px] text-slate-400 mt-0.5">Publish telemetry to see fleet</p>
+               </div>
+             ) : (
+               vehicleList.map((vehicle) => {
+                 const status = computeVehicleStatus(vehicle, lastSeenMap[vehicle.vehicle_id] || 0, now);
+                 const isSelected = selectedVehicleId === vehicle.vehicle_id;
++                const distanceKm = dailyMetrics?.[vehicle.vehicle_id]?.total_distance_km ?? 0;
+ 
+                 return (
+                   <div
+                     key={vehicle.vehicle_id}
+                     onClick={() => onSelectVehicle(vehicle.vehicle_id)}
+-                    className={`group cursor-pointer flex items-center justify-between p-2.5 rounded-xl border transition-all ${
++                    className={`group cursor-pointer p-2.5 rounded-xl border transition-all ${
+                       isSelected
+                         ? 'border-emerald-500 bg-emerald-50/60 shadow-sm'
+                         : 'border-slate-100 hover:border-slate-200 hover:bg-slate-50/80'
+                     }`}
+                   >
+-                    <div className="flex items-center gap-2.5 min-w-0">
+-                      <span className="relative flex h-2.5 w-2.5">
+-                        {status.isOnline && (
+-                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+-                        )}
+-                        <span
+-                          className={`relative inline-flex rounded-full h-2.5 w-2.5 ${
+-                            status.isOnline ? 'bg-emerald-500' : 'bg-amber-400'
+-                          }`}
+-                        ></span>
+-                      </span>
+-                      <div className="truncate">
+-                        <div className="text-xs font-bold text-slate-800 truncate">
+-                          {vehicle.vehicle_id}
++                    <div className="flex items-center justify-between">
++                      <div className="flex items-center gap-2.5 min-w-0">
++                        <span className="relative flex h-2.5 w-2.5">
++                          {status.isOnline && (
++                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
++                          )}
++                          <span
++                            className={`relative inline-flex rounded-full h-2.5 w-2.5 ${
++                              status.isOnline ? 'bg-emerald-500' : 'bg-amber-400'
++                            }`}
++                          ></span>
++                        </span>
++                        <div className="truncate">
++                          <div className="text-xs font-bold text-slate-800 truncate">
++                            {vehicle.vehicle_id}
++                          </div>
++                          <div className="text-[10px] text-slate-400 font-mono flex items-center gap-1">
++                            <Navigation className="w-2.5 h-2.5" />
++                            <span>{vehicle.heading ?? 0}┬░</span>
++                          </div>
+                         </div>
+-                        <div className="text-[10px] text-slate-400 font-mono flex items-center gap-1">
+-                          <Navigation className="w-2.5 h-2.5" />
+-                          <span>{vehicle.heading ?? 0}┬░</span>
++                      </div>
++
++                      <div className="text-right">
++                        <div className="text-xs font-mono font-bold text-slate-900">
++                          {vehicle.speed.toFixed(1)} km/h
++                        </div>
++                        <div className="text-[9px] text-slate-400">
++                          {status.isOnline ? 'Live' : 'Stale'}
+                         </div>
+                       </div>
+                     </div>
+ 
+-                    <div className="text-right">
+-                      <div className="text-xs font-mono font-bold text-slate-900">
+-                        {vehicle.speed.toFixed(1)} km/h
+-                      </div>
+-                      <div className="text-[9px] text-slate-400">
+-                        {status.isOnline ? 'Live' : 'Stale'}
+-                      </div>
++                    <div className="mt-1.5 pt-1.5 border-t border-slate-100/80 flex items-center justify-between text-[10px] font-mono">
++                      <span className="text-slate-400">Daily Dist</span>
++                      <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 font-semibold border border-emerald-100/60">
++                        ≡ƒôì {distanceKm.toFixed(1)} km
++                      </span>
+                     </div>
+                   </div>
+                 );
+               })
+             )}
+           </div>
+         )}
+       </div>
+     </div>
+   );
+diff --git a/frontend/src/components/__tests__/DailyMetricsModal.test.tsx b/frontend/src/components/__tests__/DailyMetricsModal.test.tsx
+new file mode 100644
+index 0000000..a4236c8
+--- /dev/null
++++ b/frontend/src/components/__tests__/DailyMetricsModal.test.tsx
+@@ -0,0 +1,99 @@
++import { render, screen, fireEvent } from '@testing-library/react';
++import { describe, it, expect, vi } from 'vitest';
++import { DailyMetricsModal } from '../DailyMetricsModal';
++import { DailyMetricsMap } from '../../types/metrics';
++
++describe('DailyMetricsModal', () => {
++  const mockDailyMetrics: DailyMetricsMap = {
++    'shuttle-01': {
++      vehicle_id: 'shuttle-01',
++      date: '2026-10-21',
++      total_distance_km: 15.42,
++      max_speed_kmh: 42.1,
++      avg_speed_kmh: 25.0,
++      active_minutes: 75,
++      last_updated_at: '2026-10-21T10:00:00Z',
++    },
++    'shuttle-02': {
++      vehicle_id: 'shuttle-02',
++      date: '2026-10-21',
++      total_distance_km: 8.35,
++      max_speed_kmh: 30.0,
++      avg_speed_kmh: 20.0,
++      active_minutes: 45,
++      last_updated_at: '2026-10-21T10:00:00Z',
++    },
++  };
++
++  it('renders nothing when isOpen is false', () => {
++    const { container } = render(
++      <DailyMetricsModal
++        isOpen={false}
++        onClose={vi.fn()}
++        dailyMetrics={mockDailyMetrics}
++        totalFleetDistanceKm={23.77}
++      />
++    );
++    expect(container.firstChild).toBeNull();
++  });
++
++  it('renders empty breakdown state when no metrics are provided', () => {
++    render(
++      <DailyMetricsModal
++        isOpen={true}
++        onClose={vi.fn()}
++        dailyMetrics={{}}
++        totalFleetDistanceKm={0}
++      />
++    );
++
++    expect(screen.getByText('Daily Fleet Analytics')).toBeInTheDocument();
++    expect(screen.getAllByText('0.0')).toHaveLength(2);
++    expect(screen.getByText('0')).toBeInTheDocument();
++    expect(
++      screen.getByText(
++        'No mileage recorded for today yet. Telemetry will calculate distance as vehicles travel.'
++      )
++    ).toBeInTheDocument();
++  });
++
++  it('renders summary cards and vehicle breakdown correctly', () => {
++    render(
++      <DailyMetricsModal
++        isOpen={true}
++        onClose={vi.fn()}
++        dailyMetrics={mockDailyMetrics}
++        totalFleetDistanceKm={23.77}
++      />
++    );
++
++    expect(screen.getByText('Daily Fleet Analytics')).toBeInTheDocument();
++    expect(screen.getByText('23.8')).toBeInTheDocument();
++    expect(screen.getByText('42.1')).toBeInTheDocument();
++    expect(screen.getByText('2')).toBeInTheDocument();
++
++    expect(screen.getByText('shuttle-01')).toBeInTheDocument();
++    expect(screen.getByText('15.42 km')).toBeInTheDocument();
++    expect(screen.getByText('1h 15m')).toBeInTheDocument();
++
++    expect(screen.getByText('shuttle-02')).toBeInTheDocument();
++    expect(screen.getByText('8.35 km')).toBeInTheDocument();
++    expect(screen.getByText('45m')).toBeInTheDocument();
++  });
++
++  it('triggers onClose when close button is clicked', () => {
++    const onClose = vi.fn();
++    render(
++      <DailyMetricsModal
++        isOpen={true}
++        onClose={onClose}
++        dailyMetrics={mockDailyMetrics}
++        totalFleetDistanceKm={23.77}
++      />
++    );
++
++    const closeBtn = screen.getByRole('button', { name: /close modal/i });
++    fireEvent.click(closeBtn);
++    expect(onClose).toHaveBeenCalledTimes(1);
++  });
++});
+diff --git a/frontend/src/components/__tests__/FleetPanel.test.tsx b/frontend/src/components/__tests__/FleetPanel.test.tsx
+index 11e2508..de45c99 100644
+--- a/frontend/src/components/__tests__/FleetPanel.test.tsx
++++ b/frontend/src/components/__tests__/FleetPanel.test.tsx
+@@ -1,14 +1,15 @@
+ import { render, screen, fireEvent } from '@testing-library/react';
+ import { describe, it, expect, vi } from 'vitest';
+ import { FleetPanel } from '../FleetPanel';
+ import { FleetMap } from '../../types/telemetry';
++import { DailyMetricsMap } from '../../types/metrics';
+ 
+ describe('FleetPanel', () => {
+   const mockFleet: FleetMap = {
+     'shuttle-01': {
+       vehicle_id: 'shuttle-01',
+       lat: 13.75,
+       lng: 100.5,
+       speed: 32.5,
+       heading: 90,
+       timestamp: 1000,
+@@ -21,33 +22,78 @@ describe('FleetPanel', () => {
+       heading: 180,
+       timestamp: 1000,
+     },
+   };
+ 
+   const lastSeenMap = {
+     'shuttle-01': Date.now(),
+     'shuttle-02': Date.now(),
+   };
+ 
++  const mockDailyMetrics: DailyMetricsMap = {
++    'shuttle-01': {
++      vehicle_id: 'shuttle-01',
++      date: '2026-10-21',
++      total_distance_km: 12.34,
++      max_speed_kmh: 40,
++      avg_speed_kmh: 20,
++      active_minutes: 30,
++      last_updated_at: '',
++    },
++  };
++
+   it('renders vehicle list correctly', () => {
+     render(
+       <FleetPanel
+         vehicles={mockFleet}
+         lastSeenMap={lastSeenMap}
+         selectedVehicleId={null}
+         onSelectVehicle={vi.fn()}
+       />
+     );
+ 
+     expect(screen.getByText('shuttle-01')).toBeDefined();
+     expect(screen.getByText('shuttle-02')).toBeDefined();
+     expect(screen.getByText('32.5 km/h')).toBeDefined();
++    expect(screen.getAllByText('≡ƒôì 0.0 km')).toHaveLength(2);
++  });
++
++  it('renders daily distance badges when dailyMetrics are provided', () => {
++    render(
++      <FleetPanel
++        vehicles={mockFleet}
++        lastSeenMap={lastSeenMap}
++        selectedVehicleId={null}
++        onSelectVehicle={vi.fn()}
++        dailyMetrics={mockDailyMetrics}
++      />
++    );
++
++    expect(screen.getByText('≡ƒôì 12.3 km')).toBeDefined();
++    expect(screen.getByText('≡ƒôì 0.0 km')).toBeDefined();
++  });
++
++  it('triggers onOpenAnalytics when analytics button is clicked', () => {
++    const onOpenAnalytics = vi.fn();
++    render(
++      <FleetPanel
++        vehicles={mockFleet}
++        lastSeenMap={lastSeenMap}
++        selectedVehicleId={null}
++        onSelectVehicle={vi.fn()}
++        onOpenAnalytics={onOpenAnalytics}
++      />
++    );
++
++    const analyticsBtn = screen.getByRole('button', { name: /analytics/i });
++    fireEvent.click(analyticsBtn);
++    expect(onOpenAnalytics).toHaveBeenCalledTimes(1);
+   });
+ 
+   it('triggers onSelectVehicle when vehicle card is clicked', () => {
+     const onSelect = vi.fn();
+     render(
+       <FleetPanel
+         vehicles={mockFleet}
+         lastSeenMap={lastSeenMap}
+         selectedVehicleId={null}
+         onSelectVehicle={onSelect}
+diff --git a/frontend/src/hooks/__tests__/useDailyMetrics.test.ts b/frontend/src/hooks/__tests__/useDailyMetrics.test.ts
+new file mode 100644
+index 0000000..ed907e4
+--- /dev/null
++++ b/frontend/src/hooks/__tests__/useDailyMetrics.test.ts
+@@ -0,0 +1,264 @@
++import { renderHook, act } from '@testing-library/react';
++import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
++import { useDailyMetrics } from '../useDailyMetrics';
++import { FleetMap } from '../../types/telemetry';
++import * as supabaseClientModule from '../../services/supabaseClient';
++
++describe('useDailyMetrics', () => {
++  beforeEach(() => {
++    vi.restoreAllMocks();
++  });
++
++  afterEach(() => {
++    vi.restoreAllMocks();
++  });
++
++  it('initializes with zero distance and accumulates in-memory when Supabase is unconfigured', () => {
++    const initialFleet: FleetMap = {};
++    const { result, rerender } = renderHook(({ fleet }) => useDailyMetrics(fleet), {
++      initialProps: { fleet: initialFleet },
++    });
++
++    expect(result.current.totalFleetDistanceKm).toBe(0);
++
++    // Simulate vehicle movement
++    const updatedFleet1: FleetMap = {
++      'shuttle-01': {
++        vehicle_id: 'shuttle-01',
++        lat: 13.7563,
++        lng: 100.5018,
++        speed: 25.0,
++        timestamp: 1000,
++      },
++    };
++    rerender({ fleet: updatedFleet1 });
++
++    // Vehicle moves ~200 meters in 5 seconds
++    const updatedFleet2: FleetMap = {
++      'shuttle-01': {
++        vehicle_id: 'shuttle-01',
++        lat: 13.7580,
++        lng: 100.5018,
++        speed: 30.0,
++        timestamp: 6000,
++      },
++    };
++    rerender({ fleet: updatedFleet2 });
++
++    const shuttle01Metric = result.current.dailyMetrics['shuttle-01'];
++    expect(shuttle01Metric).toBeDefined();
++    expect(shuttle01Metric.total_distance_km).toBeGreaterThan(0.1);
++    expect(result.current.totalFleetDistanceKm).toBe(shuttle01Metric.total_distance_km);
++  });
++
++  it('accumulates distance for multiple vehicles and calculates fleet total', () => {
++    const { result, rerender } = renderHook(({ fleet }) => useDailyMetrics(fleet), {
++      initialProps: { fleet: {} as FleetMap },
++    });
++
++    // Initial position for 2 shuttles
++    rerender({
++      fleet: {
++        'shuttle-01': {
++          vehicle_id: 'shuttle-01',
++          lat: 13.7563,
++          lng: 100.5018,
++          speed: 25.0,
++          timestamp: 1000,
++        },
++        'shuttle-02': {
++          vehicle_id: 'shuttle-02',
++          lat: 13.7300,
++          lng: 100.5200,
++          speed: 20.0,
++          timestamp: 1000,
++        },
++      },
++    });
++
++    // Movement for both shuttles (both speeds valid < 150 km/h)
++    rerender({
++      fleet: {
++        'shuttle-01': {
++          vehicle_id: 'shuttle-01',
++          lat: 13.7580,
++          lng: 100.5018,
++          speed: 30.0,
++          timestamp: 6000,
++        },
++        'shuttle-02': {
++          vehicle_id: 'shuttle-02',
++          lat: 13.7310,
++          lng: 100.5200,
++          speed: 22.0,
++          timestamp: 6000,
++        },
++      },
++    });
++
++    const m1 = result.current.dailyMetrics['shuttle-01'];
++    const m2 = result.current.dailyMetrics['shuttle-02'];
++    expect(m1).toBeDefined();
++    expect(m2).toBeDefined();
++
++    const expectedSum = Math.round((m1.total_distance_km + m2.total_distance_km) * 100) / 100;
++    expect(result.current.totalFleetDistanceKm).toBe(expectedSum);
++    expect(m1.max_speed_kmh).toBe(30);
++    expect(m2.max_speed_kmh).toBe(22);
++  });
++
++  it('filters out parked jitter and GPS teleport spikes', () => {
++    const { result, rerender } = renderHook(({ fleet }) => useDailyMetrics(fleet), {
++      initialProps: { fleet: {} as FleetMap },
++    });
++
++    // Vehicle starts stationary
++    rerender({
++      fleet: {
++        'shuttle-01': {
++          vehicle_id: 'shuttle-01',
++          lat: 13.7563,
++          lng: 100.5018,
++          speed: 0.5,
++          timestamp: 1000,
++        },
++      },
++    });
++
++    // Parked GPS jitter (< 8m)
++    rerender({
++      fleet: {
++        'shuttle-01': {
++          vehicle_id: 'shuttle-01',
++          lat: 13.75630005,
++          lng: 100.50180005,
++          speed: 0.8,
++          timestamp: 3000,
++        },
++      },
++    });
++
++    expect(result.current.totalFleetDistanceKm).toBe(0);
++
++    // Impossible teleport jump (implied speed > 150 km/h)
++    rerender({
++      fleet: {
++        'shuttle-01': {
++          vehicle_id: 'shuttle-01',
++          lat: 14.5000, // ~80 km away in 2 seconds
++          lng: 100.5018,
++          speed: 40.0,
++          timestamp: 5000,
++        },
++      },
++    });
++
++    expect(result.current.totalFleetDistanceKm).toBe(0);
++  });
++
++  it('fetches metrics from Supabase when configured and merges with live updates', async () => {
++    vi.spyOn(supabaseClientModule, 'isSupabaseConfigured').mockReturnValue(true);
++
++    const mockSelect = vi.fn().mockReturnValue({
++      eq: vi.fn().mockResolvedValue({
++        data: [
++          {
++            vehicle_id: 'shuttle-01',
++            date: new Date().toISOString().split('T')[0],
++            total_distance_km: 15.5,
++            max_speed_kmh: 55.0,
++            avg_speed_kmh: 30.0,
++            active_minutes: 40,
++            last_updated_at: '2026-10-21T08:00:00Z',
++          },
++        ],
++        error: null,
++      }),
++    });
++
++    const mockFrom = vi.fn().mockReturnValue({
++      select: mockSelect,
++    });
++
++    vi.spyOn(supabaseClientModule, 'getSupabaseClient').mockReturnValue({
++      from: mockFrom,
++    } as unknown as ReturnType<typeof supabaseClientModule.getSupabaseClient>);
++
++    const { result, rerender } = renderHook(({ fleet }) => useDailyMetrics(fleet), {
++      initialProps: { fleet: {} as FleetMap },
++    });
++
++    // Wait for async fetch to complete
++    await act(async () => {
++      await Promise.resolve();
++    });
++
++    expect(mockFrom).toHaveBeenCalledWith('daily_vehicle_metrics');
++    expect(result.current.dailyMetrics['shuttle-01']).toBeDefined();
++    expect(result.current.dailyMetrics['shuttle-01'].total_distance_km).toBe(15.5);
++    expect(result.current.totalFleetDistanceKm).toBe(15.5);
++
++    // Initial vehicle telemetry
++    rerender({
++      fleet: {
++        'shuttle-01': {
++          vehicle_id: 'shuttle-01',
++          lat: 13.7563,
++          lng: 100.5018,
++          speed: 25.0,
++          timestamp: 1000,
++        },
++      },
++    });
++
++    // Vehicle moves ~200 meters
++    rerender({
++      fleet: {
++        'shuttle-01': {
++          vehicle_id: 'shuttle-01',
++          lat: 13.7580,
++          lng: 100.5018,
++          speed: 30.0,
++          timestamp: 6000,
++        },
++      },
++    });
++
++    const updated = result.current.dailyMetrics['shuttle-01'];
++    expect(updated.total_distance_km).toBeGreaterThan(15.5);
++    expect(result.current.totalFleetDistanceKm).toBe(updated.total_distance_km);
++
++    // Trigger refetch - distance should not regress to 15.5
++    await act(async () => {
++      result.current.refetch();
++    });
++
++    expect(result.current.dailyMetrics['shuttle-01'].total_distance_km).toBe(updated.total_distance_km);
++  });
++
++  it('handles Supabase query error gracefully without throwing', async () => {
++    vi.spyOn(supabaseClientModule, 'isSupabaseConfigured').mockReturnValue(true);
++
++    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
++
++    const mockFrom = vi.fn().mockReturnValue({
++      select: vi.fn().mockReturnValue({
++        eq: vi.fn().mockRejectedValue(new Error('Network error')),
++      }),
++    });
++
++    vi.spyOn(supabaseClientModule, 'getSupabaseClient').mockReturnValue({
++      from: mockFrom,
++    } as unknown as ReturnType<typeof supabaseClientModule.getSupabaseClient>);
++
++    const { result } = renderHook(() => useDailyMetrics({}));
++
++    await act(async () => {
++      await Promise.resolve();
++    });
++
++    expect(result.current.isLoading).toBe(false);
++    expect(result.current.totalFleetDistanceKm).toBe(0);
++    expect(warnSpy).toHaveBeenCalled();
++  });
++});
+diff --git a/frontend/src/hooks/useDailyMetrics.ts b/frontend/src/hooks/useDailyMetrics.ts
+new file mode 100644
+index 0000000..ebbd05c
+--- /dev/null
++++ b/frontend/src/hooks/useDailyMetrics.ts
+@@ -0,0 +1,134 @@
++import { useEffect, useRef, useState, useCallback } from 'react';
++import { FleetMap } from '../types/telemetry';
++import { DailyMetricsMap } from '../types/metrics';
++import { getSupabaseClient, isSupabaseConfigured } from '../services/supabaseClient';
++import { calculateDistanceIncrement, CoordinatePoint } from '../services/distanceCalculator';
++
++export function useDailyMetrics(vehicles: FleetMap) {
++  const [dailyMetrics, setDailyMetrics] = useState<DailyMetricsMap>({});
++  const [isLoading, setIsLoading] = useState<boolean>(false);
++
++  // In-memory tracking of previous coordinate per vehicle
++  const prevCoordsRef = useRef<Record<string, CoordinatePoint>>({});
++
++  const todayStr = new Date().toISOString().split('T')[0];
++
++  // Fetch metrics from Supabase if configured
++  const fetchSupabaseMetrics = useCallback(async () => {
++    const supabase = getSupabaseClient();
++    if (!supabase) return;
++
++    try {
++      setIsLoading(true);
++      const { data, error } = await supabase
++        .from('daily_vehicle_metrics')
++        .select('*')
++        .eq('date', todayStr);
++
++      if (!error && data) {
++        setDailyMetrics((prev) => {
++          const next: DailyMetricsMap = { ...prev };
++          for (const row of data) {
++            const vId = row.vehicle_id;
++            const existing = prev[vId];
++            const remoteDistance = Number(row.total_distance_km) || 0;
++            const remoteMaxSpeed = Number(row.max_speed_kmh) || 0;
++
++            next[vId] = {
++              vehicle_id: vId,
++              date: row.date,
++              total_distance_km: existing
++                ? Math.max(existing.total_distance_km, remoteDistance)
++                : remoteDistance,
++              max_speed_kmh: existing
++                ? Math.max(existing.max_speed_kmh, remoteMaxSpeed)
++                : remoteMaxSpeed,
++              avg_speed_kmh: Number(row.avg_speed_kmh) || (existing?.avg_speed_kmh ?? 0),
++              active_minutes: Number(row.active_minutes) || (existing?.active_minutes ?? 0),
++              last_updated_at: row.last_updated_at || existing?.last_updated_at || new Date().toISOString(),
++            };
++          }
++          return next;
++        });
++      }
++    } catch (err) {
++      console.warn('Supabase daily metrics query error:', err);
++    } finally {
++      setIsLoading(false);
++    }
++  }, [todayStr]);
++
++  // Initial fetch and 30-second refetch interval
++  useEffect(() => {
++    if (isSupabaseConfigured()) {
++      fetchSupabaseMetrics();
++      const interval = setInterval(fetchSupabaseMetrics, 30000);
++      return () => clearInterval(interval);
++    }
++  }, [fetchSupabaseMetrics]);
++
++  // Real-time incremental distance accumulation from live telemetry stream
++  useEffect(() => {
++    const updates: Record<string, { distance: number; maxSpeed: number }> = {};
++
++    for (const vehicle of Object.values(vehicles)) {
++      const { vehicle_id, lat, lng, speed, timestamp } = vehicle;
++      const currPoint: CoordinatePoint = { lat, lng, speed, timestamp };
++      const prevPoint = prevCoordsRef.current[vehicle_id];
++
++      if (prevPoint) {
++        const increment = calculateDistanceIncrement(prevPoint, currPoint);
++        if (increment > 0) {
++          updates[vehicle_id] = {
++            distance: increment,
++            maxSpeed: Math.round(speed * 10) / 10,
++          };
++        }
++      }
++
++      prevCoordsRef.current[vehicle_id] = currPoint;
++    }
++
++    if (Object.keys(updates).length > 0) {
++      setDailyMetrics((prev) => {
++        const next: DailyMetricsMap = { ...prev };
++        const nowIso = new Date().toISOString();
++
++        for (const [vehicleId, { distance, maxSpeed }] of Object.entries(updates)) {
++          const existing = prev[vehicleId] || {
++            vehicle_id: vehicleId,
++            date: todayStr,
++            total_distance_km: 0,
++            max_speed_kmh: 0,
++            avg_speed_kmh: 0,
++            active_minutes: 0,
++            last_updated_at: nowIso,
++          };
++
++          const updatedDistance = Math.round((existing.total_distance_km + distance) * 100) / 100;
++          const updatedMaxSpeed = Math.max(existing.max_speed_kmh, maxSpeed);
++
++          next[vehicleId] = {
++            ...existing,
++            total_distance_km: updatedDistance,
++            max_speed_kmh: updatedMaxSpeed,
++            last_updated_at: nowIso,
++          };
++        }
++
++        return next;
++      });
++    }
++  }, [vehicles, todayStr]);
++
++  const totalFleetDistanceKm = Math.round(
++    Object.values(dailyMetrics).reduce((sum, m) => sum + m.total_distance_km, 0) * 100
++  ) / 100;
++
++  return {
++    dailyMetrics,
++    totalFleetDistanceKm,
++    isLoading,
++    refetch: fetchSupabaseMetrics,
++  };
++}
+diff --git a/frontend/src/services/__tests__/distanceCalculator.test.ts b/frontend/src/services/__tests__/distanceCalculator.test.ts
+new file mode 100644
+index 0000000..da10cde
+--- /dev/null
++++ b/frontend/src/services/__tests__/distanceCalculator.test.ts
+@@ -0,0 +1,62 @@
++import { describe, it, expect } from 'vitest';
++import {
++  haversineDistance,
++  calculateDistanceIncrement,
++  JITTER_THRESHOLD_KM,
++  MIN_SPEED_THRESHOLD_KMH,
++  MAX_VALID_SPEED_KMH,
++} from '../distanceCalculator';
++
++describe('distanceCalculator', () => {
++  it('calculates known distance accurately using Haversine formula', () => {
++    // Distance between Victory Monument (13.7649, 100.5383) and Siam Paragon (13.7460, 100.5340) ~2.15 km
++    const dist = haversineDistance(13.7649, 100.5383, 13.7460, 100.5340);
++    expect(dist).toBeGreaterThan(2.0);
++    expect(dist).toBeLessThan(2.3);
++  });
++
++  it('calculates zero distance for identical coordinates', () => {
++    const dist = haversineDistance(13.7563, 100.5018, 13.7563, 100.5018);
++    expect(dist).toBe(0);
++  });
++
++  it('filters out GPS jitter when stationary (speed < 1.5 km/h and distance < 8m)', () => {
++    const prev = { lat: 13.756300, lng: 100.501800, speed: 0.0, timestamp: 1000 };
++    // Small drift of ~4 meters
++    const next = { lat: 13.756336, lng: 100.501800, speed: 0.5, timestamp: 2000 };
++
++    const dist = calculateDistanceIncrement(prev, next);
++    expect(dist).toBe(0);
++  });
++
++  it('accumulates valid movement distance when vehicle is in motion', () => {
++    const prev = { lat: 13.756300, lng: 100.501800, speed: 30.0, timestamp: 1000 };
++    // Move ~110 meters in 5 seconds
++    const next = { lat: 13.757300, lng: 100.501800, speed: 32.0, timestamp: 6000 };
++
++    const dist = calculateDistanceIncrement(prev, next);
++    expect(dist).toBeGreaterThan(0.1);
++    expect(dist).toBeLessThan(0.12);
++  });
++
++  it('rejects unrealistic GPS teleport glitch (> 150 km/h)', () => {
++    const prev = { lat: 13.7563, lng: 100.5018, speed: 30.0, timestamp: 1000 };
++    // Jumps to Chiang Mai in 1 second
++    const next = { lat: 18.7883, lng: 98.9853, speed: 30.0, timestamp: 2000 };
++
++    const dist = calculateDistanceIncrement(prev, next);
++    expect(dist).toBe(0);
++  });
++
++  it('returns 0 when prev point is null or undefined', () => {
++    const curr = { lat: 13.7563, lng: 100.5018, speed: 20.0, timestamp: 1000 };
++    expect(calculateDistanceIncrement(null, curr)).toBe(0);
++    expect(calculateDistanceIncrement(undefined, curr)).toBe(0);
++  });
++
++  it('exports correct filter threshold constants', () => {
++    expect(JITTER_THRESHOLD_KM).toBe(0.008);
++    expect(MIN_SPEED_THRESHOLD_KMH).toBe(1.5);
++    expect(MAX_VALID_SPEED_KMH).toBe(150.0);
++  });
++});
+diff --git a/frontend/src/services/__tests__/supabaseClient.test.ts b/frontend/src/services/__tests__/supabaseClient.test.ts
+new file mode 100644
+index 0000000..35955f4
+--- /dev/null
++++ b/frontend/src/services/__tests__/supabaseClient.test.ts
+@@ -0,0 +1,43 @@
++import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
++import { isSupabaseConfigured, getSupabaseClient } from '../supabaseClient';
++
++describe('supabaseClient', () => {
++  beforeEach(() => {
++    vi.unstubAllEnvs();
++  });
++
++  afterEach(() => {
++    vi.unstubAllEnvs();
++  });
++
++  it('returns false and null client when environment variables are not set', () => {
++    vi.stubEnv('VITE_SUPABASE_URL', '');
++    vi.stubEnv('VITE_SUPABASE_ANON_KEY', '');
++    expect(isSupabaseConfigured()).toBe(false);
++    expect(getSupabaseClient()).toBeNull();
++  });
++
++  it('returns false when URL does not start with http', () => {
++    vi.stubEnv('VITE_SUPABASE_URL', 'invalid-url');
++    vi.stubEnv('VITE_SUPABASE_ANON_KEY', 'anon-key-123');
++    expect(isSupabaseConfigured()).toBe(false);
++    expect(getSupabaseClient()).toBeNull();
++  });
++
++  it('returns false when anon key is missing', () => {
++    vi.stubEnv('VITE_SUPABASE_URL', 'https://example.supabase.co');
++    vi.stubEnv('VITE_SUPABASE_ANON_KEY', '');
++    expect(isSupabaseConfigured()).toBe(false);
++    expect(getSupabaseClient()).toBeNull();
++  });
++
++  it('returns true and creates client instance when environment variables are valid', () => {
++    vi.stubEnv('VITE_SUPABASE_URL', 'https://example.supabase.co');
++    vi.stubEnv('VITE_SUPABASE_ANON_KEY', 'anon-key-123');
++    expect(isSupabaseConfigured()).toBe(true);
++    const client = getSupabaseClient();
++    expect(client).not.toBeNull();
++    // Subsequent calls return memoized instance
++    expect(getSupabaseClient()).toBe(client);
++  });
++});
+diff --git a/frontend/src/services/distanceCalculator.ts b/frontend/src/services/distanceCalculator.ts
+new file mode 100644
+index 0000000..a6fb179
+--- /dev/null
++++ b/frontend/src/services/distanceCalculator.ts
+@@ -0,0 +1,67 @@
++export const JITTER_THRESHOLD_KM = 0.008; // 8 meters
++export const MIN_SPEED_THRESHOLD_KMH = 1.5; // km/h
++export const MAX_VALID_SPEED_KMH = 150.0; // km/h
++
++const EARTH_RADIUS_KM = 6371.0;
++
++function toRadians(degrees: number): number {
++  return (degrees * Math.PI) / 180.0;
++}
++
++/**
++ * Calculates great-circle distance between two GPS coordinates in kilometers.
++ */
++export function haversineDistance(
++  lat1: number,
++  lng1: number,
++  lat2: number,
++  lng2: number
++): number {
++  const dLat = toRadians(lat2 - lat1);
++  const dLng = toRadians(lng2 - lng1);
++
++  const a =
++    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
++    Math.cos(toRadians(lat1)) *
++      Math.cos(toRadians(lat2)) *
++      Math.sin(dLng / 2) *
++      Math.sin(dLng / 2);
++
++  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
++  return EARTH_RADIUS_KM * c;
++}
++
++export interface CoordinatePoint {
++  lat: number;
++  lng: number;
++  speed: number;
++  timestamp: number;
++}
++
++/**
++ * Computes incremental distance between consecutive telemetry points with noise filtering.
++ */
++export function calculateDistanceIncrement(
++  prev: CoordinatePoint | null | undefined,
++  curr: CoordinatePoint
++): number {
++  if (!prev) return 0;
++
++  const rawDistanceKm = haversineDistance(prev.lat, prev.lng, curr.lat, curr.lng);
++
++  // 1. Filter out parked GPS jitter
++  if (rawDistanceKm < JITTER_THRESHOLD_KM && curr.speed < MIN_SPEED_THRESHOLD_KMH) {
++    return 0;
++  }
++
++  // 2. Reject GPS teleport glitch if implied speed exceeds threshold
++  const timeElapsedHours = Math.abs(curr.timestamp - prev.timestamp) / 3600000;
++  if (timeElapsedHours > 0) {
++    const impliedSpeed = rawDistanceKm / timeElapsedHours;
++    if (impliedSpeed > MAX_VALID_SPEED_KMH) {
++      return 0;
++    }
++  }
++
++  return rawDistanceKm;
++}
+diff --git a/frontend/src/services/supabaseClient.ts b/frontend/src/services/supabaseClient.ts
+new file mode 100644
+index 0000000..e27fdb3
+--- /dev/null
++++ b/frontend/src/services/supabaseClient.ts
+@@ -0,0 +1,26 @@
++import { createClient, SupabaseClient } from '@supabase/supabase-js';
++
++const getSupabaseUrl = (): string | undefined => import.meta.env?.VITE_SUPABASE_URL;
++const getSupabaseAnonKey = (): string | undefined => import.meta.env?.VITE_SUPABASE_ANON_KEY;
++
++export const isSupabaseConfigured = (): boolean => {
++  const url = getSupabaseUrl();
++  const key = getSupabaseAnonKey();
++  return Boolean(url && key && typeof url === 'string' && url.startsWith('http'));
++};
++
++let clientInstance: SupabaseClient | null = null;
++
++export function getSupabaseClient(): SupabaseClient | null {
++  if (!isSupabaseConfigured()) {
++    return null;
++  }
++  const url = getSupabaseUrl();
++  const key = getSupabaseAnonKey();
++  if (!clientInstance && url && key) {
++    clientInstance = createClient(url, key, {
++      auth: { persistSession: false },
++    });
++  }
++  return clientInstance;
++}
+diff --git a/frontend/src/types/metrics.ts b/frontend/src/types/metrics.ts
+new file mode 100644
+index 0000000..6e8efd3
+--- /dev/null
++++ b/frontend/src/types/metrics.ts
+@@ -0,0 +1,11 @@
++export interface DailyVehicleMetric {
++  vehicle_id: string;
++  date: string; // 'YYYY-MM-DD'
++  total_distance_km: number;
++  max_speed_kmh: number;
++  avg_speed_kmh: number;
++  active_minutes: number;
++  last_updated_at: string;
++}
++
++export type DailyMetricsMap = Record<string, DailyVehicleMetric>;
+diff --git a/tools/README.md b/tools/README.md
+index 5cd1107..7659ef4 100644
+--- a/tools/README.md
++++ b/tools/README.md
+@@ -1,29 +1,63 @@
+-# Telemetry Simulator & Hardware Guide
++# Telemetry Tools & Hardware Guide
+ 
+-### Running the Simulator
+-To test the web map without hardware:
++This directory contains standalone tools for fleet simulation, testing, and background data ingestion into Supabase.
++
++---
++
++### 1. Background MQTT Ingestion Worker (`worker.js`)
++The ingestion worker connects to the MQTT broker, consumes real-time telemetry packets from all shuttles (`shuttle/fleet/v1/+/telemetry`), calculates incremental Haversine distance with GPS jitter & teleport glitch rejection, and batches daily mileage and speed metrics directly into Supabase (`daily_vehicle_metrics`).
++
++#### Environment Setup
++Create a `.env` file in the `tools` directory (or export environment variables):
++```env
++# Supabase Configuration (Required for persistence)
++SUPABASE_URL=https://<your-project-id>.supabase.co
++SUPABASE_SERVICE_ROLE_KEY=your-supabase-service-role-key-here
++
++# MQTT Broker Configuration (Optional, defaults to public broker)
++MQTT_BROKER=mqtt://broker.emqx.io:1883
++MQTT_TOPIC=shuttle/fleet/v1/+/telemetry
++```
++
++#### Running the Worker
++```bash
++cd tools
++npm install
++npm run worker
++```
++
++#### Processing Features:
++- **Haversine Distance**: Computes great-circle distance between successive GPS pings.
++- **Jitter Filtering**: Rejects stationary GPS drift (< 8 meters when vehicle speed is under 1.5 km/h).
++- **Teleport Glitch Filter**: Rejects erroneous GPS jumps where implied travel speed exceeds 150 km/h.
++- **Throttled Batching**: Batches accumulated distance per vehicle and upserts to `daily_vehicle_metrics` every 5 seconds, avoiding database write contention.
++
++---
++
++### 2. Telemetry Simulator (`simulate.js`)
++To test the web map and worker without physical hardware:
+ ```bash
+ cd tools
+ npm install
+ npm run simulate
+ ```
+ 
+ You can optionally specify your own broker or vehicle ID via environment variables:
+ ```bash
+ # Example with custom vehicle and private broker
+ VEHICLE_ID=shuttle-vip-01 MQTT_BROKER=mqtt://my-broker.domain:1883 npm run simulate
+ ```
+ 
+ ---
+ 
+-### Hardware Firmware Configuration (ESP32 / GSM)
++### 3. Hardware Firmware Configuration (ESP32 / GSM)
+ - **Protocol:** MQTT (TCP)
+ - **Host:** `<BROKER_HOST>` (Default testing: `broker.emqx.io`)
+ - **Port:** `1883` (Standard MQTT) or `8883` (MQTT with TLS)
+ - **Topic:** `shuttle/fleet/v1/<VEHICLE_ID>/telemetry`
+ - **Format:** JSON matching:
+ ```json
+ {
+   "vehicle_id": "YOUR_VEHICLE_ID",
+   "lat": 13.7563,
+   "lng": 100.5018,
+diff --git a/tools/package-lock.json b/tools/package-lock.json
+index 055dccb..7edf062 100644
+--- a/tools/package-lock.json
++++ b/tools/package-lock.json
+@@ -1,32 +1,126 @@
+ {
+   "name": "shuttle-telemetry-tools",
+   "version": "1.0.0",
+   "lockfileVersion": 3,
+   "requires": true,
+   "packages": {
+     "": {
+       "name": "shuttle-telemetry-tools",
+       "version": "1.0.0",
+       "dependencies": {
++        "@supabase/supabase-js": "^2.118.0",
++        "dotenv": "^18.0.8",
+         "mqtt": "^5.10.1"
+       }
+     },
+     "node_modules/@babel/runtime": {
+       "version": "7.29.10",
+       "resolved": "https://registry.npmjs.org/@babel/runtime/-/runtime-7.29.10.tgz",
+       "integrity": "sha512-NpugTzbKgGrNe45Ui32cN8vCFFMxVtP/9rtfwv0nP5FRDAjvYBxJcLVpYA9mr1jxP6cnIT7x9LUzuDTbWYYNRA==",
+       "license": "MIT",
+       "engines": {
+         "node": ">=6.9.0"
+       }
+     },
++    "node_modules/@supabase/auth-js": {
++      "version": "2.118.0",
++      "resolved": "https://registry.npmjs.org/@supabase/auth-js/-/auth-js-2.118.0.tgz",
++      "integrity": "sha512-xWfPXyhS2KDSfAneMtI6p/tBnbdiz/5vaRKXEqUfzfC9WCniKr2Ds5o5G7RIGig0bom4z6wUY9zaV07WDVTfnQ==",
++      "license": "MIT",
++      "dependencies": {
++        "tslib": "2.8.1"
++      },
++      "engines": {
++        "node": ">=22.0.0"
++      }
++    },
++    "node_modules/@supabase/functions-js": {
++      "version": "2.118.0",
++      "resolved": "https://registry.npmjs.org/@supabase/functions-js/-/functions-js-2.118.0.tgz",
++      "integrity": "sha512-4ofletPa/noKAU6KHeqsd3FztGzRPUEJRey1MKY0o+PIHaVePqRPShIXtl37gcVyIWaFM+zNg6r9zh0uUSFOSA==",
++      "license": "MIT",
++      "dependencies": {
++        "tslib": "2.8.1"
++      },
++      "engines": {
++        "node": ">=22.0.0"
++      }
++    },
++    "node_modules/@supabase/phoenix": {
++      "version": "0.4.5",
++      "resolved": "https://registry.npmjs.org/@supabase/phoenix/-/phoenix-0.4.5.tgz",
++      "integrity": "sha512-aAn9H9ovVyeApKy11OWOrrOGq8DV68yWeH4ud2lN9fzn4aO8Zb5GLL9m1pUg9nLqIcT+ZDfAcsZe0E/nqdv2lw==",
++      "license": "MIT"
++    },
++    "node_modules/@supabase/postgrest-js": {
++      "version": "2.118.0",
++      "resolved": "https://registry.npmjs.org/@supabase/postgrest-js/-/postgrest-js-2.118.0.tgz",
++      "integrity": "sha512-JXy+37KPApHsyotaQACovv/Jy9E22rfiWLRuT+2UjoEAcAIelDFIrsF/FY47Dy19mO7lI0Tq+zDCX8oJ2Ozfiw==",
++      "license": "MIT",
++      "dependencies": {
++        "tslib": "2.8.1"
++      },
++      "engines": {
++        "node": ">=22.0.0"
++      }
++    },
++    "node_modules/@supabase/realtime-js": {
++      "version": "2.118.0",
++      "resolved": "https://registry.npmjs.org/@supabase/realtime-js/-/realtime-js-2.118.0.tgz",
++      "integrity": "sha512-pzCIEWjqD5/xqEZQerpt+q9rsgYkcrkgCJgf0W2ULqC4fYUeB/p9CFa3t9vn+IVh6dMN9r4ZCE262lZvUC+Bfw==",
++      "license": "MIT",
++      "dependencies": {
++        "@supabase/phoenix": "0.4.5",
++        "tslib": "2.8.1"
++      },
++      "engines": {
++        "node": ">=22.0.0"
++      }
++    },
++    "node_modules/@supabase/storage-js": {
++      "version": "2.118.0",
++      "resolved": "https://registry.npmjs.org/@supabase/storage-js/-/storage-js-2.118.0.tgz",
++      "integrity": "sha512-5MNkKt2Moy7Jud/sPX7/28BwdDxZMCVHGJT00b8op3KRa9LKSjOAYU5IcfGWIstaasAqY8GkbA6oI3IRDgB1YQ==",
++      "license": "MIT",
++      "dependencies": {
++        "iceberg-js": "^0.8.1",
++        "tslib": "2.8.1"
++      },
++      "engines": {
++        "node": ">=22.0.0"
++      }
++    },
++    "node_modules/@supabase/supabase-js": {
++      "version": "2.118.0",
++      "resolved": "https://registry.npmjs.org/@supabase/supabase-js/-/supabase-js-2.118.0.tgz",
++      "integrity": "sha512-FxI8UXMVC2UG7IkeiI8fuQZqq2oI3JeSuN8MPIC2RLVaoEAxKS0nqE6kii9Ewpq8f9gNPM6git1Y8f0vN/QLFw==",
++      "license": "MIT",
++      "dependencies": {
++        "@supabase/auth-js": "2.118.0",
++        "@supabase/functions-js": "2.118.0",
++        "@supabase/postgrest-js": "2.118.0",
++        "@supabase/realtime-js": "2.118.0",
++        "@supabase/storage-js": "2.118.0"
++      },
++      "engines": {
++        "node": ">=22.0.0"
++      },
++      "peerDependencies": {
++        "@opentelemetry/api": ">=1.0.0"
++      },
++      "peerDependenciesMeta": {
++        "@opentelemetry/api": {
++          "optional": true
++        }
++      }
++    },
+     "node_modules/@types/node": {
+       "version": "26.6.5",
+       "resolved": "https://registry.npmjs.org/@types/node/-/node-26.6.5.tgz",
+       "integrity": "sha512-uMzsv9stDdofIZBx4UGh4Z9ZgXnGC9seRDscilBcTHAeOFk67MZg/k9bWVfO+bk4qZmG+l52hRnLwUiH2LnJTg==",
+       "license": "MIT",
+       "dependencies": {
+         "undici-types": "~8.9.0"
+       }
+     },
+     "node_modules/@types/readable-stream": {
+@@ -178,20 +272,35 @@
+       },
+       "engines": {
+         "node": ">=6.0"
+       },
+       "peerDependenciesMeta": {
+         "supports-color": {
+           "optional": true
+         }
+       }
+     },
++    "node_modules/dotenv": {
++      "version": "18.0.8",
++      "resolved": "https://registry.npmjs.org/dotenv/-/dotenv-18.0.8.tgz",
++      "integrity": "sha512-2KDeoFoK/zRtcnbunCDlLG5VWVMcyqeQc6iK65o231nfNAcuGrKoqUQfJFUtBI+QlShk5HKIHxwebBtUl3rEfA==",
++      "license": "BSD-2-Clause",
++      "bin": {
++        "dotenv": "dist/index.cjs"
++      },
++      "engines": {
++        "node": ">=12"
++      },
++      "funding": {
++        "url": "https://dotenvx.com"
++      }
++    },
+     "node_modules/event-target-shim": {
+       "version": "5.0.1",
+       "resolved": "https://registry.npmjs.org/event-target-shim/-/event-target-shim-5.0.1.tgz",
+       "integrity": "sha512-i/2XbnSz/uxRCU6+NdVJgKWDTM427+MqYbkQzD321DuCQJUqOuJKIA0IM2+W2xtYHdKOmZ4dR6fExsd4SXL+WQ==",
+       "license": "MIT",
+       "engines": {
+         "node": ">=6"
+       }
+     },
+     "node_modules/events": {
+@@ -215,20 +324,29 @@
+       "engines": {
+         "node": ">=18.2.0"
+       }
+     },
+     "node_modules/help-me": {
+       "version": "5.0.0",
+       "resolved": "https://registry.npmjs.org/help-me/-/help-me-5.0.0.tgz",
+       "integrity": "sha512-7xgomUX6ADmcYzFik0HzAxh/73YlKR9bmFzf51CZwR+b6YtzU2m0u49hQCqV6SvlqIqsaxovfwdvbnsw3b/zpg==",
+       "license": "MIT"
+     },
++    "node_modules/iceberg-js": {
++      "version": "0.8.1",
++      "resolved": "https://registry.npmjs.org/iceberg-js/-/iceberg-js-0.8.1.tgz",
++      "integrity": "sha512-1dhVQZXhcHje7798IVM+xoo/1ZdVfzOMIc8/rgVSijRK38EDqOJoGula9N/8ZI5RD8QTxNQtK/Gozpr+qUqRRA==",
++      "license": "MIT",
++      "engines": {
++        "node": ">=20.0.0"
++      }
++    },
+     "node_modules/ieee754": {
+       "version": "1.2.1",
+       "resolved": "https://registry.npmjs.org/ieee754/-/ieee754-1.2.1.tgz",
+       "integrity": "sha512-dcyqhDvX1C46lXZcVqCpK+FtMRQVdIMN6/Df5js2zouUsqG7I6sFxitIC+7KYK29KdXOLHdu9zL4sFnoVQnqaA==",
+       "funding": [
+         {
+           "type": "github",
+           "url": "https://github.com/sponsors/feross"
+         },
+         {
+diff --git a/tools/package.json b/tools/package.json
+index d8f0e13..1537530 100644
+--- a/tools/package.json
++++ b/tools/package.json
+@@ -1,11 +1,14 @@
+ {
+   "name": "shuttle-telemetry-tools",
+   "version": "1.0.0",
+   "type": "module",
+   "scripts": {
+-    "simulate": "node simulate.js"
++    "simulate": "node simulate.js",
++    "worker": "node worker.js"
+   },
+   "dependencies": {
++    "@supabase/supabase-js": "^2.118.0",
++    "dotenv": "^18.0.8",
+     "mqtt": "^5.10.1"
+   }
+ }
+diff --git a/tools/worker.js b/tools/worker.js
+new file mode 100644
+index 0000000..9ee6c78
+--- /dev/null
++++ b/tools/worker.js
+@@ -0,0 +1,179 @@
++import mqtt from 'mqtt';
++import { createClient } from '@supabase/supabase-js';
++import dotenv from 'dotenv';
++
++dotenv.config();
++
++const BROKER = process.env.MQTT_BROKER || 'mqtt://broker.emqx.io:1883';
++const TOPIC = process.env.MQTT_TOPIC || 'shuttle/fleet/v1/+/telemetry';
++const SUPABASE_URL = process.env.SUPABASE_URL;
++const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY;
++
++if (!SUPABASE_URL || !SUPABASE_KEY) {
++  console.error('[Worker Error] SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY (or SUPABASE_ANON_KEY) must be provided in tools/.env');
++  console.error('Please create a tools/.env file with:');
++  console.error('  SUPABASE_URL=https://<your-project>.supabase.co');
++  console.error('  SUPABASE_SERVICE_ROLE_KEY=<your-service-role-key>');
++  process.exit(1);
++}
++
++const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
++  auth: { persistSession: false },
++});
++
++console.log(`[Worker] Connecting to MQTT broker: ${BROKER}...`);
++const client = mqtt.connect(BROKER, {
++  clientId: `shuttle_ingest_worker_${Math.random().toString(16).slice(2, 8)}`,
++});
++
++// Haversine formula for distance between GPS coordinates in kilometers
++function haversineDistance(lat1, lng1, lat2, lng2) {
++  const toRad = (deg) => (deg * Math.PI) / 180;
++  const dLat = toRad(lat2 - lat1);
++  const dLng = toRad(lng2 - lng1);
++  const a =
++    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
++    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) * Math.sin(dLng / 2);
++  return 6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
++}
++
++// In-memory state tracking per vehicle
++const vehicleState = new Map();
++
++client.on('connect', () => {
++  console.log(`[Worker] Connected to MQTT broker! Subscribing to: ${TOPIC}`);
++  client.subscribe(TOPIC, (err) => {
++    if (err) {
++      console.error('[Worker] Subscribe error:', err.message);
++    } else {
++      console.log('[Worker] Ingestion pipeline is active and listening for telemetry.');
++    }
++  });
++});
++
++client.on('message', async (_topic, message) => {
++  try {
++    const data = JSON.parse(message.toString());
++    const { vehicle_id, lat, lng, speed, timestamp } = data;
++
++    if (!vehicle_id || typeof lat !== 'number' || typeof lng !== 'number') {
++      return;
++    }
++
++    const now = Date.now();
++    const today = new Date().toISOString().split('T')[0];
++    const numericSpeed = typeof speed === 'number' ? speed : 0;
++    const pointTimestamp = typeof timestamp === 'number' ? timestamp : now;
++
++    let state = vehicleState.get(vehicle_id);
++    if (!state) {
++      state = {
++        lastLat: lat,
++        lastLng: lng,
++        lastSpeed: numericSpeed,
++        lastTime: pointTimestamp,
++        pendingDistanceKm: 0,
++        maxSpeedKmh: numericSpeed,
++        currentDate: today,
++        lastFlushTime: now,
++        isFlushing: false,
++      };
++      vehicleState.set(vehicle_id, state);
++    } else {
++      // Midnight rollover for max speed tracking
++      if (state.currentDate !== today) {
++        state.currentDate = today;
++        state.maxSpeedKmh = numericSpeed;
++      } else {
++        state.maxSpeedKmh = Math.max(state.maxSpeedKmh, numericSpeed);
++      }
++
++      const dist = haversineDistance(state.lastLat, state.lastLng, lat, lng);
++
++      // Filter jitter (< 8m when speed < 1.5 km/h) & teleport (> 150 km/h)
++      const elapsedHours = Math.abs(pointTimestamp - state.lastTime) / 3600000;
++      const impliedSpeed = elapsedHours > 0 ? dist / elapsedHours : 0;
++
++      if (!(dist < 0.008 && numericSpeed < 1.5) && impliedSpeed <= 150) {
++        state.pendingDistanceKm += dist;
++      }
++
++      state.lastLat = lat;
++      state.lastLng = lng;
++      state.lastSpeed = numericSpeed;
++      state.lastTime = pointTimestamp;
++    }
++
++    // Flush batch to Supabase every 5 seconds per vehicle (with concurrency lock)
++    if (!state.isFlushing && now - state.lastFlushTime >= 5000 && state.pendingDistanceKm > 0) {
++      state.isFlushing = true;
++      const distanceToFlush = state.pendingDistanceKm;
++      state.pendingDistanceKm = 0;
++      state.lastFlushTime = now;
++
++      try {
++        // Upsert daily metrics
++        const { data: existing, error: fetchErr } = await supabase
++          .from('daily_vehicle_metrics')
++          .select('total_distance_km, max_speed_kmh')
++          .eq('vehicle_id', vehicle_id)
++          .eq('date', today)
++          .maybeSingle();
++
++        if (fetchErr) {
++          console.error(`[Worker Error] Failed to fetch current metrics for ${vehicle_id}:`, fetchErr.message);
++          // Restore uncommitted distance to avoid data loss
++          state.pendingDistanceKm += distanceToFlush;
++          return;
++        }
++
++        const existingDistance = Number(existing?.total_distance_km) || 0;
++        const existingMaxSpeed = Number(existing?.max_speed_kmh) || 0;
++
++        const newTotalDistance = Math.round((existingDistance + distanceToFlush) * 100) / 100;
++        const newMaxSpeed = Math.max(existingMaxSpeed, Math.round(state.maxSpeedKmh * 10) / 10);
++
++        const { error: upsertErr } = await supabase.from('daily_vehicle_metrics').upsert({
++          vehicle_id,
++          date: today,
++          total_distance_km: newTotalDistance,
++          max_speed_kmh: newMaxSpeed,
++          last_updated_at: new Date().toISOString(),
++        });
++
++        if (upsertErr) {
++          console.error(`[Worker Error] Failed to upsert metrics for ${vehicle_id}:`, upsertErr.message);
++          // Restore uncommitted distance on upsert failure
++          state.pendingDistanceKm += distanceToFlush;
++        } else {
++          console.log(`[Worker] Updated ${vehicle_id}: +${distanceToFlush.toFixed(3)} km (Total: ${newTotalDistance} km)`);
++        }
++      } catch (flushErr) {
++        console.error(`[Worker Error] Unexpected error during flush for ${vehicle_id}:`, flushErr.message);
++        state.pendingDistanceKm += distanceToFlush;
++      } finally {
++        state.isFlushing = false;
++      }
++    }
++  } catch (err) {
++    console.error('[Worker] Message processing error:', err.message);
++  }
++});
++
++client.on('error', (err) => {
++  console.error('[Worker] MQTT client error:', err.message);
++});
++
++// Graceful shutdown
++const shutdown = () => {
++  console.log('\n[Worker] Gracefully shutting down ingestion pipeline...');
++  client.end(false, () => {
++    console.log('[Worker] Disconnected from MQTT broker. Goodbye.');
++    process.exit(0);
++  });
++  // Force exit fallback if broker disconnect hangs
++  setTimeout(() => process.exit(0), 1500).unref();
++};
++
++process.on('SIGINT', shutdown);
++process.on('SIGTERM', shutdown);
