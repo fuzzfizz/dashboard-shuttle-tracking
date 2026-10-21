@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import mqtt, { MqttClient } from 'mqtt';
-import { ConnectionStatus, TelemetryPayload, UseShuttleTelemetryOptions } from '../types/telemetry';
+import { ConnectionStatus, FleetMap, TelemetryPayload, UseShuttleTelemetryOptions } from '../types/telemetry';
 import { parseTelemetryPayload } from '../services/telemetryParser';
 
 const DEFAULT_BROKER = import.meta.env.VITE_MQTT_BROKER_URL || 'wss://broker.emqx.io:8084/mqtt';
@@ -15,8 +15,9 @@ export function useShuttleTelemetry(options: UseShuttleTelemetryOptions = {}) {
   const password = options.password || DEFAULT_PASSWORD;
 
   const [status, setStatus] = useState<ConnectionStatus>('connecting');
-  const [telemetry, setTelemetry] = useState<TelemetryPayload | null>(null);
-  const [lastSeen, setLastSeen] = useState<number | null>(null);
+  const [vehicles, setVehicles] = useState<FleetMap>({});
+  const [lastSeenMap, setLastSeenMap] = useState<Record<string, number>>({});
+  const [selectedVehicleId, setSelectedVehicleId] = useState<string | null>(null);
 
   useEffect(() => {
     setStatus('connecting');
@@ -42,8 +43,15 @@ export function useShuttleTelemetry(options: UseShuttleTelemetryOptions = {}) {
     client.on('message', (_topic, message) => {
       const parsed = parseTelemetryPayload(message.toString());
       if (parsed) {
-        setTelemetry(parsed);
-        setLastSeen(Date.now());
+        const now = Date.now();
+        setVehicles((prev) => ({
+          ...prev,
+          [parsed.vehicle_id]: parsed,
+        }));
+        setLastSeenMap((prev) => ({
+          ...prev,
+          [parsed.vehicle_id]: now,
+        }));
       }
     });
 
@@ -65,5 +73,19 @@ export function useShuttleTelemetry(options: UseShuttleTelemetryOptions = {}) {
     };
   }, [brokerUrl, topic]);
 
-  return { status, telemetry, lastSeen };
+  // Backward compatibility helper
+  const selectedVehicle = selectedVehicleId ? vehicles[selectedVehicleId] || null : null;
+  const fallbackVehicle = Object.values(vehicles)[0] || null;
+  const telemetry: TelemetryPayload | null = selectedVehicle || fallbackVehicle;
+  const lastSeen: number | null = telemetry ? lastSeenMap[telemetry.vehicle_id] || null : null;
+
+  return {
+    status,
+    vehicles,
+    lastSeenMap,
+    selectedVehicleId,
+    setSelectedVehicleId,
+    telemetry,
+    lastSeen,
+  };
 }
