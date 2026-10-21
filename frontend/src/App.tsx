@@ -1,5 +1,5 @@
 import { useShuttleTelemetry } from './hooks/useShuttleTelemetry';
-import { ShuttleMap } from './components/ShuttleMap';
+import { ShuttleMap, DEFAULT_CENTER } from './components/ShuttleMap';
 import { TelemetryHUD } from './components/TelemetryHUD';
 import { FleetPanel } from './components/FleetPanel';
 import { Bus } from 'lucide-react';
@@ -11,8 +11,6 @@ export function App() {
     lastSeenMap,
     selectedVehicleId,
     setSelectedVehicleId,
-    telemetry,
-    lastSeen,
   } = useShuttleTelemetry();
 
   return (
@@ -38,9 +36,9 @@ export function App() {
 
       {/* Floating HUD Card */}
       <TelemetryHUD
-        telemetry={selectedVehicleId ? vehicles[selectedVehicleId] || null : telemetry}
+        telemetry={selectedVehicleId ? (vehicles[selectedVehicleId] ?? null) : null}
         status={status}
-        lastSeen={lastSeen}
+        lastSeen={selectedVehicleId ? (lastSeenMap[selectedVehicleId] ?? null) : null}
         totalVehicles={Object.keys(vehicles).length}
       />
 
@@ -49,7 +47,7 @@ export function App() {
         vehicles={vehicles}
         selectedVehicleId={selectedVehicleId}
         onSelectVehicle={setSelectedVehicleId}
-        defaultCenter={[13.7563, 100.5018]}
+        defaultCenter={DEFAULT_CENTER}
         zoom={14}
       />
     </div>
