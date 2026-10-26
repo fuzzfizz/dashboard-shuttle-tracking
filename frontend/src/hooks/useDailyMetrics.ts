@@ -4,6 +4,15 @@ import { DailyMetricsMap } from '../types/metrics';
 import { getSupabaseClient, isSupabaseConfigured } from '../services/supabaseClient';
 import { calculateDistanceIncrement, CoordinatePoint } from '../services/distanceCalculator';
 
+export function getBangkokDate(date: Date = new Date()): string {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Bangkok',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(date);
+}
+
 export function useDailyMetrics(vehicles: FleetMap) {
   const [dailyMetrics, setDailyMetrics] = useState<DailyMetricsMap>({});
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -11,7 +20,7 @@ export function useDailyMetrics(vehicles: FleetMap) {
   // In-memory tracking of previous coordinate per vehicle
   const prevCoordsRef = useRef<Record<string, CoordinatePoint>>({});
 
-  const todayStr = new Date().toISOString().split('T')[0];
+  const todayStr = getBangkokDate();
 
   // Fetch metrics from Supabase if configured
   const fetchSupabaseMetrics = useCallback(async () => {

@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: shuttle-tracking-app
+    runtime: node
+    plan: free
+    region: singapore
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: MQTT_BROKER
+        value: mqtt://broker.emqx.io:1883
+      - key: MQTT_TOPIC
+        value: shuttle/fleet/v1/+/telemetry
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
