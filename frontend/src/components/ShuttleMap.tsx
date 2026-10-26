@@ -41,6 +41,7 @@ export interface ShuttleMapProps {
   telemetry?: TelemetryPayload | null;
   defaultCenter?: [number, number];
   zoom?: number;
+  isFullscreen?: boolean;
 }
 
 // Camera auto controller: handles overview (fitBounds) or focused tracking (panTo)
@@ -109,6 +110,29 @@ export const FleetCameraController: React.FC<{
   return null;
 };
 
+export const MapResizeHandler: React.FC<{ isFullscreen?: boolean }> = ({ isFullscreen }) => {
+  const map = useMap();
+
+  useEffect(() => {
+    // Invalidate Leaflet canvas dimensions after transition/state update
+    const timer = setTimeout(() => {
+      map.invalidateSize();
+    }, 100);
+
+    const handleWindowResize = () => {
+      map.invalidateSize();
+    };
+
+    window.addEventListener('resize', handleWindowResize);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener('resize', handleWindowResize);
+    };
+  }, [isFullscreen, map]);
+
+  return null;
+};
+
 // SVG vehicle marker with direction arrow and vehicle badge
 export function createVehicleIcon(
   heading: number = 0,
@@ -157,6 +181,7 @@ export const ShuttleMap: React.FC<ShuttleMapProps> = ({
   telemetry,
   defaultCenter = DEFAULT_CENTER,
   zoom = 15,
+  isFullscreen = false,
 }) => {
   // Merge backward compatibility prop telemetry if vehicles is empty
   const effectiveVehicles: FleetMap =
@@ -188,6 +213,9 @@ export const ShuttleMap: React.FC<ShuttleMapProps> = ({
           selectedVehicleId={selectedVehicleId}
           defaultCenter={defaultCenter}
         />
+
+        {/* Leaflet resize invalidation handler */}
+        <MapResizeHandler isFullscreen={isFullscreen} />
 
         {/* Render vehicle markers */}
         {vehicleList.map((v) => {

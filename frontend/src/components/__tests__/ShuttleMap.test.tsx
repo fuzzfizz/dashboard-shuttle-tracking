@@ -143,4 +143,24 @@ describe('ShuttleMap', () => {
     fitBoundsSpy.mockRestore();
     panToSpy.mockRestore();
   });
+
+  it('calls map.invalidateSize when isFullscreen prop changes or window resizes', async () => {
+    const invalidateSizeSpy = vi.spyOn(L.Map.prototype, 'invalidateSize').mockImplementation(() => ({} as any));
+
+    const { rerender } = render(<ShuttleMap vehicles={{}} isFullscreen={false} />);
+
+    // Toggle fullscreen prop
+    rerender(<ShuttleMap vehicles={{}} isFullscreen={true} />);
+
+    // Wait for the scheduled timeout
+    await new Promise((resolve) => setTimeout(resolve, 150));
+
+    expect(invalidateSizeSpy).toHaveBeenCalled();
+
+    // Trigger window resize event
+    window.dispatchEvent(new Event('resize'));
+    expect(invalidateSizeSpy).toHaveBeenCalledTimes(2);
+
+    invalidateSizeSpy.mockRestore();
+  });
 });
