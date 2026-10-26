@@ -6,13 +6,31 @@ A minimalist, high-performance real-time shuttle tracking dashboard designed for
 
 ## Quick Start
 
-### 1. Run the Web Dashboard
+### 1. Run the All-in-One System Locally
 ```bash
-cd frontend
 npm install
+npm run build
+npm start
+```
+Open [http://localhost:3000](http://localhost:3000) for the web dashboard and health endpoint at [http://localhost:3000/health](http://localhost:3000/health).
+
+### 2. Run Only the Frontend Development Server
+```bash
 npm run dev
 ```
 Open [http://localhost:5173](http://localhost:5173) in your browser.
+
+### 3. Deploy to Render (All-in-One: Frontend + 24/7 Worker)
+Deploy directly using Render Blueprint (`render.yaml`) or as a Node Web Service.
+
+**Required Environment Variables on Render:**
+| Variable | Description | Source |
+| :--- | :--- | :--- |
+| `SUPABASE_URL` | Supabase Project URL | Supabase Console > Project Settings > API |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase Service Role Secret Key (for Worker writes) | Supabase Console > Project Settings > API |
+| `VITE_SUPABASE_ANON_KEY` | Supabase Anon Public Key (for Frontend reads) | Supabase Console > Project Settings > API |
+
+*Note: `MQTT_BROKER` defaults to `mqtt://broker.emqx.io:1883` and `MQTT_TOPIC` defaults to `shuttle/fleet/v1/+/telemetry`.*
 
 ### 2. Test with the Simulator (Optional)
 If your hardware is not yet powered on, run the test telemetry publisher:
