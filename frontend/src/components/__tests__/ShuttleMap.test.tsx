@@ -119,14 +119,27 @@ describe('ShuttleMap', () => {
     rerender(<ShuttleMap vehicles={fleetAUpdated} selectedVehicleId={null} />);
     expect(fitBoundsSpy).toHaveBeenCalledTimes(1);
 
-    // 3. User switches to Focus Mode on EV-01: triggers panTo
+    // 3. User switches to Focus Mode on EV-01: triggers panTo with initial focus duration 1.0
     rerender(<ShuttleMap vehicles={fleetAUpdated} selectedVehicleId="EV-01" />);
-    expect(panToSpy).toHaveBeenCalledWith([13.7505, 100.5005], expect.any(Object));
+    expect(panToSpy).toHaveBeenCalledWith([13.7505, 100.5005], { animate: true, duration: 1.0 });
 
     // 4. Focus Mode same coordinates: panTo not called again
     const panToCount = panToSpy.mock.calls.length;
     rerender(<ShuttleMap vehicles={fleetAUpdated} selectedVehicleId="EV-01" />);
     expect(panToSpy).toHaveBeenCalledTimes(panToCount);
+
+    // 4.5. Subsequent telemetry update for focused EV-01 with 5s timeDelta:
+    // Synchronizes camera pan duration with vehicle movement (5.0s, easeLinearity: 0.1)
+    const fleetAProgressed: FleetMap = {
+      ...fleetAUpdated,
+      'EV-01': { vehicle_id: 'EV-01', lat: 13.7510, lng: 100.5010, speed: 25, timestamp: 7000 },
+    };
+    rerender(<ShuttleMap vehicles={fleetAProgressed} selectedVehicleId="EV-01" />);
+    expect(panToSpy).toHaveBeenLastCalledWith([13.7510, 100.5010], {
+      animate: true,
+      duration: 5.0,
+      easeLinearity: 0.1,
+    });
 
     // 5. User switches from Focus Mode back to Overview Mode: triggers fitBounds
     rerender(<ShuttleMap vehicles={fleetAUpdated} selectedVehicleId={null} />);

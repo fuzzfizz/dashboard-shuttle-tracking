@@ -3,6 +3,7 @@ import { MapContainer, TileLayer, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import { FleetMap, TelemetryPayload } from '../types/telemetry';
 import { computeVehicleStatus } from '../services/fleetStatus';
+import { isJumpTooLarge } from '../services/markerInterpolation';
 import { AnimatedVehicleMarker } from './AnimatedVehicleMarker';
 
 // OpenStreetMap standard tile layer
@@ -56,6 +57,7 @@ export const FleetCameraController: React.FC<{
   const prevVehicleCountRef = useRef<number>(0);
   const isMountedRef = useRef<boolean>(false);
   const prevTargetCoordsRef = useRef<{ lat: number; lng: number } | null>(null);
+  const prevTimestampRef = useRef<number>(0);
 
   useEffect(() => {
     const vehicleList = Object.values(vehicles);
@@ -76,12 +78,36 @@ export const FleetCameraController: React.FC<{
         prevCoords.lng !== target.lng;
 
       if (coordsChanged) {
-        map.panTo([target.lat, target.lng], { animate: true, duration: 0.8 });
+        const isInitialFocus = selectedChanged || !prevCoords;
+        const isFarJump = prevCoords
+          ? isJumpTooLarge([prevCoords.lat, prevCoords.lng], [target.lat, target.lng], 2.0)
+          : false;
+
+        if (isInitialFocus || isFarJump) {
+          // Initial focus or large jump: snap/quick pan directly to vehicle
+          map.panTo([target.lat, target.lng], { animate: true, duration: 1.0 });
+        } else {
+          // Synchronize camera panning duration with the vehicle telemetry interval
+          // Camera glides smoothly in unison with the vehicle marker without rushing ahead
+          const timeDeltaSec = prevTimestampRef.current > 0
+            ? (target.timestamp - prevTimestampRef.current) / 1000
+            : 5.0;
+          const duration = Math.max(1.0, Math.min(10.0, timeDeltaSec || 5.0));
+
+          map.panTo([target.lat, target.lng], {
+            animate: true,
+            duration,
+            easeLinearity: 0.1,
+          });
+        }
+
         prevTargetCoordsRef.current = { lat: target.lat, lng: target.lng };
+        prevTimestampRef.current = target.timestamp;
       }
     } else {
       // Overview Mode / No focus
       prevTargetCoordsRef.current = null;
+      prevTimestampRef.current = 0;
 
       if (vehicleCount > 1) {
         // Fleet Overview Mode: fit all active vehicles with padding
