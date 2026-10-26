@@ -59,4 +59,49 @@ describe('App Integration', () => {
     expect(screen.queryByRole('button', { name: /exit full screen/i })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: /expand map to full screen/i })).toBeInTheDocument();
   });
+
+  it('preserves the same map container DOM node across fullscreen toggle', () => {
+    const { container } = render(<App />);
+    const mapEl = container.querySelector('.leaflet-container');
+    expect(mapEl).not.toBeNull();
+
+    // Toggle to fullscreen
+    const expandBtn = screen.getByRole('button', { name: /expand map to full screen/i });
+    fireEvent.click(expandBtn);
+
+    // Check map container DOM instance is preserved without remount
+    const mapElAfter = container.querySelector('.leaflet-container');
+    expect(mapElAfter).toBe(mapEl);
+
+    // Toggle back to compact
+    const exitBtn = screen.getByRole('button', { name: /exit full screen/i });
+    fireEvent.click(exitBtn);
+
+    const mapElFinal = container.querySelector('.leaflet-container');
+    expect(mapElFinal).toBe(mapEl);
+  });
+
+  it('does not exit fullscreen when Escape key is pressed while DailyMetricsModal is open', () => {
+    render(<App />);
+
+    // Expand to fullscreen
+    const expandBtn = screen.getByRole('button', { name: /expand map to full screen/i });
+    fireEvent.click(expandBtn);
+    expect(screen.getByRole('button', { name: /exit full screen/i })).toBeInTheDocument();
+
+    // Open Analytics modal from floating panel
+    const analyticsBtn = screen.getByRole('button', { name: /analytics/i });
+    fireEvent.click(analyticsBtn);
+    expect(screen.getByText('Daily Fleet Analytics')).toBeInTheDocument();
+
+    // First Escape closes modal, but preserves fullscreen
+    fireEvent.keyDown(window, { key: 'Escape', code: 'Escape' });
+    expect(screen.queryByText('Daily Fleet Analytics')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /exit full screen/i })).toBeInTheDocument();
+
+    // Second Escape exits fullscreen
+    fireEvent.keyDown(window, { key: 'Escape', code: 'Escape' });
+    expect(screen.queryByRole('button', { name: /exit full screen/i })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /expand map to full screen/i })).toBeInTheDocument();
+  });
 });
