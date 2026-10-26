@@ -127,31 +127,6 @@ export const DailyDistanceTable: React.FC<DailyDistanceTableProps> = ({
     className ??
     'bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-5 shadow-xl flex flex-col gap-4 text-slate-100';
 
-  if (allVehicleIds.length === 0) {
-    return (
-      <div className={containerClasses}>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className="p-1.5 bg-emerald-500/10 text-emerald-400 rounded-xl">
-              <Route className="w-4 h-4" />
-            </div>
-            <div>
-              <h2 className="text-sm font-semibold text-slate-200">Daily Distance Overview</h2>
-              <p className="text-[11px] text-slate-400">Total distance traveled by vehicles today</p>
-            </div>
-          </div>
-        </div>
-        <div className="py-8 px-4 text-center border border-dashed border-slate-800 rounded-xl">
-          <Route className="w-7 h-7 text-slate-600 mx-auto mb-2 animate-pulse" />
-          <p className="text-xs sm:text-sm font-medium text-slate-400">No distance recorded today</p>
-          <p className="text-[10px] sm:text-xs text-slate-500 mt-0.5">
-            Distance metrics will update automatically as vehicles move
-          </p>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className={containerClasses}>
       {/* Header */}
@@ -233,7 +208,17 @@ export const DailyDistanceTable: React.FC<DailyDistanceTableProps> = ({
         </div>
       </div>
 
-      {/* Desktop View: HTML Table */}
+      {allVehicleIds.length === 0 ? (
+        <div className="py-8 px-4 text-center border border-dashed border-slate-800 rounded-xl">
+          <Route className="w-7 h-7 text-slate-600 mx-auto mb-2 animate-pulse" />
+          <p className="text-xs sm:text-sm font-medium text-slate-400">No distance recorded today</p>
+          <p className="text-[10px] sm:text-xs text-slate-500 mt-0.5">
+            Distance metrics will update automatically as vehicles move
+          </p>
+        </div>
+      ) : (
+        <>
+          {/* Desktop View: HTML Table */}
       <div className="hidden sm:block overflow-x-auto">
         <table className="w-full text-left border-collapse text-xs">
           <thead>
@@ -434,6 +419,8 @@ export const DailyDistanceTable: React.FC<DailyDistanceTableProps> = ({
           );
         })}
       </div>
+        </>
+      )}
     </div>
   );
 };
