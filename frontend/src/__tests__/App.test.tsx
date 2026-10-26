@@ -16,12 +16,47 @@ describe('App Integration', () => {
 
     expect(screen.queryByText('Daily Fleet Analytics')).not.toBeInTheDocument();
 
-    const analyticsBtn = screen.getByRole('button', { name: /analytics/i });
+    const analyticsBtn = screen.getAllByRole('button', { name: /analytics/i })[0];
     fireEvent.click(analyticsBtn);
     expect(screen.getByText('Daily Fleet Analytics')).toBeInTheDocument();
 
     const closeBtn = screen.getByRole('button', { name: /close modal/i });
     fireEvent.click(closeBtn);
     expect(screen.queryByText('Daily Fleet Analytics')).not.toBeInTheDocument();
+  });
+
+  it('renders compact map card with expand button and toggles fullscreen on click', () => {
+    render(<App />);
+
+    // Default compact mode: Expand button is visible
+    const expandBtn = screen.getByRole('button', { name: /expand map to full screen/i });
+    expect(expandBtn).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /exit full screen/i })).not.toBeInTheDocument();
+
+    // Click expand button to enter fullscreen
+    fireEvent.click(expandBtn);
+
+    // Fullscreen mode: Exit button is visible
+    const exitBtn = screen.getByRole('button', { name: /exit full screen/i });
+    expect(exitBtn).toBeInTheDocument();
+
+    // Click exit button to return to compact mode
+    fireEvent.click(exitBtn);
+    expect(screen.getByRole('button', { name: /expand map to full screen/i })).toBeInTheDocument();
+  });
+
+  it('exits fullscreen mode when Escape key is pressed', () => {
+    render(<App />);
+
+    const expandBtn = screen.getByRole('button', { name: /expand map to full screen/i });
+    fireEvent.click(expandBtn);
+    expect(screen.getByRole('button', { name: /exit full screen/i })).toBeInTheDocument();
+
+    // Press Escape key
+    fireEvent.keyDown(window, { key: 'Escape', code: 'Escape' });
+
+    // Should return to compact mode
+    expect(screen.queryByRole('button', { name: /exit full screen/i })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /expand map to full screen/i })).toBeInTheDocument();
   });
 });
