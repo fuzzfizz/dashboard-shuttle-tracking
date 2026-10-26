@@ -1,8 +1,9 @@
 import React, { useEffect, useRef } from 'react';
-import { MapContainer, TileLayer, Marker, Tooltip, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import { FleetMap, TelemetryPayload } from '../types/telemetry';
 import { computeVehicleStatus } from '../services/fleetStatus';
+import { AnimatedVehicleMarker } from './AnimatedVehicleMarker';
 
 // OpenStreetMap standard tile layer
 const OSM_URL = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
@@ -217,7 +218,7 @@ export const ShuttleMap: React.FC<ShuttleMapProps> = ({
         {/* Leaflet resize invalidation handler */}
         <MapResizeHandler isFullscreen={isFullscreen} />
 
-        {/* Render vehicle markers */}
+        {/* Render animated vehicle markers with 60 FPS gliding */}
         {vehicleList.map((v) => {
           const isSelected = selectedVehicleId === v.vehicle_id;
           const isOnline = computeVehicleStatus(
@@ -227,22 +228,13 @@ export const ShuttleMap: React.FC<ShuttleMapProps> = ({
           ).isOnline;
 
           return (
-            <Marker
+            <AnimatedVehicleMarker
               key={v.vehicle_id}
-              position={[v.lat, v.lng]}
-              icon={createVehicleIcon(v.heading ?? 0, isSelected, v.vehicle_id, isOnline)}
-              eventHandlers={{
-                click: () => onSelectVehicle?.(v.vehicle_id),
-              }}
-            >
-              <Tooltip direction="top" offset={[0, -20]} opacity={0.95}>
-                <div className="text-xs font-sans">
-                  <strong>{v.vehicle_id}</strong>
-                  <br />
-                  Speed: {(v.speed ?? 0).toFixed(1)} km/h
-                </div>
-              </Tooltip>
-            </Marker>
+              vehicle={v}
+              isSelected={isSelected}
+              isOnline={isOnline}
+              onSelectVehicle={onSelectVehicle}
+            />
           );
         })}
       </MapContainer>
