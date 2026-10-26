@@ -5,6 +5,7 @@ import { ShuttleMap, DEFAULT_CENTER } from './components/ShuttleMap';
 import { TelemetryHUD } from './components/TelemetryHUD';
 import { FleetPanel } from './components/FleetPanel';
 import { DailyMetricsModal } from './components/DailyMetricsModal';
+import { DailyDistanceTable } from './components/DailyDistanceTable';
 import { Bus, Maximize2, Minimize2, BarChart3 } from 'lucide-react';
 import { calculateFleetStats, computeVehicleStatus } from './services/fleetStatus';
 
@@ -46,6 +47,11 @@ export function App() {
   const activeLastSeen = selectedVehicleId
     ? (lastSeenMap[selectedVehicleId] ?? null)
     : latestFleetHeartbeat;
+
+  const handleOpenVehicleMap = (vehicleId: string) => {
+    setSelectedVehicleId(vehicleId);
+    setIsMapFullscreen(true);
+  };
 
   const getConnectionDot = (s: string) => {
     switch (s) {
@@ -96,7 +102,7 @@ export function App() {
 
       {/* Main Grid */}
       <main className="flex-1 p-4 md:p-6 grid grid-cols-1 lg:grid-cols-12 gap-5 max-w-7xl mx-auto w-full">
-        {/* Left Column: Map Card & Telemetry HUD */}
+        {/* Left Column: Map Card & Telemetry HUD & Daily Distance Table */}
         <div className="lg:col-span-8 flex flex-col gap-4">
           <div className={isMapFullscreen ? '' : 'bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-xl flex flex-col gap-3'}>
             {!isMapFullscreen && (
@@ -208,6 +214,18 @@ export function App() {
               totalVehicles={fleetStats.totalVehicles}
               fleetStats={fleetStats}
               isOnline={isOnline}
+              now={now}
+            />
+          )}
+
+          {/* Daily Distance Table (compact mode only) */}
+          {!isMapFullscreen && (
+            <DailyDistanceTable
+              dailyMetrics={dailyMetrics}
+              vehicles={vehicles}
+              lastSeenMap={lastSeenMap}
+              selectedVehicleId={selectedVehicleId}
+              onOpenVehicleMap={handleOpenVehicleMap}
               now={now}
             />
           )}

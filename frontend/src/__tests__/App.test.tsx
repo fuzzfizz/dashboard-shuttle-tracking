@@ -1,8 +1,14 @@
 import { render, screen, fireEvent } from '@testing-library/react';
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import { App } from '../App';
+import * as shuttleHook from '../hooks/useShuttleTelemetry';
+import * as dailyMetricsHook from '../hooks/useDailyMetrics';
 
 describe('App Integration', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it('renders top brand header, Fleet Status, and map without crashing', () => {
     const { container } = render(<App />);
     expect(screen.getByText('Shuttle Tracker')).toBeInTheDocument();
@@ -103,5 +109,65 @@ describe('App Integration', () => {
     fireEvent.keyDown(window, { key: 'Escape', code: 'Escape' });
     expect(screen.queryByRole('button', { name: /exit full screen/i })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: /expand map to full screen/i })).toBeInTheDocument();
+  });
+
+  it('renders DailyDistanceTable overview on the dashboard in compact mode', () => {
+    render(<App />);
+    expect(screen.getByText('Daily Distance Overview')).toBeInTheDocument();
+  });
+
+  it('opens map in fullscreen mode when a vehicle row is clicked in DailyDistanceTable', () => {
+    vi.spyOn(shuttleHook, 'useShuttleTelemetry').mockReturnValue({
+      status: 'connected',
+      vehicles: {
+        'EV-01': {
+          vehicle_id: 'EV-01',
+          lat: 13.75,
+          lng: 100.5,
+          speed: 30,
+          timestamp: Date.now(),
+        },
+      },
+      lastSeenMap: { 'EV-01': Date.now() },
+      selectedVehicleId: null,
+      setSelectedVehicleId: vi.fn(),
+      telemetry: null,
+      lastSeen: null,
+      now: Date.now(),
+    });
+
+    vi.spyOn(dailyMetricsHook, 'useDailyMetrics').mockReturnValue({
+      dailyMetrics: {
+        'EV-01': {
+          vehicle_id: 'EV-01',
+          date: '2026-10-26',
+          total_distance_km: 15.4,
+          max_speed_kmh: 40,
+          avg_speed_kmh: 20,
+          active_minutes: 45,
+          last_updated_at: new Date().toISOString(),
+        },
+      },
+      totalFleetDistanceKm: 15.4,
+      isLoading: false,
+      error: null,
+      refreshMetrics: vi.fn(),
+    });
+
+    render(<App />);
+
+    // DailyDistanceTable displays EV-01 and 15.40 km
+    expect(screen.getAllByText('EV-01').length).toBeGreaterThan(0);
+    expect(screen.getByText('15.40 km')).toBeInTheDocument();
+
+    // Initially in compact mode
+    expect(screen.queryByRole('button', { name: /exit full screen/i })).not.toBeInTheDocument();
+
+    // Click "Open map for EV-01" button in the table row
+    const openBtn = screen.getByRole('button', { name: /open map for ev-01/i });
+    fireEvent.click(openBtn);
+
+    // Map transitions to fullscreen
+    expect(screen.getByRole('button', { name: /exit full screen/i })).toBeInTheDocument();
   });
 });
