@@ -117,22 +117,24 @@ describe('App Integration', () => {
   });
 
   it('opens map in fullscreen mode when a vehicle row is clicked in DailyDistanceTable', () => {
+    const testVehicle = {
+      vehicle_id: 'EV-01',
+      lat: 13.75,
+      lng: 100.5,
+      speed: 30,
+      timestamp: Date.now(),
+    };
+
     vi.spyOn(shuttleHook, 'useShuttleTelemetry').mockReturnValue({
       status: 'connected',
       vehicles: {
-        'EV-01': {
-          vehicle_id: 'EV-01',
-          lat: 13.75,
-          lng: 100.5,
-          speed: 30,
-          timestamp: Date.now(),
-        },
+        'EV-01': testVehicle,
       },
       lastSeenMap: { 'EV-01': Date.now() },
       selectedVehicleId: null,
       setSelectedVehicleId: vi.fn(),
-      telemetry: null,
-      lastSeen: null,
+      telemetry: testVehicle,
+      lastSeen: Date.now(),
       now: Date.now(),
     });
 
@@ -150,8 +152,7 @@ describe('App Integration', () => {
       },
       totalFleetDistanceKm: 15.4,
       isLoading: false,
-      error: null,
-      refreshMetrics: vi.fn(),
+      refetch: vi.fn(),
     });
 
     render(<App />);
