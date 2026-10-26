@@ -155,7 +155,7 @@ export const DailyDistanceTable: React.FC<DailyDistanceTableProps> = ({
             onClick={handleSortToggle}
             aria-label="Toggle sort"
             title={`Sort mode: ${sortMode}`}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-750 text-slate-300 hover:text-white border border-slate-700/80 text-xs font-medium transition-colors"
+            className="flex items-center justify-center gap-1.5 px-3 py-1.5 min-h-[44px] sm:min-h-0 rounded-xl bg-slate-800 hover:bg-slate-750 text-slate-300 hover:text-white border border-slate-700/80 text-xs font-medium transition-colors"
           >
             <ArrowUpDown className="w-3.5 h-3.5 text-emerald-400" />
             <span className="hidden sm:inline">Sort: {getSortLabel(sortMode)}</span>
