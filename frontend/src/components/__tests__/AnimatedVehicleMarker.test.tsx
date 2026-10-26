@@ -1,4 +1,4 @@
-import { render, fireEvent } from '@testing-library/react';
+import { render } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { MapContainer } from 'react-leaflet';
 import { AnimatedVehicleMarker } from '../AnimatedVehicleMarker';
