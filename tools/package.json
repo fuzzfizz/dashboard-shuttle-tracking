@@ -4,6 +4,7 @@
   "type": "module",
   "scripts": {
     "simulate": "node simulate.js",
+    "simulate:cmi": "node simulate-chiangmai.js",
     "worker": "node worker.js",
     "migrate": "node migrate.js"
   },
