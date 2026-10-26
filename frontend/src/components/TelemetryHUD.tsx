@@ -10,6 +10,7 @@ export interface TelemetryHUDProps {
   fleetStats?: FleetStats;
   isOnline?: boolean;
   now?: number;
+  className?: string;
 }
 
 export const TelemetryHUD: React.FC<TelemetryHUDProps> = ({
@@ -20,6 +21,7 @@ export const TelemetryHUD: React.FC<TelemetryHUDProps> = ({
   fleetStats,
   isOnline,
   now,
+  className,
 }) => {
   const getStatusColor = (s: ConnectionStatus) => {
     switch (s) {
@@ -43,7 +45,7 @@ export const TelemetryHUD: React.FC<TelemetryHUDProps> = ({
   };
 
   return (
-    <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-[1000] w-[92vw] max-w-xl">
+    <div className={className ?? "absolute bottom-6 left-1/2 -translate-x-1/2 z-[1000] w-[92vw] max-w-xl"}>
       <div className="bg-slate-900/90 backdrop-blur-md border border-slate-800 text-white px-5 py-4 rounded-2xl shadow-2xl flex flex-wrap items-center justify-between gap-4">
         {/* Status & Vehicle Info */}
         <div className="flex items-center gap-3">

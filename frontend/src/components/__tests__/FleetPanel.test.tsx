@@ -153,4 +153,17 @@ describe('FleetPanel', () => {
     fireEvent.click(expandBtn);
     expect(screen.getByText('shuttle-01')).toBeDefined();
   });
+
+  it('applies custom className when provided', () => {
+    const { container } = render(
+      <FleetPanel
+        vehicles={{}}
+        lastSeenMap={{}}
+        selectedVehicleId={null}
+        onSelectVehicle={vi.fn()}
+        className="custom-fleet-class"
+      />
+    );
+    expect(container.firstChild).toHaveClass('custom-fleet-class');
+  });
 });

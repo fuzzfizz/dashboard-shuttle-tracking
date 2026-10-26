@@ -12,6 +12,7 @@ interface FleetPanelProps {
   now?: number;
   dailyMetrics?: DailyMetricsMap;
   onOpenAnalytics?: () => void;
+  className?: string;
 }
 
 export const FleetPanel: React.FC<FleetPanelProps> = ({
@@ -22,13 +23,14 @@ export const FleetPanel: React.FC<FleetPanelProps> = ({
   now,
   dailyMetrics,
   onOpenAnalytics,
+  className,
 }) => {
   const [collapsed, setCollapsed] = useState(false);
   const vehicleList = Object.values(vehicles);
   const totalCount = vehicleList.length;
 
   return (
-    <div className="absolute top-4 right-4 z-[1000] w-72 max-w-[calc(100vw-2rem)] flex flex-col gap-2">
+    <div className={className ?? "absolute top-4 right-4 z-[1000] w-72 max-w-[calc(100vw-2rem)] flex flex-col gap-2"}>
       <div className="bg-white/95 backdrop-blur-md border border-slate-200/90 rounded-2xl shadow-xl overflow-hidden transition-all duration-300">
         {/* Panel Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100 bg-slate-50/50">

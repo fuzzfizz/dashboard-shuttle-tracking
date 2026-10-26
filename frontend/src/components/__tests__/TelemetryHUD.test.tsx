@@ -106,4 +106,16 @@ describe('TelemetryHUD', () => {
     expect(screen.getByText('shuttle-09')).toBeInTheDocument();
     expect(screen.getByText('Signal Lost')).toBeInTheDocument();
   });
+
+  it('applies custom className when provided', () => {
+    const { container } = render(
+      <TelemetryHUD
+        telemetry={null}
+        status="connected"
+        lastSeen={null}
+        className="custom-hud-class"
+      />
+    );
+    expect(container.firstChild).toHaveClass('custom-hud-class');
+  });
 });
