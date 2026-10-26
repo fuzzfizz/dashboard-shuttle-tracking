@@ -58,6 +58,11 @@ export const AnimatedVehicleMarker: React.FC<AnimatedVehicleMarkerProps> = ({
       targetCoordRef.current = newTarget;
       if (markerRef.current) {
         markerRef.current.setLatLng(newTarget);
+        const el = markerRef.current.getElement();
+        if (el) {
+          el.dataset.lat = newTarget[0].toFixed(6);
+          el.dataset.lng = newTarget[1].toFixed(6);
+        }
       }
       return;
     }
@@ -80,6 +85,11 @@ export const AnimatedVehicleMarker: React.FC<AnimatedVehicleMarkerProps> = ({
 
       if (markerRef.current) {
         markerRef.current.setLatLng(interpolated);
+        const el = markerRef.current.getElement();
+        if (el) {
+          el.dataset.lat = interpolated[0].toFixed(6);
+          el.dataset.lng = interpolated[1].toFixed(6);
+        }
       }
 
       if (progress < 1.0) {
