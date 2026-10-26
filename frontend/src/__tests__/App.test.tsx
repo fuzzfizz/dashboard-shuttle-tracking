@@ -1,10 +1,14 @@
 import { render, screen, fireEvent } from '@testing-library/react';
-import { describe, it, expect, vi, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { App } from '../App';
 import * as shuttleHook from '../hooks/useShuttleTelemetry';
 import * as dailyMetricsHook from '../hooks/useDailyMetrics';
 
 describe('App Integration', () => {
+  beforeEach(() => {
+    window.HTMLElement.prototype.scrollIntoView = vi.fn();
+  });
+
   afterEach(() => {
     vi.restoreAllMocks();
   });
@@ -17,18 +21,37 @@ describe('App Integration', () => {
     expect(container.querySelector('.leaflet-container')).not.toBeNull();
   });
 
-  it('opens and closes DailyMetricsModal when analytics button and close button are clicked', () => {
-    render(<App />);
+  it('renders #fleet-analytics as a full-width bottom section containing DailyDistanceTable', () => {
+    const { container } = render(<App />);
+    const analyticsSection = container.querySelector('#fleet-analytics');
+    expect(analyticsSection).toBeInTheDocument();
+    expect(analyticsSection).toHaveClass('lg:col-span-12');
+    expect(screen.getByText('Daily Distance Overview')).toBeInTheDocument();
+  });
 
-    expect(screen.queryByText('Daily Fleet Analytics')).not.toBeInTheDocument();
+  it('triggers scrollIntoView on #fleet-analytics when header Analytics button is clicked', () => {
+    const { container } = render(<App />);
+    const scrollSpy = vi.spyOn(window.HTMLElement.prototype, 'scrollIntoView');
 
-    const analyticsBtn = screen.getAllByRole('button', { name: /analytics/i })[0];
-    fireEvent.click(analyticsBtn);
-    expect(screen.getByText('Daily Fleet Analytics')).toBeInTheDocument();
+    const analyticsButtons = screen.getAllByRole('button', { name: 'View Daily Analytics' });
+    fireEvent.click(analyticsButtons[0]);
 
-    const closeBtn = screen.getByRole('button', { name: /close modal/i });
-    fireEvent.click(closeBtn);
-    expect(screen.queryByText('Daily Fleet Analytics')).not.toBeInTheDocument();
+    const analyticsSection = container.querySelector('#fleet-analytics');
+    expect(analyticsSection).not.toBeNull();
+    expect(scrollSpy).toHaveBeenCalledWith({ behavior: 'smooth' });
+  });
+
+  it('triggers scrollIntoView on #fleet-analytics when FleetPanel Analytics button is clicked', () => {
+    const { container } = render(<App />);
+    const scrollSpy = vi.spyOn(window.HTMLElement.prototype, 'scrollIntoView');
+
+    const analyticsButtons = screen.getAllByRole('button', { name: 'View Daily Analytics' });
+    // Click panel analytics button (second one in the DOM)
+    fireEvent.click(analyticsButtons[1]);
+
+    const analyticsSection = container.querySelector('#fleet-analytics');
+    expect(analyticsSection).not.toBeNull();
+    expect(scrollSpy).toHaveBeenCalledWith({ behavior: 'smooth' });
   });
 
   it('renders compact map card with expand button and toggles fullscreen on click', () => {
@@ -87,35 +110,6 @@ describe('App Integration', () => {
     expect(mapElFinal).toBe(mapEl);
   });
 
-  it('does not exit fullscreen when Escape key is pressed while DailyMetricsModal is open', () => {
-    render(<App />);
-
-    // Expand to fullscreen
-    const expandBtn = screen.getByRole('button', { name: /expand map to full screen/i });
-    fireEvent.click(expandBtn);
-    expect(screen.getByRole('button', { name: /exit full screen/i })).toBeInTheDocument();
-
-    // Open Analytics modal from floating panel
-    const analyticsBtn = screen.getByRole('button', { name: /analytics/i });
-    fireEvent.click(analyticsBtn);
-    expect(screen.getByText('Daily Fleet Analytics')).toBeInTheDocument();
-
-    // First Escape closes modal, but preserves fullscreen
-    fireEvent.keyDown(window, { key: 'Escape', code: 'Escape' });
-    expect(screen.queryByText('Daily Fleet Analytics')).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /exit full screen/i })).toBeInTheDocument();
-
-    // Second Escape exits fullscreen
-    fireEvent.keyDown(window, { key: 'Escape', code: 'Escape' });
-    expect(screen.queryByRole('button', { name: /exit full screen/i })).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /expand map to full screen/i })).toBeInTheDocument();
-  });
-
-  it('renders DailyDistanceTable overview on the dashboard in compact mode', () => {
-    render(<App />);
-    expect(screen.getByText('Daily Distance Overview')).toBeInTheDocument();
-  });
-
   it('opens map in fullscreen mode when a vehicle row is clicked in DailyDistanceTable', () => {
     const testVehicle = {
       vehicle_id: 'EV-01',
@@ -125,6 +119,8 @@ describe('App Integration', () => {
       timestamp: Date.now(),
     };
 
+    const setSelectedVehicleIdMock = vi.fn();
+
     vi.spyOn(shuttleHook, 'useShuttleTelemetry').mockReturnValue({
       status: 'connected',
       vehicles: {
@@ -132,7 +128,7 @@ describe('App Integration', () => {
       },
       lastSeenMap: { 'EV-01': Date.now() },
       selectedVehicleId: null,
-      setSelectedVehicleId: vi.fn(),
+      setSelectedVehicleId: setSelectedVehicleIdMock,
       telemetry: testVehicle,
       lastSeen: Date.now(),
       now: Date.now(),
@@ -159,7 +155,7 @@ describe('App Integration', () => {
 
     // DailyDistanceTable displays EV-01 and 15.40 km
     expect(screen.getAllByText('EV-01').length).toBeGreaterThan(0);
-    expect(screen.getByText('15.40 km')).toBeInTheDocument();
+    expect(screen.getAllByText('15.40 km').length).toBeGreaterThan(0);
 
     // Initially in compact mode
     expect(screen.queryByRole('button', { name: /exit full screen/i })).not.toBeInTheDocument();
@@ -168,7 +164,8 @@ describe('App Integration', () => {
     const openBtn = screen.getByRole('button', { name: /open map for ev-01/i });
     fireEvent.click(openBtn);
 
-    // Map transitions to fullscreen
+    // Map transitions to fullscreen and selects EV-01
+    expect(setSelectedVehicleIdMock).toHaveBeenCalledWith('EV-01');
     expect(screen.getByRole('button', { name: /exit full screen/i })).toBeInTheDocument();
   });
 });

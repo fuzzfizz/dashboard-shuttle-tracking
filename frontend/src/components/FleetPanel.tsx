@@ -49,8 +49,8 @@ export const FleetPanel: React.FC<FleetPanelProps> = ({
             {onOpenAnalytics && (
               <button
                 onClick={onOpenAnalytics}
-                aria-label="Analytics"
-                title="Daily Fleet Analytics"
+                aria-label="View Daily Analytics"
+                title="View Daily Analytics"
                 className="p-1 hover:bg-slate-200/60 rounded-lg text-slate-500 hover:text-emerald-600 transition-colors"
               >
                 <BarChart3 className="w-4 h-4" />

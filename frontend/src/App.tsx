@@ -4,7 +4,6 @@ import { useDailyMetrics } from './hooks/useDailyMetrics';
 import { ShuttleMap, DEFAULT_CENTER } from './components/ShuttleMap';
 import { TelemetryHUD } from './components/TelemetryHUD';
 import { FleetPanel } from './components/FleetPanel';
-import { DailyMetricsModal } from './components/DailyMetricsModal';
 import { DailyDistanceTable } from './components/DailyDistanceTable';
 import { Bus, Maximize2, Minimize2, BarChart3 } from 'lucide-react';
 import { calculateFleetStats, computeVehicleStatus } from './services/fleetStatus';
@@ -19,19 +18,18 @@ export function App() {
     now,
   } = useShuttleTelemetry();
 
-  const { dailyMetrics, totalFleetDistanceKm } = useDailyMetrics(vehicles);
-  const [isAnalyticsOpen, setIsAnalyticsOpen] = useState(false);
+  const { dailyMetrics } = useDailyMetrics(vehicles);
   const [isMapFullscreen, setIsMapFullscreen] = useState(false);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isMapFullscreen && !isAnalyticsOpen) {
+      if (e.key === 'Escape' && isMapFullscreen) {
         setIsMapFullscreen(false);
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isMapFullscreen, isAnalyticsOpen]);
+  }, [isMapFullscreen]);
 
   const fleetStats = calculateFleetStats(vehicles, lastSeenMap, now);
   const lastSeenValues = Object.values(lastSeenMap);
@@ -51,6 +49,23 @@ export function App() {
   const handleOpenVehicleMap = (vehicleId: string) => {
     setSelectedVehicleId(vehicleId);
     setIsMapFullscreen(true);
+  };
+
+  const handleScrollToAnalytics = () => {
+    if (isMapFullscreen) {
+      setIsMapFullscreen(false);
+      setTimeout(() => {
+        const el = document.getElementById('fleet-analytics');
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth' });
+        }
+      }, 50);
+      return;
+    }
+    const el = document.getElementById('fleet-analytics');
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth' });
+    }
   };
 
   const getConnectionDot = (s: string) => {
@@ -88,9 +103,9 @@ export function App() {
             </div>
             {/* Analytics shortcut button */}
             <button
-              onClick={() => setIsAnalyticsOpen(true)}
-              aria-label="Analytics"
-              title="Daily Fleet Analytics"
+              onClick={handleScrollToAnalytics}
+              aria-label="View Daily Analytics"
+              title="View Daily Analytics"
               className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white border border-slate-700/80 transition-all text-xs font-medium shadow-sm hover:border-slate-600"
             >
               <BarChart3 className="w-4 h-4 text-emerald-400" />
@@ -102,7 +117,7 @@ export function App() {
 
       {/* Main Grid */}
       <main className="flex-1 p-4 md:p-6 grid grid-cols-1 lg:grid-cols-12 gap-5 max-w-7xl mx-auto w-full">
-        {/* Left Column: Map Card & Telemetry HUD & Daily Distance Table */}
+        {/* Left Column: Map Card & Telemetry HUD */}
         <div className="lg:col-span-8 flex flex-col gap-4">
           <div className={isMapFullscreen ? '' : 'bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-xl flex flex-col gap-3'}>
             {!isMapFullscreen && (
@@ -197,7 +212,7 @@ export function App() {
                     onSelectVehicle={setSelectedVehicleId}
                     now={now}
                     dailyMetrics={dailyMetrics}
-                    onOpenAnalytics={() => setIsAnalyticsOpen(true)}
+                    onOpenAnalytics={handleScrollToAnalytics}
                   />
                 </>
               )}
@@ -217,18 +232,6 @@ export function App() {
               now={now}
             />
           )}
-
-          {/* Daily Distance Table (compact mode only) */}
-          {!isMapFullscreen && (
-            <DailyDistanceTable
-              dailyMetrics={dailyMetrics}
-              vehicles={vehicles}
-              lastSeenMap={lastSeenMap}
-              selectedVehicleId={selectedVehicleId}
-              onOpenVehicleMap={handleOpenVehicleMap}
-              now={now}
-            />
-          )}
         </div>
 
         {/* Right Column: FleetPanel (compact mode only) */}
@@ -242,19 +245,25 @@ export function App() {
               onSelectVehicle={setSelectedVehicleId}
               now={now}
               dailyMetrics={dailyMetrics}
-              onOpenAnalytics={() => setIsAnalyticsOpen(true)}
+              onOpenAnalytics={handleScrollToAnalytics}
             />
           </div>
         )}
-      </main>
 
-      {/* Daily Metrics Analytics Modal */}
-      <DailyMetricsModal
-        isOpen={isAnalyticsOpen}
-        onClose={() => setIsAnalyticsOpen(false)}
-        dailyMetrics={dailyMetrics}
-        totalFleetDistanceKm={totalFleetDistanceKm}
-      />
+        {/* Full-Width Bottom Analytics Table */}
+        {!isMapFullscreen && (
+          <section id="fleet-analytics" className="lg:col-span-12 w-full mt-2">
+            <DailyDistanceTable
+              dailyMetrics={dailyMetrics}
+              vehicles={vehicles}
+              lastSeenMap={lastSeenMap}
+              selectedVehicleId={selectedVehicleId}
+              onOpenVehicleMap={handleOpenVehicleMap}
+              now={now}
+            />
+          </section>
+        )}
+      </main>
     </div>
   );
 }
