@@ -4,11 +4,14 @@
   "type": "module",
   "scripts": {
     "simulate": "node simulate.js",
-    "worker": "node worker.js"
+    "worker": "node worker.js",
+    "migrate": "node migrate.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.118.0",
     "dotenv": "^18.0.8",
-    "mqtt": "^5.10.1"
+    "mqtt": "^5.10.1",
+    "pg": "^8.23.1",
+    "puppeteer-core": "^25.16.0"
   }
 }

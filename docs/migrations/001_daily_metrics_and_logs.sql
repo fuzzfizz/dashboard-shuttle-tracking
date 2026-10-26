@@ -30,16 +30,20 @@ CREATE INDEX IF NOT EXISTS idx_telemetry_logs_vehicle_time ON telemetry_logs (ve
 ALTER TABLE daily_vehicle_metrics ENABLE ROW LEVEL SECURITY;
 ALTER TABLE telemetry_logs ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Public read daily_vehicle_metrics" ON daily_vehicle_metrics;
 CREATE POLICY "Public read daily_vehicle_metrics"
     ON daily_vehicle_metrics FOR SELECT USING (true);
 
+DROP POLICY IF EXISTS "Public read telemetry_logs" ON telemetry_logs;
 CREATE POLICY "Public read telemetry_logs"
     ON telemetry_logs FOR SELECT USING (true);
 
+DROP POLICY IF EXISTS "Service write daily_vehicle_metrics" ON daily_vehicle_metrics;
 CREATE POLICY "Service write daily_vehicle_metrics"
     ON daily_vehicle_metrics FOR ALL
     USING (auth.role() = 'service_role' OR auth.role() = 'authenticated');
 
+DROP POLICY IF EXISTS "Service write telemetry_logs" ON telemetry_logs;
 CREATE POLICY "Service write telemetry_logs"
     ON telemetry_logs FOR INSERT
     WITH CHECK (auth.role() = 'service_role' OR auth.role() = 'authenticated');

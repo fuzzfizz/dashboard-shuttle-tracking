@@ -19,6 +19,13 @@ MQTT_BROKER=mqtt://broker.emqx.io:1883
 MQTT_TOPIC=shuttle/fleet/v1/+/telemetry
 ```
 
+#### Database Setup (Migrations)
+To create or update the required tables (`daily_vehicle_metrics` and `telemetry_logs`) with Row Level Security:
+```bash
+cd tools
+npm run migrate
+```
+
 #### Running the Worker
 ```bash
 cd tools
