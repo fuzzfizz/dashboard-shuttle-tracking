@@ -1,10 +1,10 @@
 import React, { useState, useMemo } from 'react';
-import { Bus, Route, ArrowUpDown, Maximize2 } from 'lucide-react';
+import { Bus, Route, ArrowUpDown, Maximize2, Gauge } from 'lucide-react';
 import { DailyMetricsMap } from '../types/metrics';
 import { FleetMap } from '../types/telemetry';
 import { OFFLINE_THRESHOLD_MS } from '../services/fleetStatus';
 
-export type SortMode = 'distance-desc' | 'distance-asc' | 'id-asc';
+export type SortMode = 'distance-desc' | 'speed-desc' | 'id-asc';
 
 export interface DailyDistanceTableProps {
   dailyMetrics: DailyMetricsMap;
@@ -41,21 +41,43 @@ export const DailyDistanceTable: React.FC<DailyDistanceTableProps> = ({
     );
   }, [dailyMetrics]);
 
+  const maxSpeedOverall = useMemo(() => {
+    return Object.values(dailyMetrics).reduce(
+      (max, m) => Math.max(max, m.max_speed_kmh || 0),
+      0
+    );
+  }, [dailyMetrics]);
+
+  const trackedUnitsCount = useMemo(() => {
+    return allVehicleIds.length;
+  }, [allVehicleIds]);
+
+  const formatActiveTime = (minutes: number) => {
+    if (!minutes || minutes <= 0) return '0m';
+    const h = Math.floor(minutes / 60);
+    const m = Math.round(minutes % 60);
+    return h > 0 ? `${h}h ${m}m` : `${m}m`;
+  };
+
   const rows = useMemo(() => {
     const currentTime = now ?? Date.now();
     return allVehicleIds.map((id) => {
       const metric = dailyMetrics[id];
       const vehicle = vehicles[id];
       const distanceKm = metric?.total_distance_km ?? 0;
+      const maxSpeedKmH = metric?.max_speed_kmh ?? 0;
+      const activeMinutes = metric?.active_minutes ?? 0;
       const lastSeen = lastSeenMap[id] ?? vehicle?.timestamp ?? 0;
       const isOnline = lastSeen > 0 && currentTime - lastSeen < OFFLINE_THRESHOLD_MS;
-      const speed = vehicle?.speed ?? 0;
+      const liveSpeed = vehicle?.speed ?? 0;
 
       return {
         vehicleId: id,
         distanceKm,
+        maxSpeedKmH,
+        activeMinutes,
         isOnline,
-        speed,
+        liveSpeed,
       };
     });
   }, [allVehicleIds, dailyMetrics, vehicles, lastSeenMap, now]);
@@ -71,8 +93,8 @@ export const DailyDistanceTable: React.FC<DailyDistanceTableProps> = ({
         if (b.distanceKm !== a.distanceKm) return b.distanceKm - a.distanceKm;
         return a.vehicleId.localeCompare(b.vehicleId);
       }
-      if (sortMode === 'distance-asc') {
-        if (a.distanceKm !== b.distanceKm) return a.distanceKm - b.distanceKm;
+      if (sortMode === 'speed-desc') {
+        if (b.maxSpeedKmH !== a.maxSpeedKmH) return b.maxSpeedKmH - a.maxSpeedKmH;
         return a.vehicleId.localeCompare(b.vehicleId);
       }
       if (sortMode === 'id-asc') {
@@ -84,8 +106,8 @@ export const DailyDistanceTable: React.FC<DailyDistanceTableProps> = ({
 
   const handleSortToggle = () => {
     setSortMode((prev) => {
-      if (prev === 'distance-desc') return 'distance-asc';
-      if (prev === 'distance-asc') return 'id-asc';
+      if (prev === 'distance-desc') return 'speed-desc';
+      if (prev === 'speed-desc') return 'id-asc';
       return 'distance-desc';
     });
   };
@@ -94,8 +116,8 @@ export const DailyDistanceTable: React.FC<DailyDistanceTableProps> = ({
     switch (mode) {
       case 'distance-desc':
         return 'Highest Distance';
-      case 'distance-asc':
-        return 'Lowest Distance';
+      case 'speed-desc':
+        return 'Highest Speed';
       case 'id-asc':
         return 'Vehicle ID';
     }
@@ -163,6 +185,54 @@ export const DailyDistanceTable: React.FC<DailyDistanceTableProps> = ({
         </div>
       </div>
 
+      {/* 3 Summary Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 my-1">
+        {/* Total Distance */}
+        <div className="bg-slate-800/60 border border-slate-700/60 rounded-xl p-3 flex items-center gap-3">
+          <div className="p-2.5 bg-emerald-500/10 text-emerald-400 rounded-lg border border-emerald-500/20">
+            <Route className="w-5 h-5" />
+          </div>
+          <div>
+            <span className="text-[11px] font-medium text-slate-400 block uppercase tracking-wider">
+              Total Distance
+            </span>
+            <span className="text-base sm:text-lg font-bold font-mono text-emerald-400">
+              {totalFleetDistanceKm.toFixed(2)} km
+            </span>
+          </div>
+        </div>
+
+        {/* Max Speed */}
+        <div className="bg-slate-800/60 border border-slate-700/60 rounded-xl p-3 flex items-center gap-3">
+          <div className="p-2.5 bg-sky-500/10 text-sky-400 rounded-lg border border-sky-500/20">
+            <Gauge className="w-5 h-5" />
+          </div>
+          <div>
+            <span className="text-[11px] font-medium text-slate-400 block uppercase tracking-wider">
+              Max Speed
+            </span>
+            <span className="text-base sm:text-lg font-bold font-mono text-sky-400">
+              {maxSpeedOverall.toFixed(1)} km/h
+            </span>
+          </div>
+        </div>
+
+        {/* Tracked Shuttles */}
+        <div className="bg-slate-800/60 border border-slate-700/60 rounded-xl p-3 flex items-center gap-3">
+          <div className="p-2.5 bg-amber-500/10 text-amber-400 rounded-lg border border-amber-500/20">
+            <Bus className="w-5 h-5" />
+          </div>
+          <div>
+            <span className="text-[11px] font-medium text-slate-400 block uppercase tracking-wider">
+              Tracked Shuttles
+            </span>
+            <span className="text-base sm:text-lg font-bold font-mono text-amber-400">
+              {trackedUnitsCount} shuttles
+            </span>
+          </div>
+        </div>
+      </div>
+
       {/* Desktop View: HTML Table */}
       <div className="hidden sm:block overflow-x-auto">
         <table className="w-full text-left border-collapse text-xs">
@@ -171,6 +241,8 @@ export const DailyDistanceTable: React.FC<DailyDistanceTableProps> = ({
               <th className="py-2.5 px-3 font-semibold">Vehicle</th>
               <th className="py-2.5 px-3 font-semibold">Status</th>
               <th className="py-2.5 px-3 font-semibold">Today's Distance</th>
+              <th className="py-2.5 px-3 font-semibold">Max Speed</th>
+              <th className="py-2.5 px-3 font-semibold">Active Time</th>
               <th className="py-2.5 px-3 font-semibold text-right">Action</th>
             </tr>
           </thead>
@@ -242,6 +314,16 @@ export const DailyDistanceTable: React.FC<DailyDistanceTableProps> = ({
                     </div>
                   </td>
 
+                  {/* Max Speed Column */}
+                  <td className="py-3 px-3 font-mono text-slate-300">
+                    {row.maxSpeedKmH.toFixed(1)} km/h
+                  </td>
+
+                  {/* Active Time Column */}
+                  <td className="py-3 px-3 font-mono text-slate-300">
+                    {formatActiveTime(row.activeMinutes)}
+                  </td>
+
                   {/* Action Column */}
                   <td className="py-3 px-3 text-right">
                     <button
@@ -252,7 +334,7 @@ export const DailyDistanceTable: React.FC<DailyDistanceTableProps> = ({
                       }}
                       aria-label={`Open map for ${row.vehicleId}`}
                       title={`Open map for ${row.vehicleId}`}
-                      className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700/80 text-xs font-medium transition-all group-hover:border-emerald-500/50"
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-750 text-slate-300 hover:text-white border border-slate-700/80 text-xs font-medium transition-all group-hover:border-emerald-500/50"
                     >
                       <Maximize2 className="w-3.5 h-3.5 text-emerald-400" />
                       <span>Open Map</span>
@@ -266,7 +348,7 @@ export const DailyDistanceTable: React.FC<DailyDistanceTableProps> = ({
       </div>
 
       {/* Mobile View: Stacked Card List with min-h-[44px] Accessible Tap Targets */}
-      <div className="sm:hidden space-y-2.5">
+      <div className="sm:hidden space-y-3">
         {sortedRows.map((row) => {
           const isSelected = selectedVehicleId === row.vehicleId;
           const progressPercent = Math.min(100, Math.round((row.distanceKm / maxDistance) * 100));
@@ -282,6 +364,7 @@ export const DailyDistanceTable: React.FC<DailyDistanceTableProps> = ({
                   : 'bg-slate-800/60 border-slate-700/60 hover:bg-slate-800 hover:border-slate-600'
               }`}
             >
+              {/* Card Header */}
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
                   <div className="p-1.5 bg-slate-800 rounded-lg text-emerald-400">
@@ -308,16 +391,21 @@ export const DailyDistanceTable: React.FC<DailyDistanceTableProps> = ({
                     </div>
                   </div>
                 </div>
+              </div>
 
-                <div className="text-right">
-                  <div className="text-xs font-mono font-bold text-white">
-                    Today: {row.distanceKm.toFixed(2)} km
-                  </div>
-                  {row.speed > 0 && (
-                    <div className="text-[10px] text-slate-400 font-mono">
-                      {row.speed.toFixed(1)} km/h
-                    </div>
-                  )}
+              {/* 3-Metric Grid */}
+              <div className="grid grid-cols-3 gap-2 py-1 text-xs">
+                <div className="bg-slate-900/60 rounded-lg p-2 border border-slate-800/80">
+                  <span className="text-[10px] text-slate-400 block">Distance</span>
+                  <span className="font-mono font-bold text-white text-xs">{row.distanceKm.toFixed(2)} km</span>
+                </div>
+                <div className="bg-slate-900/60 rounded-lg p-2 border border-slate-800/80">
+                  <span className="text-[10px] text-slate-400 block">Max Speed</span>
+                  <span className="font-mono font-bold text-sky-400 text-xs">{row.maxSpeedKmH.toFixed(1)} km/h</span>
+                </div>
+                <div className="bg-slate-900/60 rounded-lg p-2 border border-slate-800/80">
+                  <span className="text-[10px] text-slate-400 block">Active Time</span>
+                  <span className="font-mono font-bold text-amber-400 text-xs">{formatActiveTime(row.activeMinutes)}</span>
                 </div>
               </div>
 
