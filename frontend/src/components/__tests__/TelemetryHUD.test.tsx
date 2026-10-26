@@ -47,6 +47,20 @@ describe('TelemetryHUD', () => {
     expect(screen.getByText(/5s ago/i)).toBeInTheDocument();
   });
 
+  it('formats hours and days cleanly for offline vehicles', () => {
+    const twoHoursAgo = Date.now() - 2 * 3600 * 1000;
+    const telemetry = {
+      vehicle_id: 'shuttle-03',
+      lat: 13.7563,
+      lng: 100.5018,
+      speed: 0,
+      heading: 180,
+      timestamp: twoHoursAgo,
+    };
+    render(<TelemetryHUD telemetry={telemetry} status="connected" lastSeen={twoHoursAgo} />);
+    expect(screen.getByText(/2h ago/i)).toBeInTheDocument();
+  });
+
   it('renders fleet overview mode with total vehicles', () => {
     render(
       <TelemetryHUD

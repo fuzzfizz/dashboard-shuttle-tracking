@@ -18,6 +18,7 @@ describe('useShuttleTelemetry', () => {
   let messageHandler: (topic: string, message: Buffer) => void;
 
   beforeEach(() => {
+    localStorage.clear();
     vi.clearAllMocks();
     mockMqttClient.on.mockImplementation((event: string, handler: any) => {
       if (event === 'message') {
@@ -143,5 +144,28 @@ describe('useShuttleTelemetry', () => {
 
     expect(result.current.now).toBeGreaterThanOrEqual(initialNow + 1000);
     vi.useRealTimers();
+  });
+
+  it('preloads last known vehicles from storage and fetches from Supabase on mount', async () => {
+    localStorage.setItem(
+      'shuttle_last_known_vehicles',
+      JSON.stringify({
+        'cached-shuttle': {
+          vehicle_id: 'cached-shuttle',
+          lat: 18.783,
+          lng: 98.977,
+          speed: 0,
+          heading: 0,
+          timestamp: 1000,
+        },
+      })
+    );
+
+    const { result } = renderHook(() => useShuttleTelemetry());
+
+    // Check preloaded from local storage
+    expect(result.current.vehicles['cached-shuttle']).toBeDefined();
+    expect(result.current.vehicles['cached-shuttle'].vehicle_id).toBe('cached-shuttle');
+    expect(result.current.lastSeenMap['cached-shuttle']).toBe(1000);
   });
 });

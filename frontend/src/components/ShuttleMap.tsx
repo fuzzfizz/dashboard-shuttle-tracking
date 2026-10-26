@@ -219,9 +219,19 @@ export const ShuttleMap: React.FC<ShuttleMapProps> = ({
         : {};
 
   const vehicleList = Object.values(effectiveVehicles);
+  const isSelectedVehicleMissing =
+    Boolean(selectedVehicleId) && !effectiveVehicles[selectedVehicleId!];
 
   return (
     <div className="relative w-full h-full">
+      {isSelectedVehicleMissing && (
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[1001] bg-slate-900/95 border border-amber-500/40 text-amber-300 px-4 py-2.5 rounded-xl shadow-xl backdrop-blur-md flex items-center gap-2 text-xs font-medium pointer-events-none">
+          <span className="flex h-2 w-2 rounded-full bg-amber-400" />
+          <span>
+            No GPS coordinates recorded for {selectedVehicleId} yet. Showing map overview.
+          </span>
+        </div>
+      )}
       <MapContainer
         center={defaultCenter}
         zoom={zoom}

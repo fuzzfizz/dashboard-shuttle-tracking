@@ -2,6 +2,11 @@ import { useEffect, useState } from 'react';
 import mqtt, { MqttClient } from 'mqtt';
 import { ConnectionStatus, FleetMap, TelemetryPayload, UseShuttleTelemetryOptions } from '../types/telemetry';
 import { parseTelemetryPayload } from '../services/telemetryParser';
+import {
+  loadLastKnownVehicles,
+  saveLastKnownVehicles,
+  fetchLastKnownTelemetry,
+} from '../services/telemetryStorage';
 
 const DEFAULT_BROKER = import.meta.env.VITE_MQTT_BROKER_URL || 'wss://broker.emqx.io:8084/mqtt';
 const DEFAULT_TOPIC = import.meta.env.VITE_MQTT_TOPIC || 'shuttle/fleet/v1/+/telemetry';
@@ -15,16 +20,51 @@ export function useShuttleTelemetry(options: UseShuttleTelemetryOptions = {}) {
   const password = options.password || DEFAULT_PASSWORD;
 
   const [status, setStatus] = useState<ConnectionStatus>('connecting');
-  const [vehicles, setVehicles] = useState<FleetMap>({});
-  const [lastSeenMap, setLastSeenMap] = useState<Record<string, number>>({});
+  const [vehicles, setVehicles] = useState<FleetMap>(() => loadLastKnownVehicles());
+  const [lastSeenMap, setLastSeenMap] = useState<Record<string, number>>(() => {
+    const initial = loadLastKnownVehicles();
+    const map: Record<string, number> = {};
+    for (const [id, v] of Object.entries(initial)) {
+      map[id] = v.timestamp || 0;
+    }
+    return map;
+  });
   const [selectedVehicleId, setSelectedVehicleId] = useState<string | null>(null);
   const [now, setNow] = useState<number>(Date.now());
 
+  // Clock tick
   useEffect(() => {
     const timer = setInterval(() => {
       setNow(Date.now());
     }, 1000);
     return () => clearInterval(timer);
+  }, []);
+
+  // Fetch last known telemetry from Supabase on mount
+  useEffect(() => {
+    let isMounted = true;
+    fetchLastKnownTelemetry().then((remoteFleet) => {
+      if (!isMounted) return;
+      if (remoteFleet && Object.keys(remoteFleet).length > 0) {
+        setVehicles((prev) => {
+          const merged = { ...remoteFleet, ...prev };
+          saveLastKnownVehicles(merged);
+          return merged;
+        });
+        setLastSeenMap((prev) => {
+          const next = { ...prev };
+          for (const [id, v] of Object.entries(remoteFleet)) {
+            if (!next[id] || v.timestamp > next[id]) {
+              next[id] = v.timestamp;
+            }
+          }
+          return next;
+        });
+      }
+    });
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   useEffect(() => {
@@ -53,10 +93,14 @@ export function useShuttleTelemetry(options: UseShuttleTelemetryOptions = {}) {
       if (parsed) {
         const timestamp = Date.now();
         setNow(timestamp);
-        setVehicles((prev) => ({
-          ...prev,
-          [parsed.vehicle_id]: parsed,
-        }));
+        setVehicles((prev) => {
+          const updated = {
+            ...prev,
+            [parsed.vehicle_id]: parsed,
+          };
+          saveLastKnownVehicles(updated);
+          return updated;
+        });
         setLastSeenMap((prev) => ({
           ...prev,
           [parsed.vehicle_id]: timestamp,

@@ -176,4 +176,11 @@ describe('ShuttleMap', () => {
 
     invalidateSizeSpy.mockRestore();
   });
+
+  it('displays a friendly notice when selected vehicle has no GPS location data', () => {
+    const { getByText } = render(
+      <ShuttleMap vehicles={{}} selectedVehicleId="UNKNOWN-01" />
+    );
+    expect(getByText(/No GPS coordinates recorded for UNKNOWN-01/i)).toBeInTheDocument();
+  });
 });
