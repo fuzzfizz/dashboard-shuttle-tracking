@@ -23,7 +23,7 @@ const tileAttribution = cartoKey
   ? '&copy; <a href="https://carto.com/">CARTO</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
   : OSM_ATTRIBUTION;
 
-export const DEFAULT_CENTER: [number, number] = [13.7563, 100.5018];
+export const DEFAULT_CENTER: [number, number] = [18.7883, 98.9853];
 
 export function escapeHtml(str: string): string {
   return str

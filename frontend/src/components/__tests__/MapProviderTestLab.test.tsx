@@ -81,6 +81,22 @@ describe('MapProviderTestLab', () => {
     expect(screen.getAllByText(/Thai Localized/i)[0]).toBeInTheDocument();
   });
 
+  it('renders Chiang Mai as default city preset and allows toggling to Bangkok', () => {
+    render(<MapProviderTestLab />);
+    const chiangMaiBtn = screen.getByRole('button', { name: /เชียงใหม่/i });
+    const bangkokBtn = screen.getByRole('button', { name: /กรุงเทพฯ/i });
+
+    expect(chiangMaiBtn).toBeInTheDocument();
+    expect(bangkokBtn).toBeInTheDocument();
+
+    // Default active city displays Chiang Mai badge
+    expect(screen.getByText(/Chiang Mai/i)).toBeInTheDocument();
+
+    // Switch to Bangkok
+    fireEvent.click(bangkokBtn);
+    expect(screen.getByText(/Bangkok/i)).toBeInTheDocument();
+  });
+
   it('renders back button or home navigation callback if provided', () => {
     const onBack = vi.fn();
     render(<MapProviderTestLab onBack={onBack} />);

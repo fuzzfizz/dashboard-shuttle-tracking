@@ -11,17 +11,50 @@ export interface MapProviderTestLabProps {
   initialTheme?: 'light' | 'dark';
 }
 
-const DEFAULT_CENTER: [number, number] = [13.7563, 100.5018];
-const DEFAULT_ZOOM = 15;
+export interface CityPreset {
+  id: 'chiangmai' | 'bangkok';
+  name: string;
+  nameEn: string;
+  center: [number, number];
+  zoom: number;
+  vehicle: TelemetryPayload;
+}
 
-const SAMPLE_VEHICLE: TelemetryPayload = {
-  vehicle_id: 'LAB-01',
-  lat: 13.7563,
-  lng: 100.5018,
-  speed: 28.5,
-  heading: 45,
-  timestamp: Date.now(),
+export const CITY_PRESETS: Record<'chiangmai' | 'bangkok', CityPreset> = {
+  chiangmai: {
+    id: 'chiangmai',
+    name: 'เชียงใหม่',
+    nameEn: 'Chiang Mai',
+    center: [18.7883, 98.9853],
+    zoom: 15,
+    vehicle: {
+      vehicle_id: 'CM-01',
+      lat: 18.7883,
+      lng: 98.9853,
+      speed: 32.0,
+      heading: 42.0,
+      timestamp: Date.now(),
+    },
+  },
+  bangkok: {
+    id: 'bangkok',
+    name: 'กรุงเทพฯ',
+    nameEn: 'Bangkok',
+    center: [13.7563, 100.5018],
+    zoom: 15,
+    vehicle: {
+      vehicle_id: 'BKK-01',
+      lat: 13.7563,
+      lng: 100.5018,
+      speed: 28.5,
+      heading: 45.0,
+      timestamp: Date.now(),
+    },
+  },
 };
+
+export const DEFAULT_CENTER: [number, number] = CITY_PRESETS.chiangmai.center;
+export const DEFAULT_ZOOM = CITY_PRESETS.chiangmai.zoom;
 
 // Camera synchronizer for Grid Compare mode
 export const CameraSyncController: React.FC<{
@@ -115,10 +148,20 @@ export const MapProviderTestLab: React.FC<MapProviderTestLabProps> = ({
   const [viewMode, setViewMode] = useState<'single' | 'grid'>('single');
   const [activeProviderId, setActiveProviderId] = useState<string>(initialProviderId);
   const [showShuttle, setShowShuttle] = useState<boolean>(true);
+  const [selectedCity, setSelectedCity] = useState<'chiangmai' | 'bangkok'>('chiangmai');
 
-  // Synchronized camera state for Grid Compare mode
-  const [syncCenter, setSyncCenter] = useState<[number, number]>(DEFAULT_CENTER);
-  const [syncZoom, setSyncZoom] = useState<number>(DEFAULT_ZOOM);
+  const activeCity = CITY_PRESETS[selectedCity];
+  const sampleVehicle = activeCity.vehicle;
+
+  // Synchronized camera state for Grid Compare mode and Single View
+  const [syncCenter, setSyncCenter] = useState<[number, number]>(activeCity.center);
+  const [syncZoom, setSyncZoom] = useState<number>(activeCity.zoom);
+
+  const handleSelectCity = (cityId: 'chiangmai' | 'bangkok') => {
+    setSelectedCity(cityId);
+    setSyncCenter(CITY_PRESETS[cityId].center);
+    setSyncZoom(CITY_PRESETS[cityId].zoom);
+  };
 
   const providers = getAllMapProviders();
   const activeProvider = getMapProvider(activeProviderId);
@@ -178,6 +221,34 @@ export const MapProviderTestLab: React.FC<MapProviderTestLabProps> = ({
 
         {/* Global Controls */}
         <div className="flex items-center gap-2 flex-wrap">
+          {/* City / Location Selector */}
+          <div className={`flex items-center rounded-lg border p-0.5 text-xs font-medium ${
+            isLight ? 'bg-slate-200/80 border-slate-300' : 'bg-slate-800 border-slate-700'
+          }`}>
+            <button
+              onClick={() => handleSelectCity('chiangmai')}
+              className={`px-2.5 py-1 rounded-md transition-all flex items-center gap-1.5 ${
+                selectedCity === 'chiangmai'
+                  ? 'bg-emerald-600 text-white shadow-sm font-semibold'
+                  : isLight ? 'text-slate-600 hover:text-slate-900' : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              <span>📍</span>
+              <span>เชียงใหม่</span>
+            </button>
+            <button
+              onClick={() => handleSelectCity('bangkok')}
+              className={`px-2.5 py-1 rounded-md transition-all flex items-center gap-1.5 ${
+                selectedCity === 'bangkok'
+                  ? 'bg-emerald-600 text-white shadow-sm font-semibold'
+                  : isLight ? 'text-slate-600 hover:text-slate-900' : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              <span>📍</span>
+              <span>กรุงเทพฯ</span>
+            </button>
+          </div>
+
           {/* UI Theme Toggle */}
           <div className={`flex items-center rounded-lg border p-0.5 text-xs font-medium ${
             isLight ? 'bg-slate-200/80 border-slate-300' : 'bg-slate-800 border-slate-700'
@@ -292,10 +363,15 @@ export const MapProviderTestLab: React.FC<MapProviderTestLabProps> = ({
 
             {/* Provider Metadata Banner */}
             <div className={`px-4 py-2.5 rounded-xl border flex flex-wrap items-center justify-between gap-3 text-xs ${cardClass}`}>
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 flex-wrap">
                 <span className="font-bold text-sm">{activeProvider.name}</span>
                 <span className={`px-2 py-0.5 rounded-md border text-[11px] ${badgeClass}`}>
                   {activeProvider.description}
+                </span>
+                <span className={`px-2 py-0.5 rounded-md border text-[11px] font-semibold ${
+                  isLight ? 'bg-indigo-50 text-indigo-700 border-indigo-200' : 'bg-indigo-950/60 text-indigo-400 border-indigo-800'
+                }`}>
+                  📍 {activeCity.name} ({activeCity.nameEn})
                 </span>
               </div>
               <div className="flex items-center gap-3 text-[11px] font-mono">
@@ -316,7 +392,7 @@ export const MapProviderTestLab: React.FC<MapProviderTestLabProps> = ({
               style={{ height: 'calc(100vh - 230px)', minHeight: '520px' }}
             >
               <MapContainer
-                key={`single-${activeProvider.id}`}
+                key={`single-${activeProvider.id}-${selectedCity}`}
                 center={syncCenter}
                 zoom={syncZoom}
                 className="w-full h-full"
@@ -335,7 +411,7 @@ export const MapProviderTestLab: React.FC<MapProviderTestLabProps> = ({
                 <ProviderMapLayer key={activeProvider.id} provider={activeProvider} />
                 {showShuttle && (
                   <AnimatedVehicleMarker
-                    vehicle={SAMPLE_VEHICLE}
+                    vehicle={sampleVehicle}
                     isSelected={true}
                     isOnline={true}
                   />
@@ -417,7 +493,7 @@ export const MapProviderTestLab: React.FC<MapProviderTestLabProps> = ({
                       <ProviderMapLayer provider={provider} />
                       {showShuttle && (
                         <AnimatedVehicleMarker
-                          vehicle={SAMPLE_VEHICLE}
+                          vehicle={sampleVehicle}
                           isSelected={true}
                           isOnline={true}
                         />
