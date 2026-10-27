@@ -8,6 +8,7 @@ export interface MapProviderConfig {
   subdomains?: string[];
   description: string;
   keyRequired: boolean;
+  isVector?: boolean;
 }
 
 export const DEFAULT_MAPTILER_KEY =
@@ -33,13 +34,14 @@ export const MAP_PROVIDERS: Record<string, MapProviderConfig> = {
   openfreemap: {
     id: 'openfreemap',
     name: 'OpenFreeMap',
-    category: 'Free Vector/Raster',
-    tileUrl: 'https://tiles.openfreemap.org/styles/bright/{z}/{x}/{y}.png',
+    category: 'Free Vector / WebGL',
+    tileUrl: 'https://tiles.openfreemap.org/styles/bright',
     attribution:
       '&copy; <a href="https://openfreemap.org" target="_blank" rel="noreferrer">OpenFreeMap</a> &copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a>',
     maxZoom: 19,
-    description: 'Ultra-fast vector map tiles with clean Bright aesthetic (Free & Open Source).',
+    description: 'Ultra-fast vector map tiles rendered via MapLibre GL with clean Bright aesthetic.',
     keyRequired: false,
+    isVector: true,
   },
   maptiler: {
     id: 'maptiler',

@@ -9,23 +9,7 @@ import { Bus, Maximize2, Minimize2, BarChart3 } from 'lucide-react';
 import { calculateFleetStats, computeVehicleStatus } from './services/fleetStatus';
 import { MapProviderTestLab } from './components/MapProviderTestLab';
 
-export function App() {
-  const [currentPath, setCurrentPath] = useState(() =>
-    typeof window !== 'undefined' ? window.location.pathname + window.location.hash : '/'
-  );
-
-  useEffect(() => {
-    const handleLocationChange = () => {
-      setCurrentPath(window.location.pathname + window.location.hash);
-    };
-    window.addEventListener('popstate', handleLocationChange);
-    window.addEventListener('hashchange', handleLocationChange);
-    return () => {
-      window.removeEventListener('popstate', handleLocationChange);
-      window.removeEventListener('hashchange', handleLocationChange);
-    };
-  }, []);
-
+function OperationalDashboard() {
   const {
     status,
     vehicles,
@@ -47,22 +31,6 @@ export function App() {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isMapFullscreen]);
-
-  const isMapTestRoute =
-    currentPath.startsWith('/map-test') ||
-    currentPath === '#map-test' ||
-    currentPath.endsWith('#map-test');
-
-  if (isMapTestRoute) {
-    return (
-      <MapProviderTestLab
-        onBack={() => {
-          window.history.pushState({}, '', '/');
-          setCurrentPath('/');
-        }}
-      />
-    );
-  }
 
   const fleetStats = calculateFleetStats(vehicles, lastSeenMap, now);
   const lastSeenValues = Object.values(lastSeenMap);
@@ -299,6 +267,42 @@ export function App() {
       </main>
     </div>
   );
+}
+
+export function App() {
+  const [currentPath, setCurrentPath] = useState(() =>
+    typeof window !== 'undefined' ? window.location.pathname + window.location.hash : '/'
+  );
+
+  useEffect(() => {
+    const handleLocationChange = () => {
+      setCurrentPath(window.location.pathname + window.location.hash);
+    };
+    window.addEventListener('popstate', handleLocationChange);
+    window.addEventListener('hashchange', handleLocationChange);
+    return () => {
+      window.removeEventListener('popstate', handleLocationChange);
+      window.removeEventListener('hashchange', handleLocationChange);
+    };
+  }, []);
+
+  const isMapTestRoute =
+    currentPath.startsWith('/map-test') ||
+    currentPath === '#map-test' ||
+    currentPath.endsWith('#map-test');
+
+  if (isMapTestRoute) {
+    return (
+      <MapProviderTestLab
+        onBack={() => {
+          window.history.pushState({}, '', '/');
+          setCurrentPath('/');
+        }}
+      />
+    );
+  }
+
+  return <OperationalDashboard />;
 }
 
 export default App;
