@@ -7,8 +7,7 @@ import { lerpCoordinate, isJumpTooLarge, shortestAngleDelta } from '../services/
 import {
   calculateBearing,
   haversineDistance,
-  JITTER_THRESHOLD_KM,
-  MIN_SPEED_THRESHOLD_KMH,
+  JITTER_THRESHOLD_KM
 } from '../services/distanceCalculator';
 
 export interface AnimatedVehicleMarkerProps {
@@ -63,8 +62,7 @@ export const AnimatedVehicleMarker: React.FC<AnimatedVehicleMarkerProps> = ({
     const newTarget: [number, number] = [vehicle.lat, vehicle.lng];
     const prevCoord = prevCoordRef.current;
     const dist = haversineDistance(prevCoord[0], prevCoord[1], newTarget[0], newTarget[1]);
-    const isMoving = dist > JITTER_THRESHOLD_KM || (vehicle.speed ?? 0) >= MIN_SPEED_THRESHOLD_KMH;
-
+    
     let targetHeading: number;
     if (vehicle.heading !== undefined && vehicle.heading !== null && vehicle.heading > 0) {
       targetHeading = vehicle.heading;
