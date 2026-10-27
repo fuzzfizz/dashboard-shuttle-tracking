@@ -20,10 +20,10 @@ const DIST_DIR = path.join(__dirname, 'frontend', 'dist');
 // Start the background MQTT ingestion engine
 const worker = startWorker();
 
-// Start the Chiang Mai shuttle simulator so live telemetry is actively flowing in Chiang Mai
-if (process.env.ENABLE_SIMULATOR !== 'false') {
+// Optional simulator: only runs if explicitly requested via ENABLE_SIMULATOR=true
+if (process.env.ENABLE_SIMULATOR === 'true') {
   import('./tools/simulate-chiangmai.js')
-    .then(() => console.log('[Server] Chiang Mai shuttle simulator active and publishing.'))
+    .then(() => console.log('[Server] Chiang Mai shuttle simulator active.'))
     .catch((err) => console.warn('[Server Warning] Could not start simulator:', err.message));
 }
 
