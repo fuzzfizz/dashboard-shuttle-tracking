@@ -31,16 +31,16 @@ export const FleetPanel: React.FC<FleetPanelProps> = ({
 
   return (
     <div className={className ?? "absolute top-4 right-4 z-[1000] w-72 max-w-[calc(100vw-2rem)] flex flex-col gap-2"}>
-      <div className="bg-white/95 backdrop-blur-md border border-slate-200/90 rounded-2xl shadow-xl overflow-hidden transition-all duration-300">
+      <div className="bg-white/95 backdrop-blur-md border border-slate-200/90 rounded-2xl shadow-xl overflow-hidden transition-all duration-300 dark:bg-slate-900/95 dark:border-slate-800">
         {/* Panel Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100 bg-slate-50/50">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100 bg-slate-50/50 dark:border-slate-800 dark:bg-slate-800/40">
           <div className="flex items-center gap-2">
-            <div className="p-1 bg-emerald-500/10 text-emerald-600 rounded-lg">
+            <div className="p-1 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-lg">
               <Bus className="w-4 h-4" />
             </div>
             <div>
-              <h2 className="text-xs font-bold text-slate-800 uppercase tracking-wider">Fleet Status</h2>
-              <p className="text-[10px] text-slate-500 font-medium">
+              <h2 className="text-xs font-bold text-slate-800 uppercase tracking-wider dark:text-slate-200">Fleet Status</h2>
+              <p className="text-[10px] text-slate-500 font-medium dark:text-slate-400">
                 {totalCount} {totalCount === 1 ? 'vehicle' : 'vehicles'} active
               </p>
             </div>
@@ -51,7 +51,7 @@ export const FleetPanel: React.FC<FleetPanelProps> = ({
                 onClick={onOpenAnalytics}
                 aria-label="View Daily Analytics"
                 title="View Daily Analytics"
-                className="p-1 hover:bg-slate-200/60 rounded-lg text-slate-500 hover:text-emerald-600 transition-colors"
+                className="p-1 hover:bg-slate-200/60 dark:hover:bg-slate-800/80 rounded-lg text-slate-500 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors"
               >
                 <BarChart3 className="w-4 h-4" />
               </button>
@@ -59,7 +59,7 @@ export const FleetPanel: React.FC<FleetPanelProps> = ({
             <button
               onClick={() => setCollapsed(!collapsed)}
               aria-label={collapsed ? 'Expand panel' : 'Collapse panel'}
-              className="p-1 hover:bg-slate-200/60 rounded-lg text-slate-400 hover:text-slate-600 transition-colors"
+              className="p-1 hover:bg-slate-200/60 dark:hover:bg-slate-800/80 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
             >
               {collapsed ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
             </button>
@@ -74,8 +74,8 @@ export const FleetPanel: React.FC<FleetPanelProps> = ({
               aria-label="All Vehicles (Overview)"
               className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold transition-all ${
                 selectedVehicleId === null
-                  ? 'bg-slate-900 text-white shadow-sm'
-                  : 'text-slate-600 hover:bg-slate-100/80'
+                  ? 'bg-slate-900 text-white shadow-sm dark:bg-emerald-600'
+                  : 'text-slate-600 hover:bg-slate-100/80 dark:text-slate-300 dark:hover:bg-slate-800/80'
               }`}
             >
               <div className="flex items-center gap-2">
@@ -90,9 +90,9 @@ export const FleetPanel: React.FC<FleetPanelProps> = ({
             {/* Vehicle List */}
             {totalCount === 0 ? (
               <div className="py-6 px-4 text-center">
-                <Radio className="w-6 h-6 text-slate-300 mx-auto mb-2 animate-pulse" />
-                <p className="text-xs text-slate-500 font-medium">Listening for vehicles...</p>
-                <p className="text-[10px] text-slate-400 mt-0.5">Publish telemetry to see fleet</p>
+                <Radio className="w-6 h-6 text-slate-300 dark:text-slate-600 mx-auto mb-2 animate-pulse" />
+                <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">Listening for vehicles...</p>
+                <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-0.5">Publish telemetry to see fleet</p>
               </div>
             ) : (
               vehicleList.map((vehicle) => {
@@ -106,8 +106,8 @@ export const FleetPanel: React.FC<FleetPanelProps> = ({
                     onClick={() => onSelectVehicle(vehicle.vehicle_id)}
                     className={`group cursor-pointer p-2.5 rounded-xl border transition-all ${
                       isSelected
-                        ? 'border-emerald-500 bg-emerald-50/60 shadow-sm'
-                        : 'border-slate-100 hover:border-slate-200 hover:bg-slate-50/80'
+                        ? 'border-emerald-500 bg-emerald-50/60 dark:bg-emerald-950/40 shadow-sm'
+                        : 'border-slate-100 hover:border-slate-200 hover:bg-slate-50/80 dark:border-slate-800 dark:hover:border-slate-700 dark:hover:bg-slate-800/50'
                     }`}
                   >
                     <div className="flex items-center justify-between">
@@ -123,7 +123,7 @@ export const FleetPanel: React.FC<FleetPanelProps> = ({
                           ></span>
                         </span>
                         <div className="truncate">
-                          <div className="text-xs font-bold text-slate-800 truncate">
+                          <div className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate">
                             {vehicle.vehicle_id}
                           </div>
                           <div className="text-[10px] text-slate-400 font-mono flex items-center gap-1">
@@ -134,7 +134,7 @@ export const FleetPanel: React.FC<FleetPanelProps> = ({
                       </div>
 
                       <div className="text-right">
-                        <div className="text-xs font-mono font-bold text-slate-900">
+                        <div className="text-xs font-mono font-bold text-slate-900 dark:text-slate-100">
                           {vehicle.speed.toFixed(1)} km/h
                         </div>
                         <div className="text-[9px] text-slate-400">
@@ -143,9 +143,9 @@ export const FleetPanel: React.FC<FleetPanelProps> = ({
                       </div>
                     </div>
 
-                    <div className="mt-1.5 pt-1.5 border-t border-slate-100/80 flex items-center justify-between text-[10px] font-mono">
+                    <div className="mt-1.5 pt-1.5 border-t border-slate-100/80 dark:border-slate-800 flex items-center justify-between text-[10px] font-mono">
                       <span className="text-slate-400">Daily Dist</span>
-                      <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 font-semibold border border-emerald-100/60">
+                      <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400 font-semibold border border-emerald-100/60 dark:border-emerald-800/60">
                         📍 {distanceKm.toFixed(1)} km
                       </span>
                     </div>

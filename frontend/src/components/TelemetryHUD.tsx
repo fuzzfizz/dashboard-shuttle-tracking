@@ -51,7 +51,7 @@ export const TelemetryHUD: React.FC<TelemetryHUDProps> = ({
 
   return (
     <div className={className ?? "absolute bottom-6 left-1/2 -translate-x-1/2 z-[1000] w-[92vw] max-w-xl"}>
-      <div className="bg-slate-900/90 backdrop-blur-md border border-slate-800 text-white px-5 py-4 rounded-2xl shadow-2xl flex flex-wrap items-center justify-between gap-4">
+      <div className="bg-white/95 border-slate-200 text-slate-900 shadow-xl dark:bg-slate-900/90 dark:border-slate-800 dark:text-white dark:shadow-2xl backdrop-blur-md border px-5 py-4 rounded-2xl flex flex-wrap items-center justify-between gap-4 transition-colors">
         {/* Status & Vehicle Info */}
         <div className="flex items-center gap-3">
           <div className="relative flex h-3 w-3">
@@ -61,19 +61,19 @@ export const TelemetryHUD: React.FC<TelemetryHUDProps> = ({
             <span className={`relative inline-flex rounded-full h-3 w-3 ${getStatusColor(status).split(' ')[0]}`}></span>
           </div>
           <div>
-            <div className="text-xs font-mono uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+            <div className="text-xs font-mono uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
               <Radio className="w-3.5 h-3.5" />
               <span>Broker: {status}</span>
             </div>
-            <div className="text-sm font-bold tracking-tight text-white flex items-center gap-1.5 mt-0.5">
-              <Bus className="w-4 h-4 text-emerald-400" />
+            <div className="text-sm font-bold tracking-tight text-slate-900 dark:text-white flex items-center gap-1.5 mt-0.5">
+              <Bus className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
               <span>
                 {telemetry
                   ? telemetry.vehicle_id
                   : `Overview (${fleetStats?.onlineVehicles ?? totalVehicles ?? 0} online)`}
               </span>
               {telemetry && isOnline === false && (
-                <span className="text-[10px] uppercase font-mono font-bold px-1.5 py-0.5 rounded bg-rose-500/20 text-rose-300 border border-rose-500/40">
+                <span className="text-[10px] uppercase font-mono font-bold px-1.5 py-0.5 rounded bg-rose-500/10 text-rose-600 border border-rose-500/20 dark:bg-rose-500/20 dark:text-rose-300 dark:border-rose-500/40">
                   Signal Lost
                 </span>
               )}
@@ -82,33 +82,33 @@ export const TelemetryHUD: React.FC<TelemetryHUDProps> = ({
         </div>
 
         {/* Telemetry Metrics */}
-        <div className="flex items-center gap-6 border-l border-slate-800 pl-6">
+        <div className="flex items-center gap-6 border-l border-slate-200 dark:border-slate-800 pl-6">
           {/* Speed */}
           <div className="flex items-center gap-2.5">
-            <div className="p-2 bg-slate-800/80 rounded-xl text-emerald-400">
+            <div className="p-2 bg-slate-100 dark:bg-slate-800/80 rounded-xl text-emerald-600 dark:text-emerald-400">
               <Gauge className="w-5 h-5" />
             </div>
             <div>
-              <div className="text-[10px] uppercase font-mono tracking-wider text-slate-400">Speed</div>
-              <div className="text-lg font-bold font-mono text-white leading-none">
+              <div className="text-[10px] uppercase font-mono tracking-wider text-slate-500 dark:text-slate-400">Speed</div>
+              <div className="text-lg font-bold font-mono text-slate-900 dark:text-white leading-none">
                 {telemetry
                   ? telemetry.speed.toFixed(1)
                   : fleetStats?.averageSpeed !== undefined
                     ? fleetStats.averageSpeed.toFixed(1)
                     : '--'}
-                <span className="text-xs font-normal text-slate-400 ml-1">km/h</span>
+                <span className="text-xs font-normal text-slate-500 dark:text-slate-400 ml-1">km/h</span>
               </div>
             </div>
           </div>
 
           {/* Heading */}
           <div className="hidden sm:flex items-center gap-2.5">
-            <div className="p-2 bg-slate-800/80 rounded-xl text-sky-400">
+            <div className="p-2 bg-slate-100 dark:bg-slate-800/80 rounded-xl text-sky-600 dark:text-sky-400">
               <Compass className="w-5 h-5" />
             </div>
             <div>
-              <div className="text-[10px] uppercase font-mono tracking-wider text-slate-400">Heading</div>
-              <div className="text-lg font-bold font-mono text-white leading-none">
+              <div className="text-[10px] uppercase font-mono tracking-wider text-slate-500 dark:text-slate-400">Heading</div>
+              <div className="text-lg font-bold font-mono text-slate-900 dark:text-white leading-none">
                 {telemetry?.heading !== undefined ? `${telemetry.heading}°` : '--'}
               </div>
             </div>
@@ -116,12 +116,12 @@ export const TelemetryHUD: React.FC<TelemetryHUDProps> = ({
 
           {/* Last Seen */}
           <div className="flex items-center gap-2.5">
-            <div className="p-2 bg-slate-800/80 rounded-xl text-amber-400">
+            <div className="p-2 bg-slate-100 dark:bg-slate-800/80 rounded-xl text-amber-600 dark:text-amber-400">
               <Clock className="w-5 h-5" />
             </div>
             <div>
-              <div className="text-[10px] uppercase font-mono tracking-wider text-slate-400">Heartbeat</div>
-              <div className="text-xs font-bold font-mono text-white leading-none">
+              <div className="text-[10px] uppercase font-mono tracking-wider text-slate-500 dark:text-slate-400">Heartbeat</div>
+              <div className="text-xs font-bold font-mono text-slate-900 dark:text-white leading-none">
                 {formatLastSeen(lastSeen)}
               </div>
             </div>
