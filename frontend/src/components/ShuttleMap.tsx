@@ -160,7 +160,7 @@ export const MapResizeHandler: React.FC<{ isFullscreen?: boolean }> = ({ isFulls
   return null;
 };
 
-// SVG vehicle marker with direction arrow and vehicle badge
+// SVG top-down shuttle van marker with headlight beam, van body, and fixed vehicle badge
 export function createVehicleIcon(
   heading: number = 0,
   isSelected: boolean = false,
@@ -168,25 +168,69 @@ export function createVehicleIcon(
   isOnline: boolean = true
 ) {
   const safeVehicleId = escapeHtml(vehicleId);
-  const borderColor = !isOnline ? '#94a3b8' : isSelected ? '#10b981' : '#ffffff';
-  const arrowColor = !isOnline ? '#475569' : '#10b981';
+  const primaryColor = !isOnline ? '#64748b' : isSelected ? '#34d399' : '#10b981';
+  const borderColor = !isOnline ? '#94a3b8' : isSelected ? '#6ee7b7' : '#ffffff';
   const overallOpacity = !isOnline ? '0.6' : '1';
   const pulseHtml = isOnline
-    ? `<div style="position: absolute; width: 38px; height: 38px; background: rgba(16, 185, 129, ${isSelected ? '0.4' : '0.2'}); border-radius: 9999px; animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;"></div>`
+    ? `<div style="position: absolute; width: 44px; height: 44px; background: rgba(16, 185, 129, ${isSelected ? '0.35' : '0.15'}); border-radius: 9999px; animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;"></div>`
+    : '';
+
+  const headlightGradient = isOnline
+    ? `<defs>
+        <linearGradient id="headlight-glow" x1="0%" y1="100%" x2="0%" y2="0%">
+          <stop offset="0%" stop-color="${primaryColor}" stop-opacity="0.6"/>
+          <stop offset="100%" stop-color="${primaryColor}" stop-opacity="0"/>
+        </linearGradient>
+       </defs>`
+    : '';
+
+  const headlightBeam = isOnline
+    ? `<path class="headlight-beam" d="M 9 10 L 3 0 L 23 0 L 17 10 Z" fill="url(#headlight-glow)" pointer-events="none" />`
     : '';
 
   const html = `
-    <div style="position: relative; width: 44px; height: 44px; display: flex; flex-direction: column; align-items: center; justify-content: center; opacity: ${overallOpacity};">
-      <!-- Vehicle ID Pill Badge -->
-      <div style="position: absolute; top: -14px; background: rgba(15, 23, 42, 0.9); color: #ffffff; font-size: 9px; font-weight: bold; font-family: monospace; padding: 1px 5px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.2); white-space: nowrap; box-shadow: 0 2px 4px rgba(0,0,0,0.2); pointer-events: none;">
+    <div style="position: relative; width: 52px; height: 52px; display: flex; align-items: center; justify-content: center; opacity: ${overallOpacity};">
+      <!-- Vehicle ID Pill Badge (Fixed horizontal orientation) -->
+      <div style="position: absolute; top: -14px; background: rgba(15, 23, 42, 0.95); color: #ffffff; font-size: 9px; font-weight: bold; font-family: monospace; padding: 1px 6px; border-radius: 4px; border: 1px solid ${borderColor}; white-space: nowrap; box-shadow: 0 2px 5px rgba(0,0,0,0.3); pointer-events: none; z-index: 10;">
         ${safeVehicleId}
       </div>
       <!-- Pulse Ring -->
       ${pulseHtml}
-      <!-- Rotational Body -->
-      <div style="position: relative; width: 28px; height: 28px; background: #0f172a; border: 2.5px solid ${borderColor}; border-radius: 9999px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3); display: flex; align-items: center; justify-content: center; transform: rotate(${heading}deg); transition: transform 0.4s ease;">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="${arrowColor}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-          <polygon points="12 2 19 21 12 17 5 21 12 2"></polygon>
+      <!-- Rotational Top-Down Van Body -->
+      <div class="shuttle-van-body" style="position: relative; width: 26px; height: 42px; display: flex; align-items: center; justify-content: center; transform: rotate(${heading}deg); transition: transform 0.4s cubic-bezier(0.2, 0, 0, 1);">
+        <svg width="26" height="42" viewBox="0 0 26 42" fill="none" xmlns="http://www.w3.org/2000/svg">
+          ${headlightGradient}
+          <!-- Forward Headlight Beam Cone -->
+          ${headlightBeam}
+          <!-- Side Mirrors -->
+          <rect x="1" y="14" width="2" height="4" rx="1" fill="${borderColor}" />
+          <rect x="23" y="14" width="2" height="4" rx="1" fill="${borderColor}" />
+          <!-- Wheels -->
+          <rect x="1.5" y="10" width="1.5" height="5" rx="0.75" fill="#0f172a" />
+          <rect x="23" y="10" width="1.5" height="5" rx="0.75" fill="#0f172a" />
+          <rect x="1.5" y="28" width="1.5" height="5" rx="0.75" fill="#0f172a" />
+          <rect x="23" y="28" width="1.5" height="5" rx="0.75" fill="#0f172a" />
+          <!-- Van Chassis Shell -->
+          <rect x="3" y="9" width="20" height="28" rx="4" fill="#0f172a" stroke="${borderColor}" stroke-width="1.8" />
+          <!-- Front Hood Curve -->
+          <path d="M 4 12 C 4 9.5 7 8 13 8 C 19 8 22 9.5 22 12 Z" fill="#1e293b" />
+          <!-- Windshield Glass -->
+          <path d="M 5 14 C 5 12.5 8 11.5 13 11.5 C 18 11.5 21 12.5 21 14 L 20 18 L 6 18 Z" fill="#38bdf8" fill-opacity="0.85" />
+          <!-- Front Headlight Lamps -->
+          <circle cx="6" cy="9.5" r="1.5" fill="${primaryColor}" />
+          <circle cx="20" cy="9.5" r="1.5" fill="${primaryColor}" />
+          <!-- Side Passenger Windows -->
+          <rect x="4.5" y="19.5" width="2" height="12" rx="0.8" fill="#38bdf8" fill-opacity="0.65" />
+          <rect x="19.5" y="19.5" width="2" height="12" rx="0.8" fill="#38bdf8" fill-opacity="0.65" />
+          <!-- Shuttle Passenger Cabin Roof Ridge -->
+          <line x1="8.5" y1="20" x2="8.5" y2="31" stroke="${primaryColor}" stroke-width="1" stroke-opacity="0.4" />
+          <line x1="17.5" y1="20" x2="17.5" y2="31" stroke="${primaryColor}" stroke-width="1" stroke-opacity="0.4" />
+          <rect x="10" y="22" width="6" height="8" rx="1.5" fill="#1e293b" stroke="${primaryColor}" stroke-width="1" stroke-opacity="0.5" />
+          <!-- Rear Window Glass -->
+          <rect x="6" y="33.5" width="14" height="2" rx="0.8" fill="#38bdf8" fill-opacity="0.7" />
+          <!-- Rear Taillights -->
+          <rect x="4.5" y="36" width="2.5" height="1" rx="0.5" fill="#ef4444" />
+          <rect x="19" y="36" width="2.5" height="1" rx="0.5" fill="#ef4444" />
         </svg>
       </div>
     </div>
@@ -194,8 +238,8 @@ export function createVehicleIcon(
   return L.divIcon({
     html,
     className: 'custom-vehicle-marker',
-    iconSize: [44, 44],
-    iconAnchor: [22, 22],
+    iconSize: [52, 52],
+    iconAnchor: [26, 26],
   });
 }
 

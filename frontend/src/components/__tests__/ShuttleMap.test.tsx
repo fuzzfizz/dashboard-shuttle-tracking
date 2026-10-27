@@ -77,24 +77,35 @@ describe('ShuttleMap', () => {
     expect(container.innerHTML).not.toContain('<img src=x onerror=alert(1)>');
   });
 
+  it('creates shuttle van icon with headlight beam, van body, and non-rotating vehicle id badge', () => {
+    const icon = createVehicleIcon(90, true, 'VAN-01', true);
+    expect(icon.options.className).toBe('custom-vehicle-marker');
+    expect(icon.options.iconSize).toEqual([52, 52]);
+    expect(icon.options.iconAnchor).toEqual([26, 26]);
+
+    const html = icon.options.html as string;
+    expect(html).toContain('VAN-01');
+    expect(html).toContain('rotate(90deg)');
+    // Headlight beam / van indicators
+    expect(html).toContain('headlight-beam');
+    expect(html).toContain('shuttle-van-body');
+  });
+
   it('dims marker styling and disables pulse animation when vehicle is offline', () => {
     const onlineIcon = createVehicleIcon(90, false, 'EV-01', true);
-    expect(onlineIcon.options.html).toContain('stroke="#10b981"');
-    expect(onlineIcon.options.html).toContain('border: 2.5px solid #ffffff');
     expect(onlineIcon.options.html).toContain('animation: pulse');
     expect(onlineIcon.options.html).toContain('opacity: 1');
+    expect(onlineIcon.options.html).toContain('headlight-beam');
 
     const offlineIcon = createVehicleIcon(90, false, 'EV-01', false);
-    expect(offlineIcon.options.html).toContain('stroke="#475569"');
-    expect(offlineIcon.options.html).toContain('border: 2.5px solid #94a3b8');
     expect(offlineIcon.options.html).not.toContain('animation: pulse');
     expect(offlineIcon.options.html).toContain('opacity: 0.6');
+    expect(offlineIcon.options.html).not.toContain('headlight-beam');
 
     // Selected vehicle offline
     const selectedOfflineIcon = createVehicleIcon(90, true, 'EV-01', false);
-    expect(selectedOfflineIcon.options.html).toContain('border: 2.5px solid #94a3b8');
-    expect(selectedOfflineIcon.options.html).toContain('stroke="#475569"');
     expect(selectedOfflineIcon.options.html).not.toContain('animation: pulse');
+    expect(selectedOfflineIcon.options.html).toContain('opacity: 0.6');
   });
 
   it('stabilizes camera in overview mode and prevents fitBounds thrashing', () => {
