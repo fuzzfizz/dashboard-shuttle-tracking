@@ -68,3 +68,27 @@ export function calculateDistanceIncrement(
 
   return rawDistanceKm;
 }
+
+/**
+ * Calculates forward azimuth (bearing) in degrees (0 - 360) from point 1 to point 2.
+ * 0° = North, 90° = East, 180° = South, 270° = West.
+ */
+export function calculateBearing(
+  lat1: number,
+  lng1: number,
+  lat2: number,
+  lng2: number
+): number {
+  const dLng = toRadians(lng2 - lng1);
+  const phi1 = toRadians(lat1);
+  const phi2 = toRadians(lat2);
+
+  const y = Math.sin(dLng) * Math.cos(phi2);
+  const x =
+    Math.cos(phi1) * Math.sin(phi2) -
+    Math.sin(phi1) * Math.cos(phi2) * Math.cos(dLng);
+
+  const bearingRad = Math.atan2(y, x);
+  return ((bearingRad * 180.0) / Math.PI + 360.0) % 360.0;
+}
+
