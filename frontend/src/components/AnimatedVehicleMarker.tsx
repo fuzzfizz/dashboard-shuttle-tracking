@@ -3,7 +3,13 @@ import { Marker, Tooltip } from 'react-leaflet';
 import L from 'leaflet';
 import { TelemetryPayload } from '../types/telemetry';
 import { createVehicleIcon } from './ShuttleMap';
-import { lerpCoordinate, isJumpTooLarge } from '../services/markerInterpolation';
+import { lerpCoordinate, isJumpTooLarge, shortestAngleDelta } from '../services/markerInterpolation';
+import {
+  calculateBearing,
+  haversineDistance,
+  JITTER_THRESHOLD_KM,
+  MIN_SPEED_THRESHOLD_KMH,
+} from '../services/distanceCalculator';
 
 export interface AnimatedVehicleMarkerProps {
   vehicle: TelemetryPayload;
@@ -31,11 +37,48 @@ export const AnimatedVehicleMarker: React.FC<AnimatedVehicleMarkerProps> = ({
   const prevCoordRef = useRef<[number, number]>([vehicle.lat, vehicle.lng]);
   const targetCoordRef = useRef<[number, number]>([vehicle.lat, vehicle.lng]);
 
+  // Heading tracking
+  const initialHeading = vehicle.heading ?? 0;
+  const lastHeadingRef = useRef<number>(initialHeading);
+  const cumulativeHeadingRef = useRef<number>(initialHeading);
+  const prevVehicleRef = useRef<TelemetryPayload>(vehicle);
+
   // Timing tracking
   const startTimeRef = useRef<number>(performance.now());
   const durationRef = useRef<number>(5000);
   const prevTimestampRef = useRef<number>(vehicle.timestamp);
   const animFrameRef = useRef<number | null>(null);
+
+  // Process heading update on telemetry changes
+  const prevVehicle = prevVehicleRef.current;
+  const hasTelemetryUpdated =
+    vehicle !== prevVehicle &&
+    (prevVehicle.lat !== vehicle.lat ||
+      prevVehicle.lng !== vehicle.lng ||
+      prevVehicle.heading !== vehicle.heading ||
+      prevVehicle.speed !== vehicle.speed ||
+      prevVehicle.timestamp !== vehicle.timestamp);
+
+  if (hasTelemetryUpdated) {
+    const newTarget: [number, number] = [vehicle.lat, vehicle.lng];
+    const prevCoord = prevCoordRef.current;
+    const dist = haversineDistance(prevCoord[0], prevCoord[1], newTarget[0], newTarget[1]);
+    const isMoving = dist > JITTER_THRESHOLD_KM || (vehicle.speed ?? 0) >= MIN_SPEED_THRESHOLD_KMH;
+
+    let targetHeading: number;
+    if (vehicle.heading !== undefined && vehicle.heading !== null && vehicle.heading > 0) {
+      targetHeading = vehicle.heading;
+    } else if (isMoving && (newTarget[0] !== prevCoord[0] || newTarget[1] !== prevCoord[1])) {
+      targetHeading = Math.round(calculateBearing(prevCoord[0], prevCoord[1], newTarget[0], newTarget[1]));
+    } else {
+      targetHeading = lastHeadingRef.current;
+    }
+
+    const angleDiff = shortestAngleDelta(cumulativeHeadingRef.current, targetHeading);
+    cumulativeHeadingRef.current += angleDiff;
+    lastHeadingRef.current = targetHeading;
+    prevVehicleRef.current = vehicle;
+  }
 
   useEffect(() => {
     const newTarget: [number, number] = [vehicle.lat, vehicle.lng];
@@ -96,6 +139,7 @@ export const AnimatedVehicleMarker: React.FC<AnimatedVehicleMarkerProps> = ({
         animFrameRef.current = requestAnimationFrame(animate);
       } else {
         animFrameRef.current = null;
+        prevCoordRef.current = targetCoordRef.current;
       }
     };
 
@@ -123,7 +167,7 @@ export const AnimatedVehicleMarker: React.FC<AnimatedVehicleMarkerProps> = ({
   }, []);
 
   const icon = createVehicleIcon(
-    vehicle.heading ?? 0,
+    cumulativeHeadingRef.current,
     isSelected,
     vehicle.vehicle_id,
     isOnline

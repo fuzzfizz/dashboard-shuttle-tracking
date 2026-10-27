@@ -175,9 +175,11 @@ export function createVehicleIcon(
     ? `<div style="position: absolute; width: 44px; height: 44px; background: rgba(16, 185, 129, ${isSelected ? '0.35' : '0.15'}); border-radius: 9999px; animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;"></div>`
     : '';
 
+  const gradientId = `headlight-glow-${safeVehicleId || 'default'}`;
+
   const headlightGradient = isOnline
     ? `<defs>
-        <linearGradient id="headlight-glow" x1="0%" y1="100%" x2="0%" y2="0%">
+        <linearGradient id="${gradientId}" x1="0%" y1="100%" x2="0%" y2="0%">
           <stop offset="0%" stop-color="${primaryColor}" stop-opacity="0.6"/>
           <stop offset="100%" stop-color="${primaryColor}" stop-opacity="0"/>
         </linearGradient>
@@ -185,7 +187,7 @@ export function createVehicleIcon(
     : '';
 
   const headlightBeam = isOnline
-    ? `<path class="headlight-beam" d="M 9 10 L 3 0 L 23 0 L 17 10 Z" fill="url(#headlight-glow)" pointer-events="none" />`
+    ? `<path class="headlight-beam" d="M 9 10 L 3 0 L 23 0 L 17 10 Z" fill="url(#${gradientId})" pointer-events="none" />`
     : '';
 
   const html = `
