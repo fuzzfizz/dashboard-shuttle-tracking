@@ -7,10 +7,43 @@ import * as dailyMetricsHook from '../hooks/useDailyMetrics';
 describe('App Integration', () => {
   beforeEach(() => {
     window.HTMLElement.prototype.scrollIntoView = vi.fn();
+    window.history.pushState({}, '', '/');
   });
 
   afterEach(() => {
+    window.history.pushState({}, '', '/');
     vi.restoreAllMocks();
+  });
+
+  it('renders MapProviderTestLab when URL is /map-test', () => {
+    window.history.pushState({}, '', '/map-test');
+    const { getByText } = render(<App />);
+    expect(getByText(/Map Provider Lab/i)).toBeInTheDocument();
+    window.history.pushState({}, '', '/');
+  });
+
+  it('renders default operational dashboard at / without any public map-test button', () => {
+    window.history.pushState({}, '', '/');
+    const { queryByText, getByText } = render(<App />);
+    expect(getByText('Shuttle Tracker')).toBeInTheDocument();
+    // No public button pointing to map-test on main dashboard
+    expect(queryByText(/Map Provider Lab/i)).toBeNull();
+  });
+
+  it('renders MapProviderTestLab when URL hash is #map-test', () => {
+    window.history.pushState({}, '', '/#map-test');
+    const { getByText } = render(<App />);
+    expect(getByText(/Map Provider Lab/i)).toBeInTheDocument();
+    window.history.pushState({}, '', '/');
+  });
+
+  it('navigates back to dashboard when Back button is clicked in MapProviderTestLab', () => {
+    window.history.pushState({}, '', '/map-test');
+    const { getByText, queryByText } = render(<App />);
+    expect(getByText(/Map Provider Lab/i)).toBeInTheDocument();
+    fireEvent.click(getByText(/Back/i));
+    expect(getByText('Shuttle Tracker')).toBeInTheDocument();
+    expect(queryByText(/Map Provider Lab/i)).toBeNull();
   });
 
   it('renders top brand header, Fleet Status, and map without crashing', () => {
