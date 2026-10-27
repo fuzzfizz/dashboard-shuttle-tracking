@@ -5,23 +5,17 @@ import { FleetMap, TelemetryPayload } from '../types/telemetry';
 import { computeVehicleStatus } from '../services/fleetStatus';
 import { isJumpTooLarge } from '../services/markerInterpolation';
 import { AnimatedVehicleMarker } from './AnimatedVehicleMarker';
+import { MAP_PROVIDERS } from '../services/mapProviders';
 
-// OpenStreetMap standard tile layer
-const OSM_URL = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
-const OSM_ATTRIBUTION = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
+// Primary map provider: Longdo Map (Thai localized high-detail cartography)
+export const LONGDO_MAP_CONFIG = MAP_PROVIDERS.longdomap;
 
-const cartoKey = import.meta.env.VITE_CARTO_API_KEY;
 const customTileUrl = import.meta.env.VITE_TILE_URL;
+const customAttribution = import.meta.env.VITE_TILE_ATTRIBUTION;
 
-const tileUrl = customTileUrl
-  ? customTileUrl
-  : cartoKey
-    ? `https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png?key=${cartoKey}`
-    : OSM_URL;
-
-const tileAttribution = cartoKey
-  ? '&copy; <a href="https://carto.com/">CARTO</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-  : OSM_ATTRIBUTION;
+export const tileUrl = customTileUrl || LONGDO_MAP_CONFIG.tileUrl;
+export const tileAttribution = customAttribution || LONGDO_MAP_CONFIG.attribution;
+export const tileMaxZoom = LONGDO_MAP_CONFIG.maxZoom || 20;
 
 export const DEFAULT_CENTER: [number, number] = [18.7883, 98.9853];
 
@@ -288,7 +282,7 @@ export const ShuttleMap: React.FC<ShuttleMapProps> = ({
         <TileLayer
           attribution={tileAttribution}
           url={tileUrl}
-          maxZoom={19}
+          maxZoom={tileMaxZoom}
         />
 
         {/* Camera auto controller */}

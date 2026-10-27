@@ -130,6 +130,9 @@ function OperationalDashboard() {
                   <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
                     {fleetStats.onlineVehicles} online
                   </span>
+                  <span className="px-1.5 py-0.5 rounded text-[10px] font-mono font-medium bg-slate-800 text-slate-400 border border-slate-700/60 hidden sm:inline-block">
+                    Longdo Map
+                  </span>
                 </div>
                 <button
                   onClick={() => setIsMapFullscreen(true)}

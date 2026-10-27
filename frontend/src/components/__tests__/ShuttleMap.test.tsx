@@ -1,12 +1,19 @@
 import { render } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import L from 'leaflet';
-import { ShuttleMap, escapeHtml, createVehicleIcon } from '../ShuttleMap';
+import { ShuttleMap, escapeHtml, createVehicleIcon, tileUrl, tileAttribution, LONGDO_MAP_CONFIG } from '../ShuttleMap';
 import { FleetMap } from '../../types/telemetry';
 
 describe('ShuttleMap', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+  });
+
+  it('uses Longdo Map as the primary tile provider', () => {
+    expect(tileUrl).toContain('ms.longdo.com');
+    expect(tileUrl).toContain('proj=epsg3857');
+    expect(tileAttribution).toContain('Longdo Map');
+    expect(LONGDO_MAP_CONFIG.id).toBe('longdomap');
   });
 
   it('renders map container without crashing', () => {
