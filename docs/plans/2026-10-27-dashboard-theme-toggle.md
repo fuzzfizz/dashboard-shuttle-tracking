@@ -1,6 +1,6 @@
 # Main Dashboard Theme Toggle Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Implement a Light Mode (default) and Dark Mode theme toggle on the main operational dashboard (`/`) while keeping map tiles, map markers, and map canvas completely untouched.
 
@@ -38,7 +38,7 @@
   export const useTheme: () => ThemeContextValue;
   ```
 
-- [ ] **Step 1: Write failing tests for ThemeContext**
+- [x] **Step 1: Write failing tests for ThemeContext**
 
 ```typescript
 // frontend/src/context/__tests__/ThemeContext.test.tsx
@@ -111,10 +111,10 @@ describe('ThemeContext', () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 Command: `npm test --prefix frontend ThemeContext`
 
-- [ ] **Step 3: Update `tailwind.config.js` and implement `ThemeContext.tsx`**
+- [x] **Step 3: Update `tailwind.config.js` and implement `ThemeContext.tsx`**
 In `frontend/tailwind.config.js`:
 ```javascript
 export default {
@@ -130,10 +130,10 @@ export default {
 In `frontend/src/context/ThemeContext.tsx`:
 Implement `ThemeProvider` and `useTheme` managing `'light' | 'dark'`, syncing `.dark` class on `document.documentElement`, and persisting in `localStorage.setItem('shuttle_theme', ...)`.
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 Command: `npm test --prefix frontend ThemeContext`
 
-- [ ] **Step 5: Commit changes**
+- [x] **Step 5: Commit changes**
 `git add frontend/tailwind.config.js frontend/src/context/ && git commit -m "feat(theme): configure tailwind darkMode and implement ThemeContext"`
 
 ---
@@ -148,7 +148,7 @@ Command: `npm test --prefix frontend ThemeContext`
 - Consumes: `useTheme`, `ThemeProvider` from `../context/ThemeContext`
 - Produces: Header theme toggle button with ☀️ / 🌙 icon, aria-label, and responsive styling.
 
-- [ ] **Step 1: Write integration tests for Theme Toggle in `App.test.tsx`**
+- [x] **Step 1: Write integration tests for Theme Toggle in `App.test.tsx`**
 
 Add tests to `frontend/src/__tests__/App.test.tsx`:
 ```typescript
@@ -171,10 +171,10 @@ it('switches theme to dark mode when header toggle is clicked', async () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 Command: `npm test --prefix frontend App.test.tsx`
 
-- [ ] **Step 3: Update `App.tsx`**
+- [x] **Step 3: Update `App.tsx`**
 - Wrap root `App` return in `<ThemeProvider>`.
 - In `OperationalDashboard`:
   - Call `const { theme, toggleTheme } = useTheme();`
@@ -198,10 +198,10 @@ Command: `npm test --prefix frontend App.test.tsx`
     `bg-white border border-slate-200 dark:bg-slate-900 dark:border-slate-800 rounded-2xl p-4 shadow-md dark:shadow-xl`
   - Ensure map container (`<ShuttleMap />` and its inner div) is unmodified and isolated.
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 Command: `npm test --prefix frontend App.test.tsx`
 
-- [ ] **Step 5: Commit changes**
+- [x] **Step 5: Commit changes**
 `git add frontend/src/App.tsx frontend/src/__tests__/App.test.tsx && git commit -m "feat(dashboard): integrate ThemeProvider and header theme toggle button"`
 
 ---
@@ -217,17 +217,17 @@ Command: `npm test --prefix frontend App.test.tsx`
 **Interfaces:**
 - Consumes: Tailwind `dark:` variant classes
 
-- [ ] **Step 1: Run existing component tests to establish baseline**
+- [x] **Step 1: Run existing component tests to establish baseline**
 Command: `npm test --prefix frontend TelemetryHUD.test.tsx FleetPanel.test.tsx`
 
-- [ ] **Step 2: Update `TelemetryHUD.tsx`**
+- [x] **Step 2: Update `TelemetryHUD.tsx`**
 - Adjust card frame to:
   `bg-white/95 border-slate-200 text-slate-900 shadow-xl dark:bg-slate-900/90 dark:border-slate-800 dark:text-white dark:shadow-2xl`
 - Divider: `border-slate-200 dark:border-slate-800`
 - Metric background: `bg-slate-100 text-slate-800 dark:bg-slate-800/80 dark:text-white`
 - Metric labels: `text-slate-500 dark:text-slate-400`
 
-- [ ] **Step 3: Update `FleetPanel.tsx`**
+- [x] **Step 3: Update `FleetPanel.tsx`**
 - Adjust container to support both light and dark:
   `bg-white/95 border-slate-200 text-slate-800 dark:bg-slate-900/95 dark:border-slate-800 dark:text-slate-100`
 - Overview button:
@@ -236,10 +236,10 @@ Command: `npm test --prefix frontend TelemetryHUD.test.tsx FleetPanel.test.tsx`
   `border-slate-200 hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-800/60`
   Selected: `border-emerald-500 bg-emerald-50/80 dark:bg-emerald-950/40`
 
-- [ ] **Step 4: Run component tests to ensure all pass**
+- [x] **Step 4: Run component tests to ensure all pass**
 Command: `npm test --prefix frontend TelemetryHUD.test.tsx FleetPanel.test.tsx`
 
-- [ ] **Step 5: Commit changes**
+- [x] **Step 5: Commit changes**
 `git add frontend/src/components/TelemetryHUD.tsx frontend/src/components/FleetPanel.tsx && git commit -m "feat(ui): style TelemetryHUD and FleetPanel for light and dark themes"`
 
 ---
@@ -253,10 +253,10 @@ Command: `npm test --prefix frontend TelemetryHUD.test.tsx FleetPanel.test.tsx`
 **Interfaces:**
 - Consumes: Tailwind `dark:` variant classes
 
-- [ ] **Step 1: Run existing tests to establish baseline**
+- [x] **Step 1: Run existing tests to establish baseline**
 Command: `npm test --prefix frontend DailyDistanceTable.test.tsx`
 
-- [ ] **Step 2: Update `DailyDistanceTable.tsx`**
+- [x] **Step 2: Update `DailyDistanceTable.tsx`**
 - Container:
   `bg-white border-slate-200 text-slate-800 shadow-xl dark:bg-slate-900 dark:border-slate-800 dark:text-slate-100`
 - Header text & description:
@@ -270,10 +270,10 @@ Command: `npm test --prefix frontend DailyDistanceTable.test.tsx`
   - Rows: `hover:bg-slate-50/80 border-b border-slate-100 dark:hover:bg-slate-800/40 dark:border-slate-800`
   - Progress bar track: `bg-slate-100 dark:bg-slate-800`
 
-- [ ] **Step 3: Run component tests to ensure all pass**
+- [x] **Step 3: Run component tests to ensure all pass**
 Command: `npm test --prefix frontend DailyDistanceTable.test.tsx`
 
-- [ ] **Step 4: Commit changes**
+- [x] **Step 4: Commit changes**
 `git add frontend/src/components/DailyDistanceTable.tsx && git commit -m "feat(analytics): adapt DailyDistanceTable for light and dark themes"`
 
 ---
@@ -284,16 +284,16 @@ Command: `npm test --prefix frontend DailyDistanceTable.test.tsx`
 - Modify: `frontend/src/components/ShuttleMap.tsx` (verify untouched)
 - Run: Vitest suite & build
 
-- [ ] **Step 1: Verify map isolation**
+- [x] **Step 1: Verify map isolation**
 Check that `ShuttleMap.tsx`, `MapLibreLayer.tsx`, `AnimatedVehicleMarker.tsx`, and `.leaflet-container` contain no filter / dark inversion styles.
 
-- [ ] **Step 2: Run all frontend tests**
+- [x] **Step 2: Run all frontend tests**
 Command: `npm test --prefix frontend`
 Expected: All tests pass (100% green).
 
-- [ ] **Step 3: Verify frontend build**
+- [x] **Step 3: Verify frontend build**
 Command: `npm run build --prefix frontend`
 Expected: Vite build succeeds with 0 errors.
 
-- [ ] **Step 4: Final commit**
+- [x] **Step 4: Final commit**
 `git commit --allow-empty -m "chore: complete theme toggle implementation with verified map isolation"`
