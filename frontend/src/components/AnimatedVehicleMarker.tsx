@@ -68,7 +68,7 @@ export const AnimatedVehicleMarker: React.FC<AnimatedVehicleMarkerProps> = ({
     let targetHeading: number;
     if (vehicle.heading !== undefined && vehicle.heading !== null && vehicle.heading > 0) {
       targetHeading = vehicle.heading;
-    } else if (isMoving && (newTarget[0] !== prevCoord[0] || newTarget[1] !== prevCoord[1])) {
+    } else if (dist > JITTER_THRESHOLD_KM) {
       targetHeading = Math.round(calculateBearing(prevCoord[0], prevCoord[1], newTarget[0], newTarget[1]));
     } else {
       targetHeading = lastHeadingRef.current;

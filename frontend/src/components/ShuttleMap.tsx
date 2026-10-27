@@ -175,7 +175,8 @@ export function createVehicleIcon(
     ? `<div style="position: absolute; width: 44px; height: 44px; background: rgba(16, 185, 129, ${isSelected ? '0.35' : '0.15'}); border-radius: 9999px; animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;"></div>`
     : '';
 
-  const gradientId = `headlight-glow-${safeVehicleId || 'default'}`;
+  const cleanId = vehicleId ? vehicleId.replace(/[^a-zA-Z0-9_-]/g, '_') : 'default';
+  const gradientId = `headlight-glow-${cleanId}`;
 
   const headlightGradient = isOnline
     ? `<defs>
