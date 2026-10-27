@@ -125,25 +125,25 @@ export const DailyDistanceTable: React.FC<DailyDistanceTableProps> = ({
 
   const containerClasses =
     className ??
-    'bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-5 shadow-xl flex flex-col gap-4 text-slate-100';
+    'bg-white border border-slate-200 text-slate-800 shadow-xl dark:bg-slate-900 dark:border-slate-800 dark:text-slate-100 rounded-2xl p-4 sm:p-5 flex flex-col gap-4 transition-colors';
 
   return (
     <div className={containerClasses}>
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2.5">
-          <div className="p-1.5 bg-emerald-500/10 text-emerald-400 rounded-xl">
+          <div className="p-1.5 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-xl">
             <Route className="w-4 h-4" />
           </div>
           <div>
-            <h2 className="text-sm font-semibold text-slate-200">Daily Distance Overview</h2>
-            <p className="text-[11px] text-slate-400">Total distance traveled by vehicles today</p>
+            <h2 className="text-sm font-semibold text-slate-800 dark:text-slate-200">Daily Distance Overview</h2>
+            <p className="text-[11px] text-slate-500 dark:text-slate-400">Total distance traveled by vehicles today</p>
           </div>
         </div>
 
         <div className="flex items-center gap-2">
           {/* Fleet Distance Pill */}
-          <div className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-mono font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+          <div className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-mono font-bold bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20">
             <span>Total: {totalFleetDistanceKm.toFixed(2)} km</span>
           </div>
 
@@ -152,9 +152,9 @@ export const DailyDistanceTable: React.FC<DailyDistanceTableProps> = ({
             onClick={handleSortToggle}
             aria-label="Toggle sort"
             title={`Sort mode: ${sortMode}`}
-            className="flex items-center justify-center gap-1.5 px-3 py-1.5 min-h-[44px] sm:min-h-0 rounded-xl bg-slate-800 hover:bg-slate-750 text-slate-300 hover:text-white border border-slate-700/80 text-xs font-medium transition-colors"
+            className="flex items-center justify-center gap-1.5 px-3 py-1.5 min-h-[44px] sm:min-h-0 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-slate-900 border border-slate-200 dark:bg-slate-800 dark:hover:bg-slate-750 dark:text-slate-300 dark:hover:text-white dark:border-slate-700/80 text-xs font-medium transition-colors"
           >
-            <ArrowUpDown className="w-3.5 h-3.5 text-emerald-400" />
+            <ArrowUpDown className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
             <span className="hidden sm:inline">Sort: {getSortLabel(sortMode)}</span>
           </button>
         </div>
@@ -163,45 +163,45 @@ export const DailyDistanceTable: React.FC<DailyDistanceTableProps> = ({
       {/* 3 Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 my-1">
         {/* Total Distance */}
-        <div className="bg-slate-800/60 border border-slate-700/60 rounded-xl p-3 flex items-center gap-3">
-          <div className="p-2.5 bg-emerald-500/10 text-emerald-400 rounded-lg border border-emerald-500/20">
+        <div className="bg-slate-50 border border-slate-200 dark:bg-slate-800/60 dark:border-slate-700/60 rounded-xl p-3 flex items-center gap-3">
+          <div className="p-2.5 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-lg border border-emerald-500/20">
             <Route className="w-5 h-5" />
           </div>
           <div>
-            <span className="text-[11px] font-medium text-slate-400 block uppercase tracking-wider">
+            <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400 block uppercase tracking-wider">
               Total Distance
             </span>
-            <span className="text-base sm:text-lg font-bold font-mono text-emerald-400">
+            <span className="text-base sm:text-lg font-bold font-mono text-emerald-600 dark:text-emerald-400">
               {totalFleetDistanceKm.toFixed(2)} km
             </span>
           </div>
         </div>
 
         {/* Max Speed */}
-        <div className="bg-slate-800/60 border border-slate-700/60 rounded-xl p-3 flex items-center gap-3">
-          <div className="p-2.5 bg-sky-500/10 text-sky-400 rounded-lg border border-sky-500/20">
+        <div className="bg-slate-50 border border-slate-200 dark:bg-slate-800/60 dark:border-slate-700/60 rounded-xl p-3 flex items-center gap-3">
+          <div className="p-2.5 bg-sky-500/10 text-sky-600 dark:text-sky-400 rounded-lg border border-sky-500/20">
             <Gauge className="w-5 h-5" />
           </div>
           <div>
-            <span className="text-[11px] font-medium text-slate-400 block uppercase tracking-wider">
+            <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400 block uppercase tracking-wider">
               Max Speed
             </span>
-            <span className="text-base sm:text-lg font-bold font-mono text-sky-400">
+            <span className="text-base sm:text-lg font-bold font-mono text-sky-600 dark:text-sky-400">
               {maxSpeedOverall.toFixed(1)} km/h
             </span>
           </div>
         </div>
 
         {/* Tracked Shuttles */}
-        <div className="bg-slate-800/60 border border-slate-700/60 rounded-xl p-3 flex items-center gap-3">
-          <div className="p-2.5 bg-amber-500/10 text-amber-400 rounded-lg border border-amber-500/20">
+        <div className="bg-slate-50 border border-slate-200 dark:bg-slate-800/60 dark:border-slate-700/60 rounded-xl p-3 flex items-center gap-3">
+          <div className="p-2.5 bg-amber-500/10 text-amber-600 dark:text-amber-400 rounded-lg border border-amber-500/20">
             <Bus className="w-5 h-5" />
           </div>
           <div>
-            <span className="text-[11px] font-medium text-slate-400 block uppercase tracking-wider">
+            <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400 block uppercase tracking-wider">
               Tracked Shuttles
             </span>
-            <span className="text-base sm:text-lg font-bold font-mono text-amber-400">
+            <span className="text-base sm:text-lg font-bold font-mono text-amber-600 dark:text-amber-400">
               {trackedUnitsCount} shuttles
             </span>
           </div>
@@ -209,9 +209,9 @@ export const DailyDistanceTable: React.FC<DailyDistanceTableProps> = ({
       </div>
 
       {allVehicleIds.length === 0 ? (
-        <div className="py-8 px-4 text-center border border-dashed border-slate-800 rounded-xl">
-          <Route className="w-7 h-7 text-slate-600 mx-auto mb-2 animate-pulse" />
-          <p className="text-xs sm:text-sm font-medium text-slate-400">No distance recorded today</p>
+        <div className="py-8 px-4 text-center border border-dashed border-slate-200 dark:border-slate-800 rounded-xl">
+          <Route className="w-7 h-7 text-slate-400 dark:text-slate-600 mx-auto mb-2 animate-pulse" />
+          <p className="text-xs sm:text-sm font-medium text-slate-600 dark:text-slate-400">No distance recorded today</p>
           <p className="text-[10px] sm:text-xs text-slate-500 mt-0.5">
             Distance metrics will update automatically as vehicles move
           </p>
@@ -222,7 +222,7 @@ export const DailyDistanceTable: React.FC<DailyDistanceTableProps> = ({
       <div className="hidden sm:block overflow-x-auto">
         <table className="w-full text-left border-collapse text-xs">
           <thead>
-            <tr className="border-b border-slate-800 text-slate-400 uppercase text-[10px] tracking-wider">
+            <tr className="border-b border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 uppercase text-[10px] tracking-wider">
               <th className="py-2.5 px-3 font-semibold">Vehicle</th>
               <th className="py-2.5 px-3 font-semibold">Status</th>
               <th className="py-2.5 px-3 font-semibold">Today's Distance</th>
@@ -231,7 +231,7 @@ export const DailyDistanceTable: React.FC<DailyDistanceTableProps> = ({
               <th className="py-2.5 px-3 font-semibold text-right">Action</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-800/60">
+          <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
             {sortedRows.map((row) => {
               const isSelected = selectedVehicleId === row.vehicleId;
               const progressPercent = Math.min(100, Math.round((row.distanceKm / maxDistance) * 100));
@@ -244,7 +244,7 @@ export const DailyDistanceTable: React.FC<DailyDistanceTableProps> = ({
                   className={`cursor-pointer transition-colors group ${
                     isSelected
                       ? 'bg-emerald-500/10'
-                      : 'hover:bg-slate-800/50'
+                      : 'hover:bg-slate-50 dark:hover:bg-slate-800/50'
                   }`}
                 >
                   {/* Vehicle Column */}
@@ -252,10 +252,10 @@ export const DailyDistanceTable: React.FC<DailyDistanceTableProps> = ({
                     data-testid="vehicle-id-cell"
                     className="py-3 px-3 flex items-center gap-2.5"
                   >
-                    <div className="p-1 bg-slate-800 rounded-lg text-emerald-400">
+                    <div className="p-1 bg-slate-100 dark:bg-slate-800 rounded-lg text-emerald-600 dark:text-emerald-400">
                       <Bus className="w-3.5 h-3.5" />
                     </div>
-                    <span className="font-mono font-bold text-slate-100">
+                    <span className="font-mono font-bold text-slate-800 dark:text-slate-100">
                       {row.vehicleId}
                     </span>
                   </td>
@@ -275,7 +275,7 @@ export const DailyDistanceTable: React.FC<DailyDistanceTableProps> = ({
                       </span>
                       <span
                         className={`text-xs font-medium ${
-                          row.isOnline ? 'text-emerald-400' : 'text-slate-400'
+                          row.isOnline ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-500 dark:text-slate-400'
                         }`}
                       >
                         {row.isOnline ? 'Live' : 'Signal Lost'}
@@ -285,13 +285,13 @@ export const DailyDistanceTable: React.FC<DailyDistanceTableProps> = ({
 
                   {/* Today's Distance Column with Progress Bar */}
                   <td className="py-3 px-3 min-w-[160px]">
-                    <div className="flex items-center justify-between font-mono font-semibold text-slate-200">
+                    <div className="flex items-center justify-between font-mono font-semibold text-slate-800 dark:text-slate-200">
                       <span>{row.distanceKm.toFixed(2)} km</span>
-                      <span className="text-[10px] text-slate-500 font-normal">
+                      <span className="text-[10px] text-slate-400 dark:text-slate-500 font-normal">
                         {progressPercent}%
                       </span>
                     </div>
-                    <div className="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden mt-1">
+                    <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-1.5 overflow-hidden mt-1">
                       <div
                         className="bg-emerald-500 h-1.5 rounded-full transition-all duration-300"
                         style={{ width: `${progressPercent}%` }}
@@ -300,12 +300,12 @@ export const DailyDistanceTable: React.FC<DailyDistanceTableProps> = ({
                   </td>
 
                   {/* Max Speed Column */}
-                  <td className="py-3 px-3 font-mono text-slate-300">
+                  <td className="py-3 px-3 font-mono text-slate-700 dark:text-slate-300">
                     {row.maxSpeedKmH.toFixed(1)} km/h
                   </td>
 
                   {/* Active Time Column */}
-                  <td className="py-3 px-3 font-mono text-slate-300">
+                  <td className="py-3 px-3 font-mono text-slate-700 dark:text-slate-300">
                     {formatActiveTime(row.activeMinutes)}
                   </td>
 
@@ -319,9 +319,9 @@ export const DailyDistanceTable: React.FC<DailyDistanceTableProps> = ({
                       }}
                       aria-label={`Open map for ${row.vehicleId}`}
                       title={`Open map for ${row.vehicleId}`}
-                      className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-750 text-slate-300 hover:text-white border border-slate-700/80 text-xs font-medium transition-all group-hover:border-emerald-500/50"
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-slate-900 border border-slate-200 dark:bg-slate-800 dark:hover:bg-slate-750 dark:text-slate-300 dark:hover:text-white dark:border-slate-700/80 text-xs font-medium transition-all group-hover:border-emerald-500/50"
                     >
-                      <Maximize2 className="w-3.5 h-3.5 text-emerald-400" />
+                      <Maximize2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                       <span>Open Map</span>
                     </button>
                   </td>
@@ -346,17 +346,17 @@ export const DailyDistanceTable: React.FC<DailyDistanceTableProps> = ({
               className={`p-3.5 rounded-xl border transition-all cursor-pointer min-h-[44px] flex flex-col gap-2.5 ${
                 isSelected
                   ? 'bg-emerald-500/10 border-emerald-500/80 shadow-md'
-                  : 'bg-slate-800/60 border-slate-700/60 hover:bg-slate-800 hover:border-slate-600'
+                  : 'bg-slate-50 border-slate-200 hover:bg-slate-100/80 dark:bg-slate-800/60 dark:border-slate-700/60 dark:hover:bg-slate-800 dark:hover:border-slate-600'
               }`}
             >
               {/* Card Header */}
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
-                  <div className="p-1.5 bg-slate-800 rounded-lg text-emerald-400">
+                  <div className="p-1.5 bg-slate-200/80 dark:bg-slate-800 rounded-lg text-emerald-600 dark:text-emerald-400">
                     <Bus className="w-4 h-4" />
                   </div>
                   <div>
-                    <div className="text-xs font-bold text-white font-mono tracking-tight">
+                    <div className="text-xs font-bold text-slate-900 dark:text-white font-mono tracking-tight">
                       Shuttle #{row.vehicleId}
                     </div>
                     <div className="flex items-center gap-1.5 mt-0.5">
@@ -370,7 +370,7 @@ export const DailyDistanceTable: React.FC<DailyDistanceTableProps> = ({
                           }`}
                         />
                       </span>
-                      <span className="text-[10px] text-slate-400">
+                      <span className="text-[10px] text-slate-500 dark:text-slate-400">
                         {row.isOnline ? 'Live' : 'Signal Lost'}
                       </span>
                     </div>
@@ -380,22 +380,22 @@ export const DailyDistanceTable: React.FC<DailyDistanceTableProps> = ({
 
               {/* 3-Metric Grid */}
               <div className="grid grid-cols-3 gap-2 py-1 text-xs">
-                <div className="bg-slate-900/60 rounded-lg p-2 border border-slate-800/80">
-                  <span className="text-[10px] text-slate-400 block">Distance</span>
-                  <span className="font-mono font-bold text-white text-xs">{row.distanceKm.toFixed(2)} km</span>
+                <div className="bg-white dark:bg-slate-900/60 rounded-lg p-2 border border-slate-200 dark:border-slate-800/80">
+                  <span className="text-[10px] text-slate-500 dark:text-slate-400 block">Distance</span>
+                  <span className="font-mono font-bold text-slate-900 dark:text-white text-xs">{row.distanceKm.toFixed(2)} km</span>
                 </div>
-                <div className="bg-slate-900/60 rounded-lg p-2 border border-slate-800/80">
-                  <span className="text-[10px] text-slate-400 block">Max Speed</span>
-                  <span className="font-mono font-bold text-sky-400 text-xs">{row.maxSpeedKmH.toFixed(1)} km/h</span>
+                <div className="bg-white dark:bg-slate-900/60 rounded-lg p-2 border border-slate-200 dark:border-slate-800/80">
+                  <span className="text-[10px] text-slate-500 dark:text-slate-400 block">Max Speed</span>
+                  <span className="font-mono font-bold text-sky-600 dark:text-sky-400 text-xs">{row.maxSpeedKmH.toFixed(1)} km/h</span>
                 </div>
-                <div className="bg-slate-900/60 rounded-lg p-2 border border-slate-800/80">
-                  <span className="text-[10px] text-slate-400 block">Active Time</span>
-                  <span className="font-mono font-bold text-amber-400 text-xs">{formatActiveTime(row.activeMinutes)}</span>
+                <div className="bg-white dark:bg-slate-900/60 rounded-lg p-2 border border-slate-200 dark:border-slate-800/80">
+                  <span className="text-[10px] text-slate-500 dark:text-slate-400 block">Active Time</span>
+                  <span className="font-mono font-bold text-amber-600 dark:text-amber-400 text-xs">{formatActiveTime(row.activeMinutes)}</span>
                 </div>
               </div>
 
               {/* Progress Bar */}
-              <div className="w-full bg-slate-900 rounded-full h-1.5 overflow-hidden">
+              <div className="w-full bg-slate-200 dark:bg-slate-900 rounded-full h-1.5 overflow-hidden">
                 <div
                   className="bg-emerald-500 h-1.5 rounded-full transition-all duration-300"
                   style={{ width: `${progressPercent}%` }}
@@ -410,9 +410,9 @@ export const DailyDistanceTable: React.FC<DailyDistanceTableProps> = ({
                   onOpenVehicleMap(row.vehicleId);
                 }}
                 aria-label={`View map for ${row.vehicleId}`}
-                className="w-full min-h-[44px] flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-medium transition-all"
+                className="w-full min-h-[44px] flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-200 dark:border-slate-700 text-xs font-medium transition-all"
               >
-                <Maximize2 className="w-3.5 h-3.5 text-emerald-400" />
+                <Maximize2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                 <span>View on Map</span>
               </button>
             </div>
