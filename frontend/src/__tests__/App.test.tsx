@@ -6,11 +6,15 @@ import * as dailyMetricsHook from '../hooks/useDailyMetrics';
 
 describe('App Integration', () => {
   beforeEach(() => {
+    localStorage.clear();
+    document.documentElement.classList.remove('dark');
     window.HTMLElement.prototype.scrollIntoView = vi.fn();
     window.history.pushState({}, '', '/');
   });
 
   afterEach(() => {
+    localStorage.clear();
+    document.documentElement.classList.remove('dark');
     window.history.pushState({}, '', '/');
     vi.restoreAllMocks();
   });
@@ -200,5 +204,30 @@ describe('App Integration', () => {
     // Map transitions to fullscreen and selects EV-01
     expect(setSelectedVehicleIdMock).toHaveBeenCalledWith('EV-01');
     expect(screen.getByRole('button', { name: /exit full screen/i })).toBeInTheDocument();
+  });
+
+  it('renders theme toggle button in header and defaults to light mode', () => {
+    render(<App />);
+    const toggleBtn = screen.getByRole('button', { name: /switch to dark mode/i });
+    expect(toggleBtn).toBeInTheDocument();
+    expect(document.documentElement.classList.contains('dark')).toBe(false);
+  });
+
+  it('switches theme to dark mode when header toggle is clicked', () => {
+    render(<App />);
+    const toggleBtn = screen.getByRole('button', { name: /switch to dark mode/i });
+    fireEvent.click(toggleBtn);
+
+    expect(document.documentElement.classList.contains('dark')).toBe(true);
+    expect(screen.getByRole('button', { name: /switch to light mode/i })).toBeInTheDocument();
+    expect(localStorage.getItem('shuttle_theme')).toBe('dark');
+
+    // Click again to return to light mode
+    const lightBtn = screen.getByRole('button', { name: /switch to light mode/i });
+    fireEvent.click(lightBtn);
+
+    expect(document.documentElement.classList.contains('dark')).toBe(false);
+    expect(screen.getByRole('button', { name: /switch to dark mode/i })).toBeInTheDocument();
+    expect(localStorage.getItem('shuttle_theme')).toBe('light');
   });
 });

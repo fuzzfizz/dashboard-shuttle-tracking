@@ -5,13 +5,15 @@ import { ShuttleMap, DEFAULT_CENTER } from './components/ShuttleMap';
 import { TelemetryHUD } from './components/TelemetryHUD';
 import { FleetPanel } from './components/FleetPanel';
 import { DailyDistanceTable } from './components/DailyDistanceTable';
-import { Bus, Maximize2, Minimize2, BarChart3 } from 'lucide-react';
+import { Bus, Maximize2, Minimize2, BarChart3, Sun, Moon } from 'lucide-react';
 import { calculateFleetStats, computeVehicleStatus } from './services/fleetStatus';
+import { ThemeProvider, useTheme } from './context/ThemeContext';
 const MapProviderTestLab = lazy(() =>
   import('./components/MapProviderTestLab').then((m) => ({ default: m.MapProviderTestLab }))
 );
 
 function OperationalDashboard() {
+  const { theme, toggleTheme } = useTheme();
   const {
     status,
     vehicles,
@@ -85,22 +87,22 @@ function OperationalDashboard() {
   };
 
   return (
-    <div className={`min-h-screen bg-slate-900 text-slate-100 flex flex-col ${isMapFullscreen ? 'overflow-hidden h-screen' : ''}`}>
+    <div className={`min-h-screen bg-slate-100 dark:bg-slate-900 text-slate-800 dark:text-slate-100 flex flex-col ${isMapFullscreen ? 'overflow-hidden h-screen' : ''}`}>
       {/* Top Header (compact mode only) */}
       {!isMapFullscreen && (
-        <header className="h-16 border-b border-slate-800 bg-slate-900/95 backdrop-blur-md px-4 md:px-6 flex items-center justify-between z-[1100] sticky top-0 shadow-lg">
+        <header className="h-16 border-b border-slate-200 dark:border-slate-800 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md px-4 md:px-6 flex items-center justify-between z-[1100] sticky top-0 shadow-sm dark:shadow-lg">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-xl">
+            <div className="p-2 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 rounded-xl">
               <Bus className="w-5 h-5" />
             </div>
             <div>
-              <h1 className="text-sm md:text-base font-bold uppercase tracking-wider text-white">Shuttle Tracker</h1>
-              <p className="text-[10px] md:text-xs text-slate-400 font-mono">Multi-Vehicle Fleet Gateway</p>
+              <h1 className="text-sm md:text-base font-bold uppercase tracking-wider text-slate-900 dark:text-white">Shuttle Tracker</h1>
+              <p className="text-[10px] md:text-xs text-slate-500 dark:text-slate-400 font-mono">Multi-Vehicle Fleet Gateway</p>
             </div>
           </div>
           <div className="flex items-center gap-3">
             {/* Connection status badge */}
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-800/80 border border-slate-700/60 text-xs font-medium text-slate-300">
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/60 text-xs font-medium text-slate-700 dark:text-slate-300">
               <span className={`w-2 h-2 rounded-full ${getConnectionDot(status)}`} />
               <span className="capitalize">{status}</span>
             </div>
@@ -109,10 +111,19 @@ function OperationalDashboard() {
               onClick={handleScrollToAnalytics}
               aria-label="View Daily Analytics"
               title="View Daily Analytics"
-              className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white border border-slate-700/80 transition-all text-xs font-medium shadow-sm hover:border-slate-600"
+              className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-slate-900 border border-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-200 dark:hover:text-white dark:border-slate-700/80 transition-all text-xs font-medium shadow-sm hover:border-slate-300 dark:hover:border-slate-600"
             >
-              <BarChart3 className="w-4 h-4 text-emerald-400" />
+              <BarChart3 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
               <span className="hidden sm:inline">Analytics</span>
+            </button>
+            {/* Theme toggle button */}
+            <button
+              onClick={toggleTheme}
+              aria-label={theme === 'light' ? 'Switch to Dark Mode' : 'Switch to Light Mode'}
+              title={theme === 'light' ? 'Switch to Dark Mode' : 'Switch to Light Mode'}
+              className="flex items-center justify-center p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-200 dark:border-slate-700/80 transition-colors shadow-sm"
+            >
+              {theme === 'light' ? <Moon className="w-4 h-4 text-slate-700" /> : <Sun className="w-4 h-4 text-amber-400" />}
             </button>
           </div>
         </header>
@@ -122,15 +133,15 @@ function OperationalDashboard() {
       <main className="flex-1 p-4 md:p-6 grid grid-cols-1 lg:grid-cols-12 gap-5 max-w-7xl mx-auto w-full">
         {/* Left Column: Map Card & Telemetry HUD */}
         <div className="lg:col-span-8 flex flex-col gap-4">
-          <div className={isMapFullscreen ? '' : 'bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-xl flex flex-col gap-3'}>
+          <div className={isMapFullscreen ? '' : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-sm dark:shadow-xl flex flex-col gap-3'}>
             {!isMapFullscreen && (
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
-                  <h2 className="text-sm font-semibold text-slate-200">Fleet Live Map</h2>
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                  <h2 className="text-sm font-semibold text-slate-800 dark:text-slate-200">Fleet Live Map</h2>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
                     {fleetStats.onlineVehicles} online
                   </span>
-                  <span className="px-1.5 py-0.5 rounded text-[10px] font-mono font-medium bg-slate-800 text-slate-400 border border-slate-700/60 hidden sm:inline-block">
+                  <span className="px-1.5 py-0.5 rounded text-[10px] font-mono font-medium bg-slate-100 text-slate-600 border border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700/60 hidden sm:inline-block">
                     Longdo Map
                   </span>
                 </div>
@@ -138,7 +149,7 @@ function OperationalDashboard() {
                   onClick={() => setIsMapFullscreen(true)}
                   aria-label="Expand map to full screen"
                   title="Expand map to full screen"
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700/70 text-xs font-medium transition-colors"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-slate-900 border border-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-300 dark:hover:text-white dark:border-slate-700/70 text-xs font-medium transition-colors"
                 >
                   <Maximize2 className="w-3.5 h-3.5" />
                   <span className="hidden sm:inline">Expand</span>
@@ -185,16 +196,27 @@ function OperationalDashboard() {
                       </div>
                     </div>
 
-                    <button
-                      onClick={() => setIsMapFullscreen(false)}
-                      aria-label="Exit full screen"
-                      title="Exit full screen (Esc)"
-                      className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-900/90 hover:bg-slate-800 text-white border border-slate-800 shadow-xl backdrop-blur-md transition-colors text-xs font-semibold pointer-events-auto"
-                    >
-                      <Minimize2 className="w-4 h-4 text-emerald-400" />
-                      <span>Exit full screen</span>
-                      <kbd className="hidden sm:inline-block ml-1 px-1.5 py-0.5 text-[10px] font-mono bg-slate-800 border border-slate-700 rounded text-slate-400">Esc</kbd>
-                    </button>
+                    <div className="flex items-center gap-2 pointer-events-auto">
+                      <button
+                        onClick={toggleTheme}
+                        aria-label={theme === 'light' ? 'Switch to Dark Mode' : 'Switch to Light Mode'}
+                        title={theme === 'light' ? 'Switch to Dark Mode' : 'Switch to Light Mode'}
+                        className="flex items-center justify-center p-2 rounded-xl bg-slate-900/90 hover:bg-slate-800 text-slate-200 border border-slate-800 shadow-xl backdrop-blur-md transition-colors"
+                      >
+                        {theme === 'light' ? <Moon className="w-4 h-4 text-slate-300" /> : <Sun className="w-4 h-4 text-amber-400" />}
+                      </button>
+
+                      <button
+                        onClick={() => setIsMapFullscreen(false)}
+                        aria-label="Exit full screen"
+                        title="Exit full screen (Esc)"
+                        className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-900/90 hover:bg-slate-800 text-white border border-slate-800 shadow-xl backdrop-blur-md transition-colors text-xs font-semibold"
+                      >
+                        <Minimize2 className="w-4 h-4 text-emerald-400" />
+                        <span>Exit full screen</span>
+                        <kbd className="hidden sm:inline-block ml-1 px-1.5 py-0.5 text-[10px] font-mono bg-slate-800 border border-slate-700 rounded text-slate-400">Esc</kbd>
+                      </button>
+                    </div>
                   </div>
 
                   {/* Floating TelemetryHUD */}
@@ -298,18 +320,24 @@ export function App() {
 
   if (isMapTestRoute) {
     return (
-      <Suspense fallback={<div className="min-h-screen bg-slate-100 flex items-center justify-center text-slate-700">Loading Map Provider Lab...</div>}>
-        <MapProviderTestLab
-          onBack={() => {
-            window.history.pushState({}, '', '/');
-            setCurrentPath('/');
-          }}
-        />
-      </Suspense>
+      <ThemeProvider>
+        <Suspense fallback={<div className="min-h-screen bg-slate-100 flex items-center justify-center text-slate-700">Loading Map Provider Lab...</div>}>
+          <MapProviderTestLab
+            onBack={() => {
+              window.history.pushState({}, '', '/');
+              setCurrentPath('/');
+            }}
+          />
+        </Suspense>
+      </ThemeProvider>
     );
   }
 
-  return <OperationalDashboard />;
+  return (
+    <ThemeProvider>
+      <OperationalDashboard />
+    </ThemeProvider>
+  );
 }
 
 export default App;
