@@ -15,10 +15,10 @@ describe('App Integration', () => {
     vi.restoreAllMocks();
   });
 
-  it('renders MapProviderTestLab when URL is /map-test', () => {
+  it('renders MapProviderTestLab when URL is /map-test', async () => {
     window.history.pushState({}, '', '/map-test');
-    const { getByText } = render(<App />);
-    expect(getByText(/Map Provider Lab/i)).toBeInTheDocument();
+    const { findByText } = render(<App />);
+    expect(await findByText(/Map Provider Lab/i)).toBeInTheDocument();
     window.history.pushState({}, '', '/');
   });
 
@@ -30,18 +30,18 @@ describe('App Integration', () => {
     expect(queryByText(/Map Provider Lab/i)).toBeNull();
   });
 
-  it('renders MapProviderTestLab when URL hash is #map-test', () => {
+  it('renders MapProviderTestLab when URL hash is #map-test', async () => {
     window.history.pushState({}, '', '/#map-test');
-    const { getByText } = render(<App />);
-    expect(getByText(/Map Provider Lab/i)).toBeInTheDocument();
+    const { findByText } = render(<App />);
+    expect(await findByText(/Map Provider Lab/i)).toBeInTheDocument();
     window.history.pushState({}, '', '/');
   });
 
-  it('navigates back to dashboard when Back button is clicked in MapProviderTestLab', () => {
+  it('navigates back to dashboard when Back button is clicked in MapProviderTestLab', async () => {
     window.history.pushState({}, '', '/map-test');
-    const { getByText, queryByText } = render(<App />);
-    expect(getByText(/Map Provider Lab/i)).toBeInTheDocument();
-    fireEvent.click(getByText(/Back/i));
+    const { findByText, getByText, queryByText } = render(<App />);
+    const backBtn = await findByText(/Back/i);
+    fireEvent.click(backBtn);
     expect(getByText('Shuttle Tracker')).toBeInTheDocument();
     expect(queryByText(/Map Provider Lab/i)).toBeNull();
   });

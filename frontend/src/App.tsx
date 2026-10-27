@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense, lazy } from 'react';
 import { useShuttleTelemetry } from './hooks/useShuttleTelemetry';
 import { useDailyMetrics } from './hooks/useDailyMetrics';
 import { ShuttleMap, DEFAULT_CENTER } from './components/ShuttleMap';
@@ -7,7 +7,9 @@ import { FleetPanel } from './components/FleetPanel';
 import { DailyDistanceTable } from './components/DailyDistanceTable';
 import { Bus, Maximize2, Minimize2, BarChart3 } from 'lucide-react';
 import { calculateFleetStats, computeVehicleStatus } from './services/fleetStatus';
-import { MapProviderTestLab } from './components/MapProviderTestLab';
+const MapProviderTestLab = lazy(() =>
+  import('./components/MapProviderTestLab').then((m) => ({ default: m.MapProviderTestLab }))
+);
 
 function OperationalDashboard() {
   const {
@@ -293,12 +295,14 @@ export function App() {
 
   if (isMapTestRoute) {
     return (
-      <MapProviderTestLab
-        onBack={() => {
-          window.history.pushState({}, '', '/');
-          setCurrentPath('/');
-        }}
-      />
+      <Suspense fallback={<div className="min-h-screen bg-slate-100 flex items-center justify-center text-slate-700">Loading Map Provider Lab...</div>}>
+        <MapProviderTestLab
+          onBack={() => {
+            window.history.pushState({}, '', '/');
+            setCurrentPath('/');
+          }}
+        />
+      </Suspense>
     );
   }
 

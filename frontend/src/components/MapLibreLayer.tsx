@@ -1,12 +1,22 @@
 import React, { useEffect, useRef } from 'react';
 import { useMap, TileLayer } from 'react-leaflet';
 import L from 'leaflet';
+import { setWorkerUrl } from 'maplibre-gl';
+import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
 import '@maplibre/maplibre-gl-leaflet';
 
 export interface MapLibreLayerProps {
   style: string;
   attribution?: string;
   fallbackTileUrl?: string;
+}
+
+if (typeof window !== 'undefined') {
+  try {
+    setWorkerUrl(workerUrl);
+  } catch {
+    // Ignore in non-browser environments
+  }
 }
 
 function isWebGLSupported(): boolean {
