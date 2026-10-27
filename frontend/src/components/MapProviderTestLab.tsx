@@ -60,10 +60,39 @@ export const CameraSyncController: React.FC<{
   return null;
 };
 
+// Invalidates Leaflet container dimensions after view switch, provider switch, or resize
+export const MapResizeHandler: React.FC<{
+  providerId?: string;
+  viewMode?: string;
+}> = ({ providerId, viewMode }) => {
+  const map = useMap();
+
+  useEffect(() => {
+    map.invalidateSize();
+    const t1 = setTimeout(() => map.invalidateSize(), 50);
+    const t2 = setTimeout(() => map.invalidateSize(), 200);
+    const t3 = setTimeout(() => map.invalidateSize(), 500);
+
+    const handleResize = () => {
+      map.invalidateSize();
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+      clearTimeout(t3);
+      window.removeEventListener('resize', handleResize);
+    };
+  }, [map, providerId, viewMode]);
+
+  return null;
+};
+
 // Helper to render layer according to vector vs raster
 function ProviderMapLayer({ provider }: { provider: MapProviderConfig }) {
   if (provider.isVector) {
-    return <MapLibreLayer style={provider.tileUrl} attribution={provider.attribution} />;
+    return <MapLibreLayer key={provider.id} style={provider.tileUrl} attribution={provider.attribution} />;
   }
   return (
     <TileLayer
@@ -282,13 +311,27 @@ export const MapProviderTestLab: React.FC<MapProviderTestLabProps> = ({
             </div>
 
             {/* Interactive Map View (Preserves Center & Zoom across provider switches) */}
-            <div className={`flex-1 min-h-[500px] h-[calc(100vh-230px)] rounded-xl overflow-hidden border shadow-inner relative ${cardClass}`}>
+            <div
+              className={`w-full rounded-xl overflow-hidden border shadow-inner relative flex-1 ${cardClass}`}
+              style={{ height: 'calc(100vh - 230px)', minHeight: '520px' }}
+            >
               <MapContainer
-                center={DEFAULT_CENTER}
-                zoom={DEFAULT_ZOOM}
+                key={`single-${activeProvider.id}`}
+                center={syncCenter}
+                zoom={syncZoom}
                 className="w-full h-full"
+                style={{ height: '100%', width: '100%', minHeight: '520px' }}
                 zoomControl={true}
               >
+                <CameraSyncController
+                  center={syncCenter}
+                  zoom={syncZoom}
+                  onCameraChange={(c, z) => {
+                    setSyncCenter(c);
+                    setSyncZoom(z);
+                  }}
+                />
+                <MapResizeHandler providerId={activeProvider.id} viewMode={viewMode} />
                 <ProviderMapLayer key={activeProvider.id} provider={activeProvider} />
                 {showShuttle && (
                   <AnimatedVehicleMarker
@@ -354,11 +397,12 @@ export const MapProviderTestLab: React.FC<MapProviderTestLabProps> = ({
                   </div>
 
                   {/* Mini Map */}
-                  <div className="h-64 relative">
+                  <div className="h-64 relative" style={{ height: '256px' }}>
                     <MapContainer
                       center={syncCenter}
                       zoom={syncZoom}
                       className="w-full h-full"
+                      style={{ height: '100%', width: '100%' }}
                       zoomControl={false}
                     >
                       <CameraSyncController
@@ -369,6 +413,7 @@ export const MapProviderTestLab: React.FC<MapProviderTestLabProps> = ({
                           setSyncZoom(z);
                         }}
                       />
+                      <MapResizeHandler providerId={provider.id} viewMode={viewMode} />
                       <ProviderMapLayer provider={provider} />
                       {showShuttle && (
                         <AnimatedVehicleMarker

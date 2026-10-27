@@ -71,8 +71,7 @@ export const MapLibreLayer: React.FC<MapLibreLayerProps> = ({
     return () => {
       if (layerRef.current && map) {
         try {
-          // Guard against maplibre-gl-leaflet bug where _glMap is undefined
-          if (layerRef.current._glMap) {
+          if (map.hasLayer(layerRef.current)) {
             map.removeLayer(layerRef.current);
           }
         } catch {
