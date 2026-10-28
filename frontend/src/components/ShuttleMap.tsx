@@ -277,6 +277,7 @@ export const ShuttleMap: React.FC<ShuttleMapProps> = ({
         center={defaultCenter}
         zoom={zoom}
         zoomControl={false}
+        attributionControl={false}
         className="w-full h-full"
       >
         <TileLayer
