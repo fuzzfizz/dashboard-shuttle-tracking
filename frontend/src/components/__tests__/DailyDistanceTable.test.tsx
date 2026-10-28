@@ -194,15 +194,19 @@ describe('DailyDistanceTable', () => {
     fireEvent.click(clearBtn);
     expect(screen.getByTestId('vehicle-row-EV-01')).toBeInTheDocument();
 
-    // Filter by status pill: Live (only EV-01 should be visible)
-    const livePill = screen.getByRole('button', { name: /live/i });
-    fireEvent.click(livePill);
+    // Filter by status dropdown: Live (only EV-01 should be visible)
+    const statusMenuBtn = screen.getByRole('button', { name: /filter by status/i });
+    fireEvent.click(statusMenuBtn);
+
+    const liveOption = screen.getByRole('button', { name: /^live/i });
+    fireEvent.click(liveOption);
     expect(screen.getByTestId('vehicle-row-EV-01')).toBeInTheDocument();
     expect(screen.queryByTestId('vehicle-row-shuttle-cm-02')).toBeNull();
 
-    // Filter by status pill: Signal Lost (only shuttle-cm-02 should be visible)
-    const offlinePill = screen.getByRole('button', { name: /signal lost/i });
-    fireEvent.click(offlinePill);
+    // Re-open status dropdown and select: Signal Lost (only shuttle-cm-02 should be visible)
+    fireEvent.click(statusMenuBtn);
+    const offlineOption = screen.getByRole('button', { name: /^signal lost/i });
+    fireEvent.click(offlineOption);
     expect(screen.queryByTestId('vehicle-row-EV-01')).toBeNull();
     expect(screen.getByTestId('vehicle-row-shuttle-cm-02')).toBeInTheDocument();
   });

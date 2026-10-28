@@ -1,5 +1,5 @@
-import React, { useState, useMemo } from 'react';
-import { Bus, Route, ArrowUpDown, Maximize2, Search, X } from 'lucide-react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
+import { Bus, Route, ArrowUpDown, Maximize2, Search, X, Filter, ChevronDown } from 'lucide-react';
 import { DailyMetricsMap } from '../types/metrics';
 import { FleetMap } from '../types/telemetry';
 import { OFFLINE_THRESHOLD_MS } from '../services/fleetStatus';
@@ -28,7 +28,19 @@ export const DailyDistanceTable: React.FC<DailyDistanceTableProps> = ({
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+  const [isStatusMenuOpen, setIsStatusMenuOpen] = useState(false);
   const [sortMode, setSortMode] = useState<SortMode>('distance-desc');
+  const statusMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (statusMenuRef.current && !statusMenuRef.current.contains(e.target as Node)) {
+        setIsStatusMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const allVehicleIds = useMemo(() => {
     const ids = new Set<string>();
@@ -113,6 +125,17 @@ export const DailyDistanceTable: React.FC<DailyDistanceTableProps> = ({
     }
   };
 
+  const getStatusFilterLabel = (filter: StatusFilter) => {
+    switch (filter) {
+      case 'all':
+        return `Status: All (${allVehicleIds.length})`;
+      case 'online':
+        return `Status: Live (${onlineCount})`;
+      case 'offline':
+        return `Status: Signal Lost (${offlineCount})`;
+    }
+  };
+
   const containerClasses =
     className ??
     'bg-white border border-slate-200 text-slate-800 shadow-xl dark:bg-slate-900 dark:border-slate-800 dark:text-slate-100 rounded-2xl p-4 sm:p-5 flex flex-col gap-4 transition-colors';
@@ -160,40 +183,79 @@ export const DailyDistanceTable: React.FC<DailyDistanceTableProps> = ({
           )}
         </div>
 
-        {/* Status Filter Pills */}
-        <div className="flex items-center gap-1.5">
+        {/* Combined Status Filter Dropdown */}
+        <div ref={statusMenuRef} className="relative">
           <button
-            onClick={() => setStatusFilter('all')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-              statusFilter === 'all'
-                ? 'bg-slate-900 text-white dark:bg-emerald-600 shadow-sm'
-                : 'bg-white hover:bg-slate-100 dark:bg-slate-900 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700/70'
-            }`}
+            type="button"
+            onClick={() => setIsStatusMenuOpen(!isStatusMenuOpen)}
+            aria-label="Filter by status"
+            aria-expanded={isStatusMenuOpen}
+            className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white hover:bg-slate-100 text-slate-700 hover:text-slate-900 border border-slate-200 dark:bg-slate-900 dark:hover:bg-slate-800 dark:text-slate-300 dark:hover:text-white dark:border-slate-700/80 text-xs font-medium transition-all shadow-sm"
           >
-            All ({allVehicleIds.length})
+            <Filter className="w-3.5 h-3.5 text-slate-400" />
+            <span className="flex items-center gap-1.5">
+              {statusFilter === 'online' && <span className="w-2 h-2 rounded-full bg-emerald-500" />}
+              {statusFilter === 'offline' && <span className="w-2 h-2 rounded-full bg-rose-500" />}
+              <span>{getStatusFilterLabel(statusFilter)}</span>
+            </span>
+            <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform ${isStatusMenuOpen ? 'rotate-180' : ''}`} />
           </button>
-          <button
-            onClick={() => setStatusFilter('online')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-              statusFilter === 'online'
-                ? 'bg-emerald-600 text-white shadow-sm'
-                : 'bg-white hover:bg-slate-100 dark:bg-slate-900 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700/70'
-            }`}
-          >
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-            Live ({onlineCount})
-          </button>
-          <button
-            onClick={() => setStatusFilter('offline')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-              statusFilter === 'offline'
-                ? 'bg-rose-600 text-white shadow-sm'
-                : 'bg-white hover:bg-slate-100 dark:bg-slate-900 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700/70'
-            }`}
-          >
-            <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
-            Signal Lost ({offlineCount})
-          </button>
+
+          {isStatusMenuOpen && (
+            <div className="absolute left-0 mt-1.5 w-44 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-xl py-1 z-[50]">
+              <button
+                type="button"
+                onClick={() => {
+                  setStatusFilter('all');
+                  setIsStatusMenuOpen(false);
+                }}
+                className={`w-full flex items-center justify-between px-3 py-2 text-xs font-medium text-left transition-colors ${
+                  statusFilter === 'all'
+                    ? 'bg-slate-100 text-slate-900 dark:bg-slate-800 dark:text-white font-semibold'
+                    : 'text-slate-600 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800/60'
+                }`}
+              >
+                <span>All Vehicles</span>
+                <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-500">{allVehicleIds.length}</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setStatusFilter('online');
+                  setIsStatusMenuOpen(false);
+                }}
+                className={`w-full flex items-center justify-between px-3 py-2 text-xs font-medium text-left transition-colors ${
+                  statusFilter === 'online'
+                    ? 'bg-emerald-500/10 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300 font-semibold'
+                    : 'text-slate-600 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800/60'
+                }`}
+              >
+                <span className="flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                  Live
+                </span>
+                <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-500">{onlineCount}</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setStatusFilter('offline');
+                  setIsStatusMenuOpen(false);
+                }}
+                className={`w-full flex items-center justify-between px-3 py-2 text-xs font-medium text-left transition-colors ${
+                  statusFilter === 'offline'
+                    ? 'bg-rose-500/10 text-rose-700 dark:bg-rose-500/20 dark:text-rose-300 font-semibold'
+                    : 'text-slate-600 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800/60'
+                }`}
+              >
+                <span className="flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-rose-500" />
+                  Signal Lost
+                </span>
+                <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-500">{offlineCount}</span>
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Sort Toggle Button */}
