@@ -122,7 +122,7 @@ function OperationalDashboard() {
               title={theme === 'light' ? 'Switch to Dark Mode' : 'Switch to Light Mode'}
               className="flex items-center justify-center p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-200 dark:border-slate-700/80 transition-colors shadow-sm"
             >
-              {theme === 'light' ? <Moon className="w-4 h-4 text-slate-700" /> : <Sun className="w-4 h-4 text-amber-400" />}
+              {theme === 'light' ? <Sun className="w-4 h-4 text-amber-500" /> : <Moon className="w-4 h-4 text-slate-300" />}
             </button>
           </div>
         </header>
@@ -210,7 +210,7 @@ function OperationalDashboard() {
                       title={theme === 'light' ? 'Switch to Dark Mode' : 'Switch to Light Mode'}
                       className="flex items-center justify-center p-2 rounded-xl bg-slate-900/90 hover:bg-slate-800 text-slate-200 border border-slate-800 shadow-xl backdrop-blur-md transition-colors"
                     >
-                      {theme === 'light' ? <Moon className="w-4 h-4 text-slate-300" /> : <Sun className="w-4 h-4 text-amber-400" />}
+                      {theme === 'light' ? <Sun className="w-4 h-4 text-amber-500" /> : <Moon className="w-4 h-4 text-slate-300" />}
                     </button>
 
                     <button
