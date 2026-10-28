@@ -28,13 +28,19 @@ export async function fetchHistoricalTripData(
   const endUtc = getBangkokEndOfDayUtc(dateStr);
 
   // 1. Fetch telemetry points
-  const { data: logsData, error: logsError } = await supabase
+  let logsQuery = supabase
     .from('telemetry_logs')
     .select('id, vehicle_id, lat, lng, speed, heading, recorded_at')
     .eq('vehicle_id', vehicleId)
     .gte('recorded_at', startUtc)
     .lte('recorded_at', endUtc)
     .order('recorded_at', { ascending: true });
+
+  if (typeof (logsQuery as any).limit === 'function') {
+    logsQuery = (logsQuery as any).limit(10000);
+  }
+
+  const { data: logsData, error: logsError } = await logsQuery;
 
   if (logsError) {
     throw new Error(logsError.message || 'Failed to fetch telemetry logs');
