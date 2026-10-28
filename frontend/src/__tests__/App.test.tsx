@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { App } from '../App';
 import * as shuttleHook from '../hooks/useShuttleTelemetry';
@@ -299,5 +299,59 @@ describe('App Integration', () => {
     expect(document.documentElement.classList.contains('dark')).toBe(false);
     expect(screen.getByRole('button', { name: /switch to dark mode/i })).toBeInTheDocument();
     expect(localStorage.getItem('shuttle_theme')).toBe('light');
+  });
+
+  it('renders "วันนี้" and "ประวัติย้อนหลัง" navigation tabs in the header', () => {
+    render(<App />);
+    expect(screen.getByRole('button', { name: 'วันนี้' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'ประวัติย้อนหลัง' })).toBeInTheDocument();
+  });
+
+  it('switches view to historical replay when "ประวัติย้อนหลัง" is clicked, and back to live view when "วันนี้" is clicked', () => {
+    render(<App />);
+
+    // Initially in live view (today tab)
+    expect(screen.getByText('Fleet Live Map')).toBeInTheDocument();
+    expect(screen.getByText('Daily Distance Overview')).toBeInTheDocument();
+    expect(screen.queryByLabelText(/select date/i)).toBeNull();
+
+    // Click "ประวัติย้อนหลัง" tab
+    const historyTab = screen.getByRole('button', { name: 'ประวัติย้อนหลัง' });
+    fireEvent.click(historyTab);
+
+    // Live view replaced by historical replay view
+    expect(screen.queryByText('Fleet Live Map')).toBeNull();
+    expect(screen.queryByText('Daily Distance Overview')).toBeNull();
+    expect(screen.getByLabelText(/select date/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/select vehicle/i)).toBeInTheDocument();
+    expect(screen.getByRole('slider')).toBeInTheDocument();
+
+    // Click "วันนี้" tab to return
+    const todayTab = screen.getByRole('button', { name: 'วันนี้' });
+    fireEvent.click(todayTab);
+
+    // Live view elements restored
+    expect(screen.getByText('Fleet Live Map')).toBeInTheDocument();
+    expect(screen.getByText('Daily Distance Overview')).toBeInTheDocument();
+    expect(screen.queryByLabelText(/select date/i)).toBeNull();
+  });
+
+  it('switches back to today view and scrolls to analytics when Analytics button is clicked from history tab', async () => {
+    render(<App />);
+    const scrollSpy = vi.spyOn(window.HTMLElement.prototype, 'scrollIntoView');
+
+    // Switch to history tab
+    fireEvent.click(screen.getByRole('button', { name: 'ประวัติย้อนหลัง' }));
+    expect(screen.getByLabelText(/select date/i)).toBeInTheDocument();
+
+    // Click Analytics shortcut
+    const analyticsBtn = screen.getByRole('button', { name: 'View Daily Analytics' });
+    fireEvent.click(analyticsBtn);
+
+    // Should return to today view and trigger scroll
+    expect(screen.getByText('Fleet Live Map')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(scrollSpy).toHaveBeenCalledWith({ behavior: 'smooth' });
+    });
   });
 });
