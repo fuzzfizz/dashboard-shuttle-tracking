@@ -89,13 +89,13 @@ describe('DailyDistanceTable', () => {
     expect(handleOpenMap).toHaveBeenCalledWith('EV-01');
   });
 
-  it('sorts vehicles by distance-desc, then speed-desc, then id-asc on sort button click', () => {
+  it('sorts vehicles between highest distance and vehicle ID on sort button click', () => {
     const metrics: DailyMetricsMap = {
       'EV-01': {
         vehicle_id: 'EV-01',
         date: '2026-10-26',
         total_distance_km: 10.0,
-        max_speed_kmh: 60, // higher speed
+        max_speed_kmh: 60,
         avg_speed_kmh: 20,
         active_minutes: 30,
         last_updated_at: new Date().toISOString(),
@@ -103,7 +103,7 @@ describe('DailyDistanceTable', () => {
       'EV-02': {
         vehicle_id: 'EV-02',
         date: '2026-10-26',
-        total_distance_km: 35.0, // higher distance
+        total_distance_km: 35.0,
         max_speed_kmh: 40,
         avg_speed_kmh: 30,
         active_minutes: 90,
@@ -126,7 +126,7 @@ describe('DailyDistanceTable', () => {
     expect(vehicleItems[0]).toHaveTextContent('EV-02');
     expect(vehicleItems[1]).toHaveTextContent('EV-01');
 
-    // Toggle sort button -> speed-desc (EV-01 first: 60km/h, EV-02 second: 40km/h)
+    // Toggle sort button -> id-asc (EV-01 first, EV-02 second)
     const sortBtn = screen.getByRole('button', { name: /toggle sort/i });
     fireEvent.click(sortBtn);
 
@@ -134,17 +134,77 @@ describe('DailyDistanceTable', () => {
     expect(vehicleItems[0]).toHaveTextContent('EV-01');
     expect(vehicleItems[1]).toHaveTextContent('EV-02');
 
-    // Toggle again -> id-asc (EV-01 first, EV-02 second)
-    fireEvent.click(sortBtn);
-    vehicleItems = screen.getAllByTestId('vehicle-id-cell');
-    expect(vehicleItems[0]).toHaveTextContent('EV-01');
-    expect(vehicleItems[1]).toHaveTextContent('EV-02');
-
-    // Toggle again -> cycle back to distance-desc (EV-02 first, EV-01 second)
+    // Toggle again -> back to distance-desc (EV-02 first, EV-01 second)
     fireEvent.click(sortBtn);
     vehicleItems = screen.getAllByTestId('vehicle-id-cell');
     expect(vehicleItems[0]).toHaveTextContent('EV-02');
     expect(vehicleItems[1]).toHaveTextContent('EV-01');
+  });
+
+  it('filters vehicles by search query and status pills', () => {
+    const now = 100000;
+    const metrics: DailyMetricsMap = {
+      'EV-01': {
+        vehicle_id: 'EV-01',
+        date: '2026-10-26',
+        total_distance_km: 12.0,
+        max_speed_kmh: 30,
+        avg_speed_kmh: 20,
+        active_minutes: 15,
+        last_updated_at: new Date().toISOString(),
+      },
+      'shuttle-cm-02': {
+        vehicle_id: 'shuttle-cm-02',
+        date: '2026-10-26',
+        total_distance_km: 5.0,
+        max_speed_kmh: 25,
+        avg_speed_kmh: 15,
+        active_minutes: 10,
+        last_updated_at: new Date().toISOString(),
+      },
+    };
+
+    render(
+      <DailyDistanceTable
+        dailyMetrics={metrics}
+        vehicles={{}}
+        lastSeenMap={{
+          'EV-01': now - 2000, // Live
+          'shuttle-cm-02': now - 30000, // Offline
+        }}
+        selectedVehicleId={null}
+        onOpenVehicleMap={vi.fn()}
+        now={now}
+      />
+    );
+
+    // Both vehicles initially present
+    expect(screen.getAllByText('EV-01').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('shuttle-cm-02').length).toBeGreaterThan(0);
+
+    // Filter by search query: "cm-02"
+    const searchInput = screen.getByPlaceholderText(/search vehicle/i);
+    fireEvent.change(searchInput, { target: { value: 'cm-02' } });
+
+    expect(screen.queryByTestId('vehicle-row-EV-01')).toBeNull();
+    expect(screen.getByTestId('vehicle-row-shuttle-cm-02')).toBeInTheDocument();
+
+    // Clear search
+    const clearBtn = screen.getByRole('button', { name: /clear search/i });
+    fireEvent.click(clearBtn);
+    expect(screen.getByTestId('vehicle-row-EV-01')).toBeInTheDocument();
+
+    // Filter by status pill: Live (only EV-01 should be visible)
+    const livePill = screen.getByRole('button', { name: /live/i });
+    fireEvent.click(livePill);
+    expect(screen.getByTestId('vehicle-row-EV-01')).toBeInTheDocument();
+    expect(screen.queryByTestId('vehicle-row-shuttle-cm-02')).toBeNull();
+
+    // Filter by status pill: Signal Lost (only shuttle-cm-02 should be visible)
+    const offlinePill = screen.getByRole('button', { name: /signal lost/i });
+    fireEvent.click(offlinePill);
+    expect(screen.queryByTestId('vehicle-row-EV-01')).toBeNull();
+    expect(screen.getByTestId('vehicle-row-shuttle-cm-02')).toBeInTheDocument();
   });
 
   it('displays Live and Signal Lost statuses accurately based on lastSeen', () => {
@@ -188,24 +248,24 @@ describe('DailyDistanceTable', () => {
     expect(screen.getAllByText('Signal Lost')[0]).toBeInTheDocument();
   });
 
-  it('renders total fleet distance in header badge', () => {
+  it('renders vehicle count in header and does not render redundant total distance or max speed cards', () => {
     const metrics: DailyMetricsMap = {
       'EV-01': {
         vehicle_id: 'EV-01',
         date: '2026-10-26',
         total_distance_km: 12.5,
-        max_speed_kmh: 40,
-        avg_speed_kmh: 20,
-        active_minutes: 30,
+        max_speed_kmh: 42.0,
+        avg_speed_kmh: 22.0,
+        active_minutes: 65,
         last_updated_at: new Date().toISOString(),
       },
       'EV-02': {
         vehicle_id: 'EV-02',
         date: '2026-10-26',
         total_distance_km: 25.5,
-        max_speed_kmh: 50,
-        avg_speed_kmh: 30,
-        active_minutes: 60,
+        max_speed_kmh: 58.0,
+        avg_speed_kmh: 30.0,
+        active_minutes: 120,
         last_updated_at: new Date().toISOString(),
       },
     };
@@ -220,8 +280,18 @@ describe('DailyDistanceTable', () => {
       />
     );
 
-    // Total = 38.00 km (present in header pill and summary card)
-    expect(screen.getAllByText(/38\.00 km/i).length).toBeGreaterThan(0);
+    // Header badge
+    expect(screen.getByText('2 vehicles')).toBeInTheDocument();
+
+    // Confirms total distance and max speed summary cards are removed
+    expect(screen.queryByText('Total Distance')).toBeNull();
+    expect(screen.queryByText('Max Speed')).toBeNull();
+    expect(screen.queryByText('Tracked Shuttles')).toBeNull();
+
+    // Table rows still display each vehicle's distance and active time
+    expect(screen.getAllByText('12.50 km').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('25.50 km').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('1h 5m').length).toBeGreaterThan(0);
   });
 
   it('handles mobile card clicks with accessible min-h-[44px] targets', () => {
@@ -254,53 +324,7 @@ describe('DailyDistanceTable', () => {
     expect(handleOpenMap).toHaveBeenCalledWith('EV-01');
   });
 
-  it('renders summary metric cards for total distance, max speed, and tracked units', () => {
-    const metrics: DailyMetricsMap = {
-      'EV-01': {
-        vehicle_id: 'EV-01',
-        date: '2026-10-26',
-        total_distance_km: 12.5,
-        max_speed_kmh: 42.0,
-        avg_speed_kmh: 22.0,
-        active_minutes: 65, // 1h 5m
-        last_updated_at: new Date().toISOString(),
-      },
-      'EV-02': {
-        vehicle_id: 'EV-02',
-        date: '2026-10-26',
-        total_distance_km: 25.5,
-        max_speed_kmh: 58.0,
-        avg_speed_kmh: 30.0,
-        active_minutes: 120, // 2h 0m
-        last_updated_at: new Date().toISOString(),
-      },
-    };
-
-    render(
-      <DailyDistanceTable
-        dailyMetrics={metrics}
-        vehicles={{}}
-        lastSeenMap={{}}
-        selectedVehicleId={null}
-        onOpenVehicleMap={vi.fn()}
-      />
-    );
-
-    // Summary cards
-    expect(screen.getByText('Total Distance')).toBeInTheDocument();
-    expect(screen.getAllByText('Max Speed').length).toBeGreaterThan(0);
-    expect(screen.getByText('Tracked Shuttles')).toBeInTheDocument();
-    expect(screen.getAllByText('38.00 km').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('58.0 km/h').length).toBeGreaterThan(0);
-    expect(screen.getByText('2 shuttles')).toBeInTheDocument();
-
-    // Table row columns
-    expect(screen.getAllByText('1h 5m').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('2h 0m').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('42.0 km/h').length).toBeGreaterThan(0);
-  });
-
-  it('renders mobile card with 3 metrics: distance, max speed, and active time', () => {
+  it('renders mobile card with today distance and active time without max speed', () => {
     const metrics: DailyMetricsMap = {
       'EV-01': {
         vehicle_id: 'EV-01',
@@ -325,7 +349,7 @@ describe('DailyDistanceTable', () => {
 
     const mobileCard = screen.getByTestId('mobile-vehicle-card-EV-01');
     expect(mobileCard).toHaveTextContent('15.50 km');
-    expect(mobileCard).toHaveTextContent('48.0 km/h');
     expect(mobileCard).toHaveTextContent('1h 15m');
+    expect(mobileCard).not.toHaveTextContent('48.0 km/h');
   });
 });
