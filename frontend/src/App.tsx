@@ -5,7 +5,7 @@ import { ShuttleMap, DEFAULT_CENTER } from './components/ShuttleMap';
 import { TelemetryHUD } from './components/TelemetryHUD';
 import { DailyDistanceTable } from './components/DailyDistanceTable';
 import { HistoricalTripReplay } from './components/HistoricalTripReplay';
-import { Bus, Maximize2, Minimize2, BarChart3, Sun, Moon } from 'lucide-react';
+import { Bus, Maximize2, Minimize2, Sun, Moon } from 'lucide-react';
 import { calculateFleetStats, computeVehicleStatus } from './services/fleetStatus';
 import { ThemeProvider, useTheme } from './context/ThemeContext';
 const MapProviderTestLab = lazy(() =>
@@ -72,29 +72,6 @@ function OperationalDashboard() {
     setIsMapFullscreen(true);
   };
 
-  const handleScrollToAnalytics = () => {
-    const needTabSwitch = activeTab !== 'today';
-    if (needTabSwitch) {
-      setActiveTab('today');
-    }
-    if (isMapFullscreen || needTabSwitch) {
-      if (isMapFullscreen) {
-        setIsMapFullscreen(false);
-      }
-      setTimeout(() => {
-        const el = document.getElementById('fleet-analytics');
-        if (el) {
-          el.scrollIntoView({ behavior: 'smooth' });
-        }
-      }, 50);
-      return;
-    }
-    const el = document.getElementById('fleet-analytics');
-    if (el) {
-      el.scrollIntoView({ behavior: 'smooth' });
-    }
-  };
-
   const getConnectionDot = (s: string) => {
     switch (s) {
       case 'connected':
@@ -155,16 +132,6 @@ function OperationalDashboard() {
               <span className={`w-2 h-2 rounded-full ${getConnectionDot(status)}`} />
               <span className="capitalize">{status === 'connected' ? 'Live' : status}</span>
             </div>
-            {/* Analytics shortcut button */}
-            <button
-              onClick={handleScrollToAnalytics}
-              aria-label="View Daily Analytics"
-              title="View Daily Analytics"
-              className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-slate-900 border border-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-200 dark:hover:text-white dark:border-slate-700/80 transition-all text-xs font-medium shadow-sm hover:border-slate-300 dark:hover:border-slate-600"
-            >
-              <BarChart3 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-              <span className="hidden sm:inline">Analytics</span>
-            </button>
             {/* Theme toggle button */}
             <button
               onClick={toggleTheme}

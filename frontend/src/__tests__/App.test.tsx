@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { App } from '../App';
 import * as shuttleHook from '../hooks/useShuttleTelemetry';
@@ -68,16 +68,9 @@ describe('App Integration', () => {
     expect(screen.getByText('Daily Distance Overview')).toBeInTheDocument();
   });
 
-  it('triggers scrollIntoView on #fleet-analytics when header Analytics button is clicked', () => {
-    const { container } = render(<App />);
-    const scrollSpy = vi.spyOn(window.HTMLElement.prototype, 'scrollIntoView');
-
-    const analyticsButton = screen.getByRole('button', { name: 'View Daily Analytics' });
-    fireEvent.click(analyticsButton);
-
-    const analyticsSection = container.querySelector('#fleet-analytics');
-    expect(analyticsSection).not.toBeNull();
-    expect(scrollSpy).toHaveBeenCalledWith({ behavior: 'smooth' });
+  it('does not render an analytics shortcut button in the header', () => {
+    render(<App />);
+    expect(screen.queryByRole('button', { name: /analytics/i })).toBeNull();
   });
 
   it('renders compact map card with expand button and toggles fullscreen on click', () => {
@@ -334,24 +327,5 @@ describe('App Integration', () => {
     expect(screen.getByText('Fleet Live Map')).toBeInTheDocument();
     expect(screen.getByText('Daily Distance Overview')).toBeInTheDocument();
     expect(screen.queryByLabelText(/select date/i)).toBeNull();
-  });
-
-  it('switches back to today view and scrolls to analytics when Analytics button is clicked from history tab', async () => {
-    render(<App />);
-    const scrollSpy = vi.spyOn(window.HTMLElement.prototype, 'scrollIntoView');
-
-    // Switch to history tab
-    fireEvent.click(screen.getByRole('button', { name: 'ประวัติย้อนหลัง' }));
-    expect(screen.getByLabelText(/select date/i)).toBeInTheDocument();
-
-    // Click Analytics shortcut
-    const analyticsBtn = screen.getByRole('button', { name: 'View Daily Analytics' });
-    fireEvent.click(analyticsBtn);
-
-    // Should return to today view and trigger scroll
-    expect(screen.getByText('Fleet Live Map')).toBeInTheDocument();
-    await waitFor(() => {
-      expect(scrollSpy).toHaveBeenCalledWith({ behavior: 'smooth' });
-    });
   });
 });

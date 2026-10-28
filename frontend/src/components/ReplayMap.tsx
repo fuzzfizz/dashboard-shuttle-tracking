@@ -3,7 +3,10 @@ import { MapContainer, TileLayer, Polyline, Marker, Tooltip, useMap } from 'reac
 import L from 'leaflet';
 import { HistoricalPoint } from '../types/historical';
 import { AlertCircle, Loader2 } from 'lucide-react';
+import { tileUrl, tileMaxZoom, createVehicleIcon } from './ShuttleMap';
 import 'leaflet/dist/leaflet.css';
+
+export { createVehicleIcon };
 
 export interface ReplayMapProps {
   points: HistoricalPoint[];
@@ -29,22 +32,6 @@ export const AutoFitBounds: React.FC<{ points: HistoricalPoint[] }> = ({ points 
 
   return null;
 };
-
-// Custom vehicle marker icon with rotation
-export function createVehicleIcon(heading: number) {
-  return L.divIcon({
-    className: 'custom-shuttle-marker',
-    html: `
-      <div style="transform: rotate(${heading}deg); transform-origin: center center;" class="w-8 h-8 flex items-center justify-center">
-        <div class="w-7 h-7 bg-emerald-500 rounded-full border-2 border-white shadow-lg flex items-center justify-center text-white text-xs">
-          ▲
-        </div>
-      </div>
-    `,
-    iconSize: [32, 32],
-    iconAnchor: [16, 16],
-  });
-}
 
 export const startIcon = L.divIcon({
   className: 'start-pin',
@@ -93,8 +80,8 @@ export const ReplayMap: React.FC<ReplayMapProps> = ({
         zoomControl={false}
       >
         <TileLayer
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          maxZoom={19}
+          url={tileUrl}
+          maxZoom={tileMaxZoom}
         />
 
         <AutoFitBounds points={points} />
@@ -149,10 +136,15 @@ export const ReplayMap: React.FC<ReplayMapProps> = ({
         {currentPoint && (
           <Marker
             position={[currentPoint.lat, currentPoint.lng]}
-            icon={createVehicleIcon(currentPoint.heading)}
+            icon={createVehicleIcon(
+              currentPoint.heading ?? 0,
+              true,
+              currentPoint.vehicle_id,
+              true
+            )}
             zIndexOffset={1000}
           >
-            <Tooltip permanent={false} direction="top" offset={[0, -16]}>
+            <Tooltip permanent={false} direction="top" offset={[0, -28]}>
               {currentPoint.vehicle_id} ({currentPoint.speed.toFixed(1)} กม./ชม.)
             </Tooltip>
           </Marker>
