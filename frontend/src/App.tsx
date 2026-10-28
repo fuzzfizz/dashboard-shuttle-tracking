@@ -182,13 +182,13 @@ function OperationalDashboard() {
               <>
                 {/* Floating Top Controls */}
                 <div className="absolute top-4 left-4 right-4 z-[1000] flex items-center justify-between pointer-events-none">
-                  <div className="flex items-center gap-2.5 bg-slate-900/90 backdrop-blur-md border border-slate-800 px-3.5 py-2 rounded-xl shadow-lg pointer-events-auto">
-                    <div className="p-1.5 bg-emerald-500/10 text-emerald-400 rounded-lg">
+                  <div className="flex items-center gap-2.5 bg-white/95 dark:bg-slate-900/90 backdrop-blur-md border border-slate-200 dark:border-slate-800 px-3.5 py-2 rounded-xl shadow-md dark:shadow-lg pointer-events-auto">
+                    <div className="p-1.5 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 rounded-lg">
                       <Bus className="w-4 h-4" />
                     </div>
                     <div>
-                      <h1 className="text-xs font-bold uppercase tracking-wider text-white">Shuttle Tracker</h1>
-                      <p className="text-[10px] text-slate-400 font-mono">
+                      <h1 className="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-white">Shuttle Tracker</h1>
+                      <p className="text-[10px] text-slate-500 dark:text-slate-400 font-mono">
                         {selectedVehicleId ? `Tracking ${selectedVehicleId}` : `${fleetStats.onlineVehicles} / ${fleetStats.totalVehicles} online`}
                       </p>
                     </div>
@@ -198,7 +198,7 @@ function OperationalDashboard() {
                     {selectedVehicleId && (
                       <button
                         onClick={() => setSelectedVehicleId(null)}
-                        className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-900/90 hover:bg-slate-800 text-slate-200 border border-slate-800 shadow-xl backdrop-blur-md text-xs font-medium transition-colors"
+                        className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/95 hover:bg-slate-100 dark:bg-slate-900/90 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-800 shadow-md dark:shadow-xl backdrop-blur-md text-xs font-medium transition-colors"
                         title="View all vehicles"
                       >
                         <span>ดูรถทั้งหมด</span>
@@ -208,7 +208,7 @@ function OperationalDashboard() {
                       onClick={toggleTheme}
                       aria-label={theme === 'light' ? 'Switch to Dark Mode' : 'Switch to Light Mode'}
                       title={theme === 'light' ? 'Switch to Dark Mode' : 'Switch to Light Mode'}
-                      className="flex items-center justify-center p-2 rounded-xl bg-slate-900/90 hover:bg-slate-800 text-slate-200 border border-slate-800 shadow-xl backdrop-blur-md transition-colors"
+                      className="flex items-center justify-center p-2 rounded-xl bg-white/95 hover:bg-slate-100 dark:bg-slate-900/90 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-800 shadow-md dark:shadow-xl backdrop-blur-md transition-colors"
                     >
                       {theme === 'light' ? <Sun className="w-4 h-4 text-amber-500" /> : <Moon className="w-4 h-4 text-slate-300" />}
                     </button>
@@ -217,11 +217,11 @@ function OperationalDashboard() {
                       onClick={() => setIsMapFullscreen(false)}
                       aria-label="Exit full screen"
                       title="Exit full screen (Esc)"
-                      className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-900/90 hover:bg-slate-800 text-white border border-slate-800 shadow-xl backdrop-blur-md transition-colors text-xs font-semibold"
+                      className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white/95 hover:bg-slate-100 dark:bg-slate-900/90 dark:hover:bg-slate-800 text-slate-800 dark:text-white border border-slate-200 dark:border-slate-800 shadow-md dark:shadow-xl backdrop-blur-md transition-colors text-xs font-semibold"
                     >
-                      <Minimize2 className="w-4 h-4 text-emerald-400" />
+                      <Minimize2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                       <span>Exit full screen</span>
-                      <kbd className="hidden sm:inline-block ml-1 px-1.5 py-0.5 text-[10px] font-mono bg-slate-800 border border-slate-700 rounded text-slate-400">Esc</kbd>
+                      <kbd className="hidden sm:inline-block ml-1 px-1.5 py-0.5 text-[10px] font-mono bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded text-slate-500 dark:text-slate-400">Esc</kbd>
                     </button>
                   </div>
                 </div>
