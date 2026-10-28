@@ -50,11 +50,13 @@ describe('App Integration', () => {
     expect(queryByText(/Map Provider Lab/i)).toBeNull();
   });
 
-  it('renders top brand header, Fleet Status, and map without crashing', () => {
+  it('renders top brand header, clean full-width map, and daily distance table without Fleet Status clutter', () => {
     const { container } = render(<App />);
     expect(screen.getByText('Shuttle Tracker')).toBeInTheDocument();
     expect(screen.getByText('Multi-Vehicle Fleet Gateway')).toBeInTheDocument();
-    expect(screen.getByText('Fleet Status')).toBeInTheDocument();
+    expect(screen.getByText('Fleet Live Map')).toBeInTheDocument();
+    // Confirms Fleet Status panel has been removed from main dashboard
+    expect(screen.queryByText('Fleet Status')).toBeNull();
     expect(container.querySelector('.leaflet-container')).not.toBeNull();
   });
 
@@ -62,7 +64,7 @@ describe('App Integration', () => {
     const { container } = render(<App />);
     const analyticsSection = container.querySelector('#fleet-analytics');
     expect(analyticsSection).toBeInTheDocument();
-    expect(analyticsSection).toHaveClass('lg:col-span-12');
+    expect(analyticsSection).toHaveClass('w-full');
     expect(screen.getByText('Daily Distance Overview')).toBeInTheDocument();
   });
 
@@ -70,21 +72,8 @@ describe('App Integration', () => {
     const { container } = render(<App />);
     const scrollSpy = vi.spyOn(window.HTMLElement.prototype, 'scrollIntoView');
 
-    const analyticsButtons = screen.getAllByRole('button', { name: 'View Daily Analytics' });
-    fireEvent.click(analyticsButtons[0]);
-
-    const analyticsSection = container.querySelector('#fleet-analytics');
-    expect(analyticsSection).not.toBeNull();
-    expect(scrollSpy).toHaveBeenCalledWith({ behavior: 'smooth' });
-  });
-
-  it('triggers scrollIntoView on #fleet-analytics when FleetPanel Analytics button is clicked', () => {
-    const { container } = render(<App />);
-    const scrollSpy = vi.spyOn(window.HTMLElement.prototype, 'scrollIntoView');
-
-    const analyticsButtons = screen.getAllByRole('button', { name: 'View Daily Analytics' });
-    // Click panel analytics button (second one in the DOM)
-    fireEvent.click(analyticsButtons[1]);
+    const analyticsButton = screen.getByRole('button', { name: 'View Daily Analytics' });
+    fireEvent.click(analyticsButton);
 
     const analyticsSection = container.querySelector('#fleet-analytics');
     expect(analyticsSection).not.toBeNull();
@@ -204,6 +193,87 @@ describe('App Integration', () => {
     // Map transitions to fullscreen and selects EV-01
     expect(setSelectedVehicleIdMock).toHaveBeenCalledWith('EV-01');
     expect(screen.getByRole('button', { name: /exit full screen/i })).toBeInTheDocument();
+  });
+
+  it('keeps fullscreen overview 100% clean without bottom HUD or Fleet Status when no vehicle is selected', () => {
+    vi.spyOn(shuttleHook, 'useShuttleTelemetry').mockReturnValue({
+      status: 'connected',
+      vehicles: {},
+      lastSeenMap: {},
+      selectedVehicleId: null,
+      setSelectedVehicleId: vi.fn(),
+      telemetry: null as any,
+      lastSeen: null,
+      now: Date.now(),
+    });
+
+    render(<App />);
+
+    // Enter fullscreen
+    const expandBtn = screen.getByRole('button', { name: /expand map to full screen/i });
+    fireEvent.click(expandBtn);
+
+    // Verify exit button exists
+    expect(screen.getByRole('button', { name: /exit full screen/i })).toBeInTheDocument();
+
+    // Verify Fleet Status and bottom Telemetry HUD are completely absent for clean overview
+    expect(screen.queryByText('Fleet Status')).toBeNull();
+    expect(screen.queryByText(/Broker:/i)).toBeNull();
+  });
+
+  it('displays consumer-friendly vehicle card without broker jargon when a vehicle is focused in fullscreen', () => {
+    const testVehicle = {
+      vehicle_id: 'shuttle-cm-01',
+      lat: 18.79,
+      lng: 98.98,
+      speed: 35.5,
+      heading: 180,
+      timestamp: Date.now(),
+    };
+
+    vi.spyOn(shuttleHook, 'useShuttleTelemetry').mockReturnValue({
+      status: 'connected',
+      vehicles: { 'shuttle-cm-01': testVehicle },
+      lastSeenMap: { 'shuttle-cm-01': Date.now() },
+      selectedVehicleId: 'shuttle-cm-01',
+      setSelectedVehicleId: vi.fn(),
+      telemetry: testVehicle,
+      lastSeen: Date.now(),
+      now: Date.now(),
+    });
+
+    vi.spyOn(dailyMetricsHook, 'useDailyMetrics').mockReturnValue({
+      dailyMetrics: {
+        'shuttle-cm-01': {
+          vehicle_id: 'shuttle-cm-01',
+          date: '2026-10-28',
+          total_distance_km: 18.25,
+          max_speed_kmh: 42,
+          avg_speed_kmh: 25,
+          active_minutes: 60,
+          last_updated_at: new Date().toISOString(),
+        },
+      },
+      totalFleetDistanceKm: 18.25,
+      isLoading: false,
+      refetch: vi.fn(),
+    });
+
+    render(<App />);
+
+    // Enter fullscreen
+    const expandBtn = screen.getByRole('button', { name: /expand map to full screen/i });
+    fireEvent.click(expandBtn);
+
+    // Shows vehicle ID, speed, today distance, moving status
+    expect(screen.getAllByText('shuttle-cm-01').length).toBeGreaterThan(0);
+    expect(screen.getByText('35.5')).toBeInTheDocument();
+    expect(screen.getByText(/18.25/)).toBeInTheDocument();
+    expect(screen.getByText(/Moving \/ กำลังวิ่ง/i)).toBeInTheDocument();
+
+    // Confirms no broker technical jargon is shown
+    expect(screen.queryByText(/Broker:/i)).toBeNull();
+    expect(screen.queryByText('Fleet Status')).toBeNull();
   });
 
   it('renders theme toggle button in header and defaults to light mode', () => {
