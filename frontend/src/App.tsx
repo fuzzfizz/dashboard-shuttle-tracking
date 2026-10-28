@@ -7,6 +7,7 @@ import { DailyDistanceTable } from './components/DailyDistanceTable';
 import { HistoricalTripReplay } from './components/HistoricalTripReplay';
 import { Bus, Maximize2, Minimize2, Sun, Moon } from 'lucide-react';
 import { calculateFleetStats, computeVehicleStatus } from './services/fleetStatus';
+import { fetchHistoricalVehicles } from './services/historicalTelemetryService';
 import { ThemeProvider, useTheme } from './context/ThemeContext';
 const MapProviderTestLab = lazy(() =>
   import('./components/MapProviderTestLab').then((m) => ({ default: m.MapProviderTestLab }))
@@ -26,21 +27,32 @@ function OperationalDashboard() {
   const { dailyMetrics } = useDailyMetrics(vehicles);
   const [isMapFullscreen, setIsMapFullscreen] = useState(false);
   const [activeTab, setActiveTab] = useState<'today' | 'history'>('today');
+  const [dbVehicles, setDbVehicles] = useState<Array<{ id: string; name: string }>>([]);
+
+  useEffect(() => {
+    fetchHistoricalVehicles().then((list) => {
+      if (list && list.length > 0) {
+        setDbVehicles(list);
+      }
+    });
+  }, []);
 
   const vehicleList = useMemo(() => {
     const listMap = new Map<string, string>();
-    listMap.set('shuttle-01', 'Shuttle 1');
-    listMap.set('shuttle-02', 'Shuttle 2');
+    // 1. Populate real vehicles queried from database
+    dbVehicles.forEach((v) => listMap.set(v.id, v.name));
+    // 2. Include live telemetry vehicles currently reporting
     Object.keys(vehicles).forEach((id) => {
       if (!listMap.has(id)) {
         listMap.set(id, id);
       }
     });
+    // 3. Include currently selected vehicle if specified
     if (selectedVehicleId && !listMap.has(selectedVehicleId)) {
       listMap.set(selectedVehicleId, selectedVehicleId);
     }
     return Array.from(listMap.entries()).map(([id, name]) => ({ id, name }));
-  }, [vehicles, selectedVehicleId]);
+  }, [dbVehicles, vehicles, selectedVehicleId]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -281,7 +293,7 @@ function OperationalDashboard() {
       ) : (
         <main className="flex-1 w-full overflow-hidden">
           <HistoricalTripReplay
-            initialVehicleId={selectedVehicleId || 'shuttle-01'}
+            initialVehicleId={selectedVehicleId || vehicleList[0]?.id || ''}
             vehicleList={vehicleList}
           />
         </main>

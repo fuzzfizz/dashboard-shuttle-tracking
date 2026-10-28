@@ -102,3 +102,43 @@ export async function fetchHistoricalTripData(
 
   return { points, summary };
 }
+
+export async function fetchHistoricalVehicles(): Promise<Array<{ id: string; name: string }>> {
+  const supabase = getSupabaseClient();
+  if (!supabase) return [];
+
+  try {
+    // 1. Query unique vehicle_ids from daily_vehicle_metrics
+    const { data: metricsData, error: metricsError } = await supabase
+      .from('daily_vehicle_metrics')
+      .select('vehicle_id');
+
+    const idsSet = new Set<string>();
+    if (!metricsError && metricsData) {
+      metricsData.forEach((row: any) => {
+        if (row.vehicle_id) idsSet.add(row.vehicle_id);
+      });
+    }
+
+    // 2. Fallback to telemetry_logs if daily_vehicle_metrics has no entries
+    if (idsSet.size === 0) {
+      const { data: logsData } = await supabase
+        .from('telemetry_logs')
+        .select('vehicle_id')
+        .limit(100);
+      if (logsData) {
+        logsData.forEach((row: any) => {
+          if (row.vehicle_id) idsSet.add(row.vehicle_id);
+        });
+      }
+    }
+
+    return Array.from(idsSet).map((id) => ({
+      id,
+      name: id,
+    }));
+  } catch (err) {
+    console.warn('Failed to fetch historical vehicles from database:', err);
+    return [];
+  }
+}

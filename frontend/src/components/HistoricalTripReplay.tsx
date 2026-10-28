@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { ReplayToolbar } from './ReplayToolbar';
 import { ReplayMap } from './ReplayMap';
 import { ReplayPlayerBar } from './ReplayPlayerBar';
@@ -6,23 +6,49 @@ import { useHistoricalTrip } from '../hooks/useHistoricalTrip';
 import { useTripPlayback } from '../hooks/useTripPlayback';
 import { getBangkokDate } from '../hooks/useDailyMetrics';
 import { haversineDistance } from '../services/distanceCalculator';
+import { fetchHistoricalVehicles } from '../services/historicalTelemetryService';
 
 export interface HistoricalTripReplayProps {
   initialVehicleId?: string;
   vehicleList?: Array<{ id: string; name: string }>;
 }
 
-const DEFAULT_VEHICLES = [
-  { id: 'shuttle-01', name: 'Shuttle 1' },
-  { id: 'shuttle-02', name: 'Shuttle 2' },
-];
-
 export const HistoricalTripReplay: React.FC<HistoricalTripReplayProps> = ({
-  initialVehicleId = 'shuttle-01',
-  vehicleList = DEFAULT_VEHICLES,
+  initialVehicleId,
+  vehicleList: propVehicleList,
 }) => {
+  const [fetchedVehicles, setFetchedVehicles] = useState<Array<{ id: string; name: string }>>([]);
+
+  useEffect(() => {
+    if (!propVehicleList || propVehicleList.length === 0) {
+      fetchHistoricalVehicles().then((list) => {
+        if (list && list.length > 0) {
+          setFetchedVehicles(list);
+        }
+      });
+    }
+  }, [propVehicleList]);
+
+  const vehicleList = useMemo(() => {
+    if (propVehicleList && propVehicleList.length > 0) {
+      return propVehicleList;
+    }
+    return fetchedVehicles;
+  }, [propVehicleList, fetchedVehicles]);
+
   const [selectedDate, setSelectedDate] = useState<string>(getBangkokDate());
-  const [selectedVehicleId, setSelectedVehicleId] = useState<string>(initialVehicleId);
+  const [selectedVehicleId, setSelectedVehicleId] = useState<string>(
+    initialVehicleId || vehicleList[0]?.id || ''
+  );
+
+  // Sync selectedVehicleId when vehicle list or initialVehicleId updates
+  useEffect(() => {
+    if (initialVehicleId) {
+      setSelectedVehicleId(initialVehicleId);
+    } else if (vehicleList.length > 0 && (!selectedVehicleId || !vehicleList.some((v) => v.id === selectedVehicleId))) {
+      setSelectedVehicleId(vehicleList[0].id);
+    }
+  }, [vehicleList, initialVehicleId]);
 
   const { points, summary, isLoading, refetch } = useHistoricalTrip(
     selectedVehicleId,
