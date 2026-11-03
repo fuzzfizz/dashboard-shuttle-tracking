@@ -75,7 +75,8 @@ export const TelemetryHUD: React.FC<TelemetryHUDProps> = ({
                   {isOnline === false ? (
                     <span className="text-rose-600 dark:text-rose-400 flex items-center gap-1">
                       <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
-                      Signal Lost
+                      <span>Signal Lost</span>
+                      <span className="text-rose-500/80 font-normal">/ ขาดการเชื่อมต่อ</span>
                     </span>
                   ) : isMoving ? (
                     <span className="text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
@@ -129,7 +130,7 @@ export const TelemetryHUD: React.FC<TelemetryHUDProps> = ({
               <Gauge className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
             <div>
-              <div className="text-[10px] uppercase font-mono tracking-wider text-slate-500 dark:text-slate-400">Speed</div>
+              <div className="text-[10px] uppercase font-mono tracking-wider text-slate-500 dark:text-slate-400">ความเร็ว (Speed)</div>
               <div className="text-base sm:text-lg font-bold font-mono text-slate-900 dark:text-white leading-none">
                 {telemetry
                   ? telemetry.speed.toFixed(1)
@@ -148,7 +149,7 @@ export const TelemetryHUD: React.FC<TelemetryHUDProps> = ({
                 <Route className="w-4 h-4 sm:w-5 sm:h-5" />
               </div>
               <div>
-                <div className="text-[10px] uppercase font-mono tracking-wider text-slate-500 dark:text-slate-400">Today</div>
+                <div className="text-[10px] uppercase font-mono tracking-wider text-slate-500 dark:text-slate-400">ระยะทางวันนี้</div>
                 <div className="text-base sm:text-lg font-bold font-mono text-slate-900 dark:text-white leading-none">
                   {dailyDistanceKm.toFixed(2)}
                   <span className="text-xs font-normal text-slate-500 dark:text-slate-400 ml-1">km</span>
@@ -163,7 +164,7 @@ export const TelemetryHUD: React.FC<TelemetryHUDProps> = ({
               <Compass className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
             <div>
-              <div className="text-[10px] uppercase font-mono tracking-wider text-slate-500 dark:text-slate-400">Heading</div>
+              <div className="text-[10px] uppercase font-mono tracking-wider text-slate-500 dark:text-slate-400">ทิศทาง (Heading)</div>
               <div className="text-base sm:text-lg font-bold font-mono text-slate-900 dark:text-white leading-none">
                 {telemetry?.heading !== undefined ? `${telemetry.heading}°` : '--'}
               </div>
@@ -176,7 +177,7 @@ export const TelemetryHUD: React.FC<TelemetryHUDProps> = ({
               <Clock className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
             <div>
-              <div className="text-[10px] uppercase font-mono tracking-wider text-slate-500 dark:text-slate-400">Updated</div>
+              <div className="text-[10px] uppercase font-mono tracking-wider text-slate-500 dark:text-slate-400">อัปเดตล่าสุด</div>
               <div className="text-xs font-bold font-mono text-slate-900 dark:text-white leading-none">
                 {formatLastSeen(lastSeen)}
               </div>

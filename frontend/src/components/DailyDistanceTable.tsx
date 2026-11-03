@@ -50,10 +50,12 @@ export const DailyDistanceTable: React.FC<DailyDistanceTableProps> = ({
   }, [dailyMetrics, vehicles]);
 
   const formatActiveTime = (minutes: number) => {
-    if (!minutes || minutes <= 0) return '0m';
+    if (!minutes || minutes <= 0) return '0 นาที';
     const h = Math.floor(minutes / 60);
     const m = Math.round(minutes % 60);
-    return h > 0 ? `${h}h ${m}m` : `${m}m`;
+    if (h > 0 && m > 0) return `${h} ชม. ${m} นาที`;
+    if (h > 0) return `${h} ชม.`;
+    return `${m} นาที`;
   };
 
   const rows = useMemo(() => {
@@ -114,20 +116,20 @@ export const DailyDistanceTable: React.FC<DailyDistanceTableProps> = ({
   const getSortLabel = (mode: SortMode) => {
     switch (mode) {
       case 'distance-desc':
-        return 'Highest Distance';
+        return 'ระยะทางมากสุด';
       case 'id-asc':
-        return 'Vehicle ID';
+        return 'หมายเลขรถ';
     }
   };
 
   const getStatusFilterLabel = (filter: StatusFilter) => {
     switch (filter) {
       case 'all':
-        return `Status: All (${allVehicleIds.length})`;
+        return `สถานะ: ทั้งหมด (${allVehicleIds.length})`;
       case 'online':
-        return `Status: Live (${onlineCount})`;
+        return `สถานะ: ออนไลน์ (${onlineCount})`;
       case 'offline':
-        return `Status: Signal Lost (${offlineCount})`;
+        return `สถานะ: ขาดสัญญาณ (${offlineCount})`;
     }
   };
 
@@ -144,14 +146,16 @@ export const DailyDistanceTable: React.FC<DailyDistanceTableProps> = ({
             <Route className="w-4 h-4" />
           </div>
           <div>
-            <h2 className="text-sm font-semibold text-slate-800 dark:text-slate-200">Daily Distance Overview</h2>
-            <p className="text-[11px] text-slate-500 dark:text-slate-400">Distance traveled by vehicles today</p>
+            <h2 className="text-sm font-semibold text-slate-800 dark:text-slate-200">
+              <span>ภาพรวมระยะทางประจำวัน</span> <span className="text-[11px] font-normal text-slate-500 dark:text-slate-400">Daily Distance Overview</span>
+            </h2>
+            <p className="text-[11px] text-slate-500 dark:text-slate-400">ระยะทางสะสมของรถแต่ละคันวันนี้</p>
           </div>
         </div>
 
         {/* Vehicle count badge */}
         <div className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
-          <span>{allVehicleIds.length} vehicles</span>
+          <span>{allVehicleIds.length} คัน</span>
         </div>
       </div>
 
@@ -164,7 +168,7 @@ export const DailyDistanceTable: React.FC<DailyDistanceTableProps> = ({
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search vehicle..."
+            placeholder="ค้นหาหมายเลขรถ... (Search vehicle)"
             className="w-full pl-9 pr-8 py-2 sm:py-1.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700/80 text-sm sm:text-xs text-slate-800 dark:text-slate-200 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-emerald-500 transition-all min-h-[44px] sm:min-h-0"
           />
           {searchQuery && (
@@ -199,7 +203,7 @@ export const DailyDistanceTable: React.FC<DailyDistanceTableProps> = ({
             </button>
 
             {isStatusMenuOpen && (
-              <div className="absolute left-0 mt-1.5 w-full sm:w-48 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-xl py-1 z-[50]">
+              <div className="absolute left-0 mt-1.5 w-full sm:w-52 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-xl py-1 z-[50]">
                 <button
                   type="button"
                   onClick={() => {
@@ -212,7 +216,7 @@ export const DailyDistanceTable: React.FC<DailyDistanceTableProps> = ({
                       : 'text-slate-600 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800/60'
                   }`}
                 >
-                  <span>All Vehicles</span>
+                  <span>รถทั้งหมด (All)</span>
                   <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-500">{allVehicleIds.length}</span>
                 </button>
                 <button
@@ -229,7 +233,7 @@ export const DailyDistanceTable: React.FC<DailyDistanceTableProps> = ({
                 >
                   <span className="flex items-center gap-1.5">
                     <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                    Live
+                    ออนไลน์ (Live)
                   </span>
                   <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-500">{onlineCount}</span>
                 </button>
@@ -247,7 +251,7 @@ export const DailyDistanceTable: React.FC<DailyDistanceTableProps> = ({
                 >
                   <span className="flex items-center gap-1.5">
                     <span className="w-2 h-2 rounded-full bg-rose-500" />
-                    Signal Lost
+                    ขาดสัญญาณ (Signal Lost)
                   </span>
                   <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-500">{offlineCount}</span>
                 </button>
@@ -263,7 +267,7 @@ export const DailyDistanceTable: React.FC<DailyDistanceTableProps> = ({
             className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 py-2 sm:py-1.5 rounded-lg bg-white hover:bg-slate-100 text-slate-700 hover:text-slate-900 border border-slate-200 dark:bg-slate-900 dark:hover:bg-slate-800 dark:text-slate-300 dark:hover:text-white dark:border-slate-700/80 text-xs font-medium transition-all shadow-sm min-h-[44px] sm:min-h-0"
           >
             <ArrowUpDown className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
-            <span className="truncate">Sort: {getSortLabel(sortMode)}</span>
+            <span className="truncate">เรียง: {getSortLabel(sortMode)}</span>
           </button>
         </div>
       </div>
@@ -271,15 +275,15 @@ export const DailyDistanceTable: React.FC<DailyDistanceTableProps> = ({
       {allVehicleIds.length === 0 ? (
         <div className="py-8 px-4 text-center border border-dashed border-slate-200 dark:border-slate-800 rounded-xl">
           <Route className="w-7 h-7 text-slate-400 dark:text-slate-600 mx-auto mb-2 animate-pulse" />
-          <p className="text-xs sm:text-sm font-medium text-slate-600 dark:text-slate-400">No distance recorded today</p>
+          <p className="text-xs sm:text-sm font-medium text-slate-600 dark:text-slate-400">ยังไม่มีบันทึกระยะทางวันนี้</p>
           <p className="text-[10px] sm:text-xs text-slate-500 mt-0.5">
-            Distance metrics will update automatically as vehicles move
+            ข้อมูลระยะทางจะอัปเดตอัตโนมัติเมื่อรถเริ่มวิ่ง
           </p>
         </div>
       ) : sortedRows.length === 0 ? (
         <div className="py-8 px-4 text-center border border-dashed border-slate-200 dark:border-slate-800 rounded-xl">
           <Search className="w-7 h-7 text-slate-400 dark:text-slate-600 mx-auto mb-2" />
-          <p className="text-xs sm:text-sm font-medium text-slate-600 dark:text-slate-400">No vehicles match your filter</p>
+          <p className="text-xs sm:text-sm font-medium text-slate-600 dark:text-slate-400">ไม่พบรถที่ตรงตามเงื่อนไขการค้นหา</p>
           <button
             onClick={() => {
               setSearchQuery('');
@@ -287,7 +291,7 @@ export const DailyDistanceTable: React.FC<DailyDistanceTableProps> = ({
             }}
             className="mt-2 text-xs font-medium text-emerald-600 dark:text-emerald-400 hover:underline"
           >
-            Clear filters
+            ล้างตัวกรอง (Clear filters)
           </button>
         </div>
       ) : (
@@ -297,11 +301,11 @@ export const DailyDistanceTable: React.FC<DailyDistanceTableProps> = ({
             <table className="w-full text-left border-collapse text-xs">
               <thead>
                 <tr className="border-b border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 uppercase text-[10px] tracking-wider">
-                  <th className="py-2.5 px-3 font-semibold">Vehicle</th>
-                  <th className="py-2.5 px-3 font-semibold">Status</th>
-                  <th className="py-2.5 px-3 font-semibold">Today's Distance</th>
-                  <th className="py-2.5 px-3 font-semibold">Active Time</th>
-                  <th className="py-2.5 px-3 font-semibold text-right">Action</th>
+                  <th className="py-2.5 px-3 font-semibold">หมายเลขรถ</th>
+                  <th className="py-2.5 px-3 font-semibold">สถานะ</th>
+                  <th className="py-2.5 px-3 font-semibold">ระยะทางวันนี้</th>
+                  <th className="py-2.5 px-3 font-semibold">เวลาวิ่งสะสม</th>
+                  <th className="py-2.5 px-3 font-semibold text-right">แผนที่</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
@@ -349,7 +353,7 @@ export const DailyDistanceTable: React.FC<DailyDistanceTableProps> = ({
                               row.isOnline ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-500 dark:text-slate-400'
                             }`}
                           >
-                            {row.isOnline ? 'Live' : 'Signal Lost'}
+                            {row.isOnline ? 'ออนไลน์' : 'ขาดสัญญาณ'}
                           </span>
                         </div>
                       </td>
@@ -370,11 +374,11 @@ export const DailyDistanceTable: React.FC<DailyDistanceTableProps> = ({
                           type="button"
                           onClick={() => onOpenVehicleMap(row.vehicleId)}
                           aria-label={`Open map for ${row.vehicleId}`}
-                          title={`Open map for ${row.vehicleId}`}
+                          title={`เปิดแผนที่สำหรับ ${row.vehicleId}`}
                           className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-slate-900 border border-slate-200 dark:bg-slate-800 dark:hover:bg-slate-750 dark:text-slate-300 dark:hover:text-white dark:border-slate-700/80 text-xs font-medium transition-all group-hover:border-emerald-500/50"
                         >
                           <Maximize2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                          <span>Open Map</span>
+                          <span>เปิดแผนที่</span>
                         </button>
                       </td>
                     </tr>
@@ -407,7 +411,7 @@ export const DailyDistanceTable: React.FC<DailyDistanceTableProps> = ({
                       </div>
                       <div>
                         <div className="text-sm font-bold text-slate-900 dark:text-white font-mono tracking-tight">
-                          Shuttle #{row.vehicleId}
+                          รถชัตเติล #{row.vehicleId}
                         </div>
                         <div className="text-[10px] text-slate-500 dark:text-slate-400">
                           {row.isOnline ? 'เชื่อมต่อสด (Connected)' : 'ขาดการเชื่อมต่อ (Signal Lost)'}
@@ -433,20 +437,20 @@ export const DailyDistanceTable: React.FC<DailyDistanceTableProps> = ({
                           }`}
                         />
                       </span>
-                      <span>{row.isOnline ? 'Live' : 'Signal Lost'}</span>
+                      <span>{row.isOnline ? 'ออนไลน์' : 'ขาดสัญญาณ'}</span>
                     </span>
                   </div>
 
                   {/* 2-Metric Grid (Distance & Active Time) with high-contrast typography */}
                   <div className="grid grid-cols-2 gap-2.5 text-xs">
                     <div className="bg-slate-50 dark:bg-slate-900/60 rounded-xl p-2.5 border border-slate-200/80 dark:border-slate-800/80">
-                      <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400 block mb-0.5">Today's Distance</span>
+                      <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400 block mb-0.5">ระยะทางวันนี้</span>
                       <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400 text-sm sm:text-base">
                         {row.distanceKm.toFixed(2)} km
                       </span>
                     </div>
                     <div className="bg-slate-50 dark:bg-slate-900/60 rounded-xl p-2.5 border border-slate-200/80 dark:border-slate-800/80">
-                      <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400 block mb-0.5">Active Time</span>
+                      <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400 block mb-0.5">เวลาวิ่งสะสม</span>
                       <span className="font-mono font-bold text-amber-600 dark:text-amber-400 text-sm sm:text-base">
                         {formatActiveTime(row.activeMinutes)}
                       </span>
@@ -458,11 +462,11 @@ export const DailyDistanceTable: React.FC<DailyDistanceTableProps> = ({
                     type="button"
                     onClick={() => onOpenVehicleMap(row.vehicleId)}
                     aria-label={`View map for ${row.vehicleId}`}
-                    title={`Open map for ${row.vehicleId}`}
+                    title={`เปิดแผนที่ ${row.vehicleId}`}
                     className="w-full min-h-[44px] flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 active:bg-slate-300 text-slate-800 border border-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 dark:active:bg-slate-650 dark:text-slate-200 dark:border-slate-700 text-xs font-semibold transition-all shadow-sm"
                   >
                     <Maximize2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                    <span>Open Map</span>
+                    <span>เปิดแผนที่</span>
                   </button>
                 </div>
               );

@@ -15,7 +15,7 @@ describe('DailyDistanceTable', () => {
         onOpenVehicleMap={vi.fn()}
       />
     );
-    expect(screen.getByText(/no distance recorded today/i)).toBeInTheDocument();
+    expect(screen.getByText(/ยังไม่มีบันทึกระยะทางวันนี้|no distance recorded today/i)).toBeInTheDocument();
   });
 
   it('renders vehicle list with daily distance and triggers onOpenVehicleMap when clicked', () => {
@@ -206,14 +206,14 @@ describe('DailyDistanceTable', () => {
     const statusMenuBtn = screen.getByRole('button', { name: /filter by status/i });
     fireEvent.click(statusMenuBtn);
 
-    const liveOption = screen.getByRole('button', { name: /^live/i });
+    const liveOption = screen.getByRole('button', { name: /ออนไลน์|live/i });
     fireEvent.click(liveOption);
     expect(screen.getByTestId('vehicle-row-EV-01')).toBeInTheDocument();
     expect(screen.queryByTestId('vehicle-row-shuttle-cm-02')).toBeNull();
 
     // Re-open status dropdown and select: Signal Lost (only shuttle-cm-02 should be visible)
     fireEvent.click(statusMenuBtn);
-    const offlineOption = screen.getByRole('button', { name: /^signal lost/i });
+    const offlineOption = screen.getByRole('button', { name: /ขาดสัญญาณ|signal lost/i });
     fireEvent.click(offlineOption);
     expect(screen.queryByTestId('vehicle-row-EV-01')).toBeNull();
     expect(screen.getByTestId('vehicle-row-shuttle-cm-02')).toBeInTheDocument();
@@ -256,8 +256,8 @@ describe('DailyDistanceTable', () => {
       />
     );
 
-    expect(screen.getAllByText('Live')[0]).toBeInTheDocument();
-    expect(screen.getAllByText('Signal Lost')[0]).toBeInTheDocument();
+    expect(screen.getAllByText(/ออนไลน์|Live/)[0]).toBeInTheDocument();
+    expect(screen.getAllByText(/ขาดสัญญาณ|Signal Lost/)[0]).toBeInTheDocument();
   });
 
   it('renders vehicle count in header and does not render redundant total distance or max speed cards', () => {
@@ -293,7 +293,7 @@ describe('DailyDistanceTable', () => {
     );
 
     // Header badge
-    expect(screen.getByText('2 vehicles')).toBeInTheDocument();
+    expect(screen.getByText(/2 คัน|2 vehicles/)).toBeInTheDocument();
 
     // Confirms total distance and max speed summary cards are removed
     expect(screen.queryByText('Total Distance')).toBeNull();
@@ -303,7 +303,7 @@ describe('DailyDistanceTable', () => {
     // Table rows still display each vehicle's distance and active time
     expect(screen.getAllByText('12.50 km').length).toBeGreaterThan(0);
     expect(screen.getAllByText('25.50 km').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('1h 5m').length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/1 ชม\. 5 นาที|1h 5m/).length).toBeGreaterThan(0);
   });
 
   it('handles mobile card clicks only via action button with accessible min-h-[44px] targets', () => {
@@ -368,7 +368,7 @@ describe('DailyDistanceTable', () => {
 
     const mobileCard = screen.getByTestId('mobile-vehicle-card-EV-01');
     expect(mobileCard).toHaveTextContent('15.50 km');
-    expect(mobileCard).toHaveTextContent('1h 15m');
+    expect(mobileCard).toHaveTextContent(/1 ชม\. 15 นาที|1h 15m/);
     expect(mobileCard).not.toHaveTextContent('48.0 km/h');
   });
 });

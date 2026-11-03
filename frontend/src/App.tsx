@@ -108,7 +108,9 @@ function OperationalDashboard() {
             </div>
             <div>
               <h1 className="text-xs sm:text-sm md:text-base font-bold uppercase tracking-wider text-slate-900 dark:text-white leading-tight">Shuttle Tracker</h1>
-              <p className="text-[10px] md:text-xs text-slate-500 dark:text-slate-400 font-mono hidden sm:block">Multi-Vehicle Fleet Gateway</p>
+              <p className="text-[10px] md:text-xs text-slate-500 dark:text-slate-400 font-mono hidden sm:block">
+                <span>ระบบติดตามรถชัตเติลบัส</span> <span className="text-slate-400 dark:text-slate-500 ml-1">Multi-Vehicle Fleet Gateway</span>
+              </p>
             </div>
           </div>
 
@@ -166,9 +168,11 @@ function OperationalDashboard() {
             {!isMapFullscreen && (
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2 sm:gap-2.5">
-                  <h2 className="text-xs sm:text-sm font-semibold text-slate-800 dark:text-slate-200">Fleet Live Map</h2>
+                  <h2 className="text-xs sm:text-sm font-semibold text-slate-800 dark:text-slate-200">
+                    <span>แผนที่ตำแหน่งรถสด</span> <span className="text-xs font-normal text-slate-400 dark:text-slate-500 ml-1">Fleet Live Map</span>
+                  </h2>
                   <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-                    {fleetStats.onlineVehicles} online
+                    ออนไลน์ {fleetStats.onlineVehicles} คัน
                   </span>
                   <span className="px-1.5 py-0.5 rounded text-[10px] font-mono font-medium bg-slate-100 text-slate-600 border border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700/60 hidden sm:inline-block">
                     Longdo Map
@@ -177,11 +181,11 @@ function OperationalDashboard() {
                 <button
                   onClick={() => setIsMapFullscreen(true)}
                   aria-label="Expand map to full screen"
-                  title="Expand map to full screen"
+                  title="ขยายแผนที่เต็มจอ"
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-slate-900 border border-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-300 dark:hover:text-white dark:border-slate-700/70 text-xs font-medium transition-colors min-h-[36px]"
                 >
                   <Maximize2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                  <span className="hidden sm:inline">Expand</span>
+                  <span className="hidden sm:inline">ขยายเต็มจอ</span>
                 </button>
               </div>
             )}
@@ -220,7 +224,7 @@ function OperationalDashboard() {
                       <div>
                         <h1 className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-white">Shuttle Tracker</h1>
                         <p className="text-[9px] sm:text-[10px] text-slate-500 dark:text-slate-400 font-mono">
-                          {selectedVehicleId ? `Tracking ${selectedVehicleId}` : `${fleetStats.onlineVehicles} / ${fleetStats.totalVehicles} online`}
+                          {selectedVehicleId ? `กำลังติดตาม ${selectedVehicleId}` : `ออนไลน์ ${fleetStats.onlineVehicles} / ${fleetStats.totalVehicles} คัน`}
                         </p>
                       </div>
                     </div>
@@ -230,7 +234,7 @@ function OperationalDashboard() {
                         <button
                           onClick={() => setSelectedVehicleId(null)}
                           className="flex items-center gap-1 px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-xl bg-white/95 hover:bg-slate-100 dark:bg-slate-900/90 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-800 shadow-md dark:shadow-xl backdrop-blur-md text-[11px] sm:text-xs font-medium transition-colors min-h-[36px]"
-                          title="View all vehicles"
+                          title="ดูรถทั้งหมด"
                         >
                           <span>ดูรถทั้งหมด</span>
                         </button>
@@ -247,11 +251,11 @@ function OperationalDashboard() {
                       <button
                         onClick={() => setIsMapFullscreen(false)}
                         aria-label="Exit full screen"
-                        title="Exit full screen (Esc)"
+                        title="ออกจากโหมดเต็มจอ (Esc)"
                         className="flex items-center gap-1.5 px-2.5 py-1.5 sm:px-3.5 sm:py-2 rounded-xl bg-white/95 hover:bg-slate-100 dark:bg-slate-900/90 dark:hover:bg-slate-800 text-slate-800 dark:text-white border border-slate-200 dark:border-slate-800 shadow-md dark:shadow-xl backdrop-blur-md transition-colors text-xs font-semibold min-h-[36px]"
                       >
                         <Minimize2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                        <span>Exit full screen</span>
+                        <span>ออกจากเต็มจอ</span>
                         <kbd className="hidden sm:inline-block ml-1 px-1.5 py-0.5 text-[10px] font-mono bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded text-slate-500 dark:text-slate-400">Esc</kbd>
                       </button>
                     </div>
