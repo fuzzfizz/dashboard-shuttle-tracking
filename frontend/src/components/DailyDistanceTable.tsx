@@ -411,7 +411,7 @@ export const DailyDistanceTable: React.FC<DailyDistanceTableProps> = ({
                       </div>
                       <div>
                         <div className="text-sm font-bold text-slate-900 dark:text-white font-mono tracking-tight">
-                          รถชัตเติล #{row.vehicleId}
+                          รถบริการ #{row.vehicleId}
                         </div>
                         <div className="text-[10px] text-slate-500 dark:text-slate-400">
                           {row.isOnline ? 'เชื่อมต่อสด (Connected)' : 'ขาดการเชื่อมต่อ (Signal Lost)'}

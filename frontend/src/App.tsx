@@ -109,7 +109,7 @@ function OperationalDashboard() {
             <div>
               <h1 className="text-xs sm:text-sm md:text-base font-bold uppercase tracking-wider text-slate-900 dark:text-white leading-tight">Shuttle Tracker</h1>
               <p className="text-[10px] md:text-xs text-slate-500 dark:text-slate-400 font-mono hidden sm:block">
-                <span>ระบบติดตามรถชัตเติลบัส</span> <span className="text-slate-400 dark:text-slate-500 ml-1">Multi-Vehicle Fleet Gateway</span>
+                <span>ระบบติดตามรถบริการรับ-ส่ง</span> <span className="text-slate-400 dark:text-slate-500 ml-1">Multi-Vehicle Fleet Gateway</span>
               </p>
             </div>
           </div>
