@@ -138,14 +138,14 @@ export const DailyDistanceTable: React.FC<DailyDistanceTableProps> = ({
 
   const containerClasses =
     className ??
-    'bg-white border border-slate-200 text-slate-800 shadow-xl dark:bg-slate-900 dark:border-slate-800 dark:text-slate-100 rounded-2xl p-4 sm:p-5 flex flex-col gap-4 transition-colors';
+    'bg-white border border-slate-200 text-slate-800 shadow-xl dark:bg-slate-900 dark:border-slate-800 dark:text-slate-100 rounded-2xl p-3.5 sm:p-5 flex flex-col gap-3.5 sm:gap-4 transition-colors';
 
   return (
     <div className={containerClasses}>
       {/* Header */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-2.5 sm:gap-3">
         <div className="flex items-center gap-2.5">
-          <div className="p-1.5 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-xl">
+          <div className="p-2 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-xl">
             <Route className="w-4 h-4" />
           </div>
           <div>
@@ -161,113 +161,116 @@ export const DailyDistanceTable: React.FC<DailyDistanceTableProps> = ({
       </div>
 
       {/* Modern & Intuitive Filter Toolbar */}
-      <div className="flex flex-wrap items-center justify-between gap-3 p-2.5 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-200 dark:border-slate-800">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5 p-2.5 sm:p-3 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-200 dark:border-slate-800">
         {/* Search Input */}
-        <div className="relative flex-1 min-w-[180px] max-w-sm">
-          <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+        <div className="relative w-full sm:flex-1 sm:max-w-sm">
+          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search vehicle..."
-            className="w-full pl-8 pr-7 py-1.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700/80 text-xs text-slate-800 dark:text-slate-200 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-emerald-500 transition-all"
+            className="w-full pl-9 pr-8 py-2 sm:py-1.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700/80 text-sm sm:text-xs text-slate-800 dark:text-slate-200 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-emerald-500 transition-all min-h-[44px] sm:min-h-0"
           />
           {searchQuery && (
             <button
               onClick={() => setSearchQuery('')}
               aria-label="Clear search"
-              className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+              className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 min-h-[36px] min-w-[36px] flex items-center justify-center"
             >
               <X className="w-3.5 h-3.5" />
             </button>
           )}
         </div>
 
-        {/* Combined Status Filter Dropdown */}
-        <div ref={statusMenuRef} className="relative">
+        {/* Filter and Sort row */}
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          {/* Combined Status Filter Dropdown */}
+          <div ref={statusMenuRef} className="relative flex-1 sm:flex-none">
+            <button
+              type="button"
+              onClick={() => setIsStatusMenuOpen(!isStatusMenuOpen)}
+              aria-label="Filter by status"
+              aria-expanded={isStatusMenuOpen}
+              className="w-full sm:w-auto flex items-center justify-between sm:justify-start gap-2 px-3 py-2 sm:py-1.5 rounded-lg bg-white hover:bg-slate-100 text-slate-700 hover:text-slate-900 border border-slate-200 dark:bg-slate-900 dark:hover:bg-slate-800 dark:text-slate-300 dark:hover:text-white dark:border-slate-700/80 text-xs font-medium transition-all shadow-sm min-h-[44px] sm:min-h-0"
+            >
+              <div className="flex items-center gap-1.5 truncate">
+                <Filter className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                {statusFilter === 'online' && <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />}
+                {statusFilter === 'offline' && <span className="w-2 h-2 rounded-full bg-rose-500 shrink-0" />}
+                <span className="truncate">{getStatusFilterLabel(statusFilter)}</span>
+              </div>
+              <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform shrink-0 ${isStatusMenuOpen ? 'rotate-180' : ''}`} />
+            </button>
+
+            {isStatusMenuOpen && (
+              <div className="absolute left-0 mt-1.5 w-full sm:w-48 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-xl py-1 z-[50]">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setStatusFilter('all');
+                    setIsStatusMenuOpen(false);
+                  }}
+                  className={`w-full flex items-center justify-between px-3 py-2.5 sm:py-2 text-xs font-medium text-left transition-colors min-h-[44px] sm:min-h-0 ${
+                    statusFilter === 'all'
+                      ? 'bg-slate-100 text-slate-900 dark:bg-slate-800 dark:text-white font-semibold'
+                      : 'text-slate-600 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800/60'
+                  }`}
+                >
+                  <span>All Vehicles</span>
+                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-500">{allVehicleIds.length}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setStatusFilter('online');
+                    setIsStatusMenuOpen(false);
+                  }}
+                  className={`w-full flex items-center justify-between px-3 py-2.5 sm:py-2 text-xs font-medium text-left transition-colors min-h-[44px] sm:min-h-0 ${
+                    statusFilter === 'online'
+                      ? 'bg-emerald-500/10 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300 font-semibold'
+                      : 'text-slate-600 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800/60'
+                  }`}
+                >
+                  <span className="flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                    Live
+                  </span>
+                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-500">{onlineCount}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setStatusFilter('offline');
+                    setIsStatusMenuOpen(false);
+                  }}
+                  className={`w-full flex items-center justify-between px-3 py-2.5 sm:py-2 text-xs font-medium text-left transition-colors min-h-[44px] sm:min-h-0 ${
+                    statusFilter === 'offline'
+                      ? 'bg-rose-500/10 text-rose-700 dark:bg-rose-500/20 dark:text-rose-300 font-semibold'
+                      : 'text-slate-600 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800/60'
+                  }`}
+                >
+                  <span className="flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-rose-500" />
+                    Signal Lost
+                  </span>
+                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-500">{offlineCount}</span>
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Sort Toggle Button */}
           <button
-            type="button"
-            onClick={() => setIsStatusMenuOpen(!isStatusMenuOpen)}
-            aria-label="Filter by status"
-            aria-expanded={isStatusMenuOpen}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white hover:bg-slate-100 text-slate-700 hover:text-slate-900 border border-slate-200 dark:bg-slate-900 dark:hover:bg-slate-800 dark:text-slate-300 dark:hover:text-white dark:border-slate-700/80 text-xs font-medium transition-all shadow-sm"
+            onClick={handleSortToggle}
+            aria-label="Toggle sort"
+            title={`Sort mode: ${sortMode}`}
+            className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 py-2 sm:py-1.5 rounded-lg bg-white hover:bg-slate-100 text-slate-700 hover:text-slate-900 border border-slate-200 dark:bg-slate-900 dark:hover:bg-slate-800 dark:text-slate-300 dark:hover:text-white dark:border-slate-700/80 text-xs font-medium transition-all shadow-sm min-h-[44px] sm:min-h-0"
           >
-            <Filter className="w-3.5 h-3.5 text-slate-400" />
-            <span className="flex items-center gap-1.5">
-              {statusFilter === 'online' && <span className="w-2 h-2 rounded-full bg-emerald-500" />}
-              {statusFilter === 'offline' && <span className="w-2 h-2 rounded-full bg-rose-500" />}
-              <span>{getStatusFilterLabel(statusFilter)}</span>
-            </span>
-            <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform ${isStatusMenuOpen ? 'rotate-180' : ''}`} />
+            <ArrowUpDown className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+            <span className="truncate">Sort: {getSortLabel(sortMode)}</span>
           </button>
-
-          {isStatusMenuOpen && (
-            <div className="absolute left-0 mt-1.5 w-44 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-xl py-1 z-[50]">
-              <button
-                type="button"
-                onClick={() => {
-                  setStatusFilter('all');
-                  setIsStatusMenuOpen(false);
-                }}
-                className={`w-full flex items-center justify-between px-3 py-2 text-xs font-medium text-left transition-colors ${
-                  statusFilter === 'all'
-                    ? 'bg-slate-100 text-slate-900 dark:bg-slate-800 dark:text-white font-semibold'
-                    : 'text-slate-600 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800/60'
-                }`}
-              >
-                <span>All Vehicles</span>
-                <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-500">{allVehicleIds.length}</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setStatusFilter('online');
-                  setIsStatusMenuOpen(false);
-                }}
-                className={`w-full flex items-center justify-between px-3 py-2 text-xs font-medium text-left transition-colors ${
-                  statusFilter === 'online'
-                    ? 'bg-emerald-500/10 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300 font-semibold'
-                    : 'text-slate-600 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800/60'
-                }`}
-              >
-                <span className="flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                  Live
-                </span>
-                <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-500">{onlineCount}</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setStatusFilter('offline');
-                  setIsStatusMenuOpen(false);
-                }}
-                className={`w-full flex items-center justify-between px-3 py-2 text-xs font-medium text-left transition-colors ${
-                  statusFilter === 'offline'
-                    ? 'bg-rose-500/10 text-rose-700 dark:bg-rose-500/20 dark:text-rose-300 font-semibold'
-                    : 'text-slate-600 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800/60'
-                }`}
-              >
-                <span className="flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-rose-500" />
-                  Signal Lost
-                </span>
-                <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-500">{offlineCount}</span>
-              </button>
-            </div>
-          )}
         </div>
-
-        {/* Sort Toggle Button */}
-        <button
-          onClick={handleSortToggle}
-          aria-label="Toggle sort"
-          title={`Sort mode: ${sortMode}`}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white hover:bg-slate-100 text-slate-700 hover:text-slate-900 border border-slate-200 dark:bg-slate-900 dark:hover:bg-slate-800 dark:text-slate-300 dark:hover:text-white dark:border-slate-700/80 text-xs font-medium transition-all shadow-sm"
-        >
-          <ArrowUpDown className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-          <span>Sort: {getSortLabel(sortMode)}</span>
-        </button>
       </div>
 
       {allVehicleIds.length === 0 ? (
@@ -413,62 +416,81 @@ export const DailyDistanceTable: React.FC<DailyDistanceTableProps> = ({
                   key={row.vehicleId}
                   data-testid={`mobile-vehicle-card-${row.vehicleId}`}
                   onClick={() => onOpenVehicleMap(row.vehicleId)}
-                  className={`p-3.5 rounded-xl border transition-all cursor-pointer min-h-[44px] flex flex-col gap-2.5 ${
+                  className={`p-4 rounded-2xl border transition-all cursor-pointer min-h-[44px] flex flex-col gap-3 shadow-sm active:scale-[0.99] ${
                     isSelected
-                      ? 'bg-emerald-500/10 border-emerald-500/80 shadow-md'
-                      : 'bg-slate-50 border-slate-200 hover:bg-slate-100/80 dark:bg-slate-800/60 dark:border-slate-700/60 dark:hover:bg-slate-800 dark:hover:border-slate-600'
+                      ? 'bg-emerald-500/10 border-emerald-500/80 shadow-md ring-1 ring-emerald-500/30'
+                      : 'bg-white border-slate-200 hover:border-slate-300 dark:bg-slate-850 dark:border-slate-800 dark:hover:border-slate-700'
                   }`}
                 >
-                  {/* Card Header */}
-                  <div className="flex items-center justify-between">
+                  {/* Card Header: Vehicle Identity & Live Status Badge */}
+                  <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2.5">
-                      <div className="p-1.5 bg-slate-200/80 dark:bg-slate-800 rounded-lg text-emerald-600 dark:text-emerald-400">
+                      <div className="p-2 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-xl border border-emerald-500/20">
                         <Bus className="w-4 h-4" />
                       </div>
                       <div>
-                        <div className="text-xs font-bold text-slate-900 dark:text-white font-mono tracking-tight">
+                        <div className="text-sm font-bold text-slate-900 dark:text-white font-mono tracking-tight">
                           Shuttle #{row.vehicleId}
                         </div>
-                        <div className="flex items-center gap-1.5 mt-0.5">
-                          <span className="relative flex h-2 w-2">
-                            {row.isOnline && (
-                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                            )}
-                            <span
-                              className={`relative inline-flex rounded-full h-2 w-2 ${
-                                row.isOnline ? 'bg-emerald-500' : 'bg-rose-500'
-                              }`}
-                            />
-                          </span>
-                          <span className="text-[10px] text-slate-500 dark:text-slate-400">
-                            {row.isOnline ? 'Live' : 'Signal Lost'}
-                          </span>
+                        <div className="text-[10px] text-slate-500 dark:text-slate-400">
+                          {row.isOnline ? 'เชื่อมต่อสด (Connected)' : 'ขาดการเชื่อมต่อ (Signal Lost)'}
                         </div>
                       </div>
                     </div>
+
+                    {/* Status Pill Badge */}
+                    <span
+                      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${
+                        row.isOnline
+                          ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60'
+                          : 'bg-rose-50 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300 border border-rose-200 dark:border-rose-800/60'
+                      }`}
+                    >
+                      <span className="relative flex h-2 w-2">
+                        {row.isOnline && (
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                        )}
+                        <span
+                          className={`relative inline-flex rounded-full h-2 w-2 ${
+                            row.isOnline ? 'bg-emerald-500' : 'bg-rose-500'
+                          }`}
+                        />
+                      </span>
+                      <span>{row.isOnline ? 'Live' : 'Signal Lost'}</span>
+                    </span>
                   </div>
 
-                  {/* 2-Metric Grid (Distance & Active Time) */}
-                  <div className="grid grid-cols-2 gap-2 py-1 text-xs">
-                    <div className="bg-white dark:bg-slate-900/60 rounded-lg p-2 border border-slate-200 dark:border-slate-800/80">
-                      <span className="text-[10px] text-slate-500 dark:text-slate-400 block">Today's Distance</span>
-                      <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400 text-xs">{row.distanceKm.toFixed(2)} km</span>
+                  {/* 2-Metric Grid (Distance & Active Time) with high-contrast typography */}
+                  <div className="grid grid-cols-2 gap-2.5 text-xs">
+                    <div className="bg-slate-50 dark:bg-slate-900/60 rounded-xl p-2.5 border border-slate-200/80 dark:border-slate-800/80">
+                      <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400 block mb-0.5">Today's Distance</span>
+                      <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400 text-sm sm:text-base">
+                        {row.distanceKm.toFixed(2)} km
+                      </span>
                     </div>
-                    <div className="bg-white dark:bg-slate-900/60 rounded-lg p-2 border border-slate-200 dark:border-slate-800/80">
-                      <span className="text-[10px] text-slate-500 dark:text-slate-400 block">Active Time</span>
-                      <span className="font-mono font-bold text-amber-600 dark:text-amber-400 text-xs">{formatActiveTime(row.activeMinutes)}</span>
+                    <div className="bg-slate-50 dark:bg-slate-900/60 rounded-xl p-2.5 border border-slate-200/80 dark:border-slate-800/80">
+                      <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400 block mb-0.5">Active Time</span>
+                      <span className="font-mono font-bold text-amber-600 dark:text-amber-400 text-sm sm:text-base">
+                        {formatActiveTime(row.activeMinutes)}
+                      </span>
                     </div>
                   </div>
 
-                  {/* Progress Bar */}
-                  <div className="w-full bg-slate-200 dark:bg-slate-900 rounded-full h-1.5 overflow-hidden">
-                    <div
-                      className="bg-emerald-500 h-1.5 rounded-full transition-all duration-300"
-                      style={{ width: `${progressPercent}%` }}
-                    />
+                  {/* Progress Bar with Percentage Label */}
+                  <div className="flex flex-col gap-1">
+                    <div className="flex items-center justify-between text-[10px] text-slate-400 dark:text-slate-500 font-mono">
+                      <span>Progress vs. highest distance</span>
+                      <span>{progressPercent}%</span>
+                    </div>
+                    <div className="w-full bg-slate-100 dark:bg-slate-900 rounded-full h-2 overflow-hidden border border-slate-200/60 dark:border-slate-800/60">
+                      <div
+                        className="bg-emerald-500 h-2 rounded-full transition-all duration-300"
+                        style={{ width: `${progressPercent}%` }}
+                      />
+                    </div>
                   </div>
 
-                  {/* Mobile Action Button with min-h-[44px] */}
+                  {/* Mobile Action Button with min-h-[44px] Accessible Target */}
                   <button
                     type="button"
                     onClick={(e) => {
@@ -476,7 +498,7 @@ export const DailyDistanceTable: React.FC<DailyDistanceTableProps> = ({
                       onOpenVehicleMap(row.vehicleId);
                     }}
                     aria-label={`View map for ${row.vehicleId}`}
-                    className="w-full min-h-[44px] flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-200 dark:border-slate-700 text-xs font-medium transition-all"
+                    className="w-full min-h-[44px] flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 active:bg-slate-300 text-slate-800 border border-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 dark:active:bg-slate-650 dark:text-slate-200 dark:border-slate-700 text-xs font-semibold transition-all shadow-sm"
                   >
                     <Maximize2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                     <span>View on Map</span>

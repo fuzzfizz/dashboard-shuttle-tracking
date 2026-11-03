@@ -57,66 +57,80 @@ export const TelemetryHUD: React.FC<TelemetryHUDProps> = ({
   const isMoving = telemetry && (telemetry.speed ?? 0) > 2;
 
   return (
-    <div className={className ?? "absolute bottom-6 left-1/2 -translate-x-1/2 z-[1000] w-[92vw] max-w-xl"}>
-      <div className="bg-white/95 border-slate-200 text-slate-900 shadow-xl dark:bg-slate-900/90 dark:border-slate-800 dark:text-white dark:shadow-2xl backdrop-blur-md border px-5 py-4 rounded-2xl flex flex-wrap items-center justify-between gap-4 transition-colors">
-        {/* Status & Vehicle Info */}
-        <div className="flex items-center gap-3">
-          <div className="relative flex h-3 w-3">
-            {status === 'connected' && (
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-            )}
-            <span className={`relative inline-flex rounded-full h-3 w-3 ${getStatusColor(status).split(' ')[0]}`}></span>
-          </div>
-          <div>
-            {telemetry ? (
-              // Consumer-friendly vehicle status without broker jargon
-              <div className="text-xs font-semibold uppercase tracking-wider flex items-center gap-1.5">
-                {isOnline === false ? (
-                  <span className="text-rose-600 dark:text-rose-400 flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
-                    Signal Lost
-                  </span>
-                ) : isMoving ? (
-                  <span className="text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                    Moving / กำลังวิ่ง
-                  </span>
-                ) : (
-                  <span className="text-slate-500 dark:text-slate-400 flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
-                    Stopped / จอดพัก
-                  </span>
-                )}
-              </div>
-            ) : (
-              // Overview mode status
-              <div className="text-xs font-mono uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
-                <Radio className="w-3.5 h-3.5" />
-                <span>Broker: {status}</span>
-              </div>
-            )}
+    <div className={className ?? "absolute bottom-3 sm:bottom-6 left-2 right-2 sm:left-1/2 sm:-translate-x-1/2 z-[1000] w-auto sm:w-[92vw] sm:max-w-xl pb-[env(safe-area-inset-bottom)]"}>
+      <div className="bg-white/95 border-slate-200 text-slate-900 shadow-xl dark:bg-slate-900/95 dark:border-slate-800 dark:text-white dark:shadow-2xl backdrop-blur-md border p-3.5 sm:px-5 sm:py-4 rounded-2xl flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 transition-colors">
+        {/* Status & Vehicle Info Header */}
+        <div className="flex items-center justify-between sm:justify-start gap-3 w-full sm:w-auto">
+          <div className="flex items-center gap-3">
+            <div className="relative flex h-3 w-3 shrink-0">
+              {status === 'connected' && (
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              )}
+              <span className={`relative inline-flex rounded-full h-3 w-3 ${getStatusColor(status).split(' ')[0]}`}></span>
+            </div>
+            <div>
+              {telemetry ? (
+                // Consumer-friendly vehicle status without broker jargon
+                <div className="text-xs font-semibold uppercase tracking-wider flex items-center gap-1.5">
+                  {isOnline === false ? (
+                    <span className="text-rose-600 dark:text-rose-400 flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+                      Signal Lost
+                    </span>
+                  ) : isMoving ? (
+                    <span className="text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                      Moving / กำลังวิ่ง
+                    </span>
+                  ) : (
+                    <span className="text-slate-500 dark:text-slate-400 flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
+                      Stopped / จอดพัก
+                    </span>
+                  )}
+                </div>
+              ) : (
+                // Overview mode status
+                <div className="text-xs font-mono uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                  <Radio className="w-3.5 h-3.5" />
+                  <span>Broker: {status}</span>
+                </div>
+              )}
 
-            <div className="text-sm font-bold tracking-tight text-slate-900 dark:text-white flex items-center gap-1.5 mt-0.5">
-              <Bus className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-              <span>
-                {telemetry
-                  ? telemetry.vehicle_id
-                  : `Overview (${fleetStats?.onlineVehicles ?? totalVehicles ?? 0} online)`}
-              </span>
+              <div className="text-sm sm:text-base font-bold tracking-tight text-slate-900 dark:text-white flex items-center gap-1.5 mt-0.5">
+                <Bus className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                <span className="font-mono">
+                  {telemetry
+                    ? telemetry.vehicle_id
+                    : `Overview (${fleetStats?.onlineVehicles ?? totalVehicles ?? 0} online)`}
+                </span>
+              </div>
             </div>
           </div>
+
+          {/* Close button on Mobile */}
+          {onClose && (
+            <button
+              onClick={onClose}
+              aria-label="Deselect vehicle and return to all vehicles overview"
+              title="Deselect vehicle (Overview)"
+              className="sm:hidden p-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white transition-colors min-h-[40px] min-w-[40px] flex items-center justify-center shrink-0"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
         </div>
 
-        {/* Telemetry Metrics */}
-        <div className="flex items-center gap-5 sm:gap-6 border-l border-slate-200 dark:border-slate-800 pl-4 sm:pl-6">
+        {/* Telemetry Metrics Grid / Row */}
+        <div className="grid grid-cols-2 xs:grid-cols-4 sm:flex sm:items-center gap-2 sm:gap-6 pt-2.5 sm:pt-0 border-t sm:border-t-0 sm:border-l border-slate-200 dark:border-slate-800 sm:pl-6 w-full sm:w-auto">
           {/* Speed */}
-          <div className="flex items-center gap-2.5">
-            <div className="p-2 bg-slate-100 dark:bg-slate-800/80 rounded-xl text-emerald-600 dark:text-emerald-400">
-              <Gauge className="w-5 h-5" />
+          <div className="flex items-center gap-2 sm:gap-2.5 bg-slate-50 sm:bg-transparent dark:bg-slate-800/40 sm:dark:bg-transparent p-2 sm:p-0 rounded-xl">
+            <div className="p-1.5 sm:p-2 bg-white dark:bg-slate-800/80 rounded-lg sm:rounded-xl text-emerald-600 dark:text-emerald-400 shrink-0 shadow-xs sm:shadow-none">
+              <Gauge className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
             <div>
               <div className="text-[10px] uppercase font-mono tracking-wider text-slate-500 dark:text-slate-400">Speed</div>
-              <div className="text-lg font-bold font-mono text-slate-900 dark:text-white leading-none">
+              <div className="text-base sm:text-lg font-bold font-mono text-slate-900 dark:text-white leading-none">
                 {telemetry
                   ? telemetry.speed.toFixed(1)
                   : fleetStats?.averageSpeed !== undefined
@@ -129,13 +143,13 @@ export const TelemetryHUD: React.FC<TelemetryHUDProps> = ({
 
           {/* Today Distance (if available) */}
           {dailyDistanceKm !== undefined && (
-            <div className="hidden md:flex items-center gap-2.5">
-              <div className="p-2 bg-slate-100 dark:bg-slate-800/80 rounded-xl text-indigo-600 dark:text-indigo-400">
-                <Route className="w-5 h-5" />
+            <div className="flex items-center gap-2 sm:gap-2.5 bg-slate-50 sm:bg-transparent dark:bg-slate-800/40 sm:dark:bg-transparent p-2 sm:p-0 rounded-xl">
+              <div className="p-1.5 sm:p-2 bg-white dark:bg-slate-800/80 rounded-lg sm:rounded-xl text-indigo-600 dark:text-indigo-400 shrink-0 shadow-xs sm:shadow-none">
+                <Route className="w-4 h-4 sm:w-5 sm:h-5" />
               </div>
               <div>
                 <div className="text-[10px] uppercase font-mono tracking-wider text-slate-500 dark:text-slate-400">Today</div>
-                <div className="text-lg font-bold font-mono text-slate-900 dark:text-white leading-none">
+                <div className="text-base sm:text-lg font-bold font-mono text-slate-900 dark:text-white leading-none">
                   {dailyDistanceKm.toFixed(2)}
                   <span className="text-xs font-normal text-slate-500 dark:text-slate-400 ml-1">km</span>
                 </div>
@@ -144,22 +158,22 @@ export const TelemetryHUD: React.FC<TelemetryHUDProps> = ({
           )}
 
           {/* Heading */}
-          <div className="hidden sm:flex items-center gap-2.5">
-            <div className="p-2 bg-slate-100 dark:bg-slate-800/80 rounded-xl text-sky-600 dark:text-sky-400">
-              <Compass className="w-5 h-5" />
+          <div className="flex items-center gap-2 sm:gap-2.5 bg-slate-50 sm:bg-transparent dark:bg-slate-800/40 sm:dark:bg-transparent p-2 sm:p-0 rounded-xl">
+            <div className="p-1.5 sm:p-2 bg-white dark:bg-slate-800/80 rounded-lg sm:rounded-xl text-sky-600 dark:text-sky-400 shrink-0 shadow-xs sm:shadow-none">
+              <Compass className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
             <div>
               <div className="text-[10px] uppercase font-mono tracking-wider text-slate-500 dark:text-slate-400">Heading</div>
-              <div className="text-lg font-bold font-mono text-slate-900 dark:text-white leading-none">
+              <div className="text-base sm:text-lg font-bold font-mono text-slate-900 dark:text-white leading-none">
                 {telemetry?.heading !== undefined ? `${telemetry.heading}°` : '--'}
               </div>
             </div>
           </div>
 
           {/* Last Seen / Heartbeat */}
-          <div className="flex items-center gap-2.5">
-            <div className="p-2 bg-slate-100 dark:bg-slate-800/80 rounded-xl text-amber-600 dark:text-amber-400">
-              <Clock className="w-5 h-5" />
+          <div className="flex items-center gap-2 sm:gap-2.5 bg-slate-50 sm:bg-transparent dark:bg-slate-800/40 sm:dark:bg-transparent p-2 sm:p-0 rounded-xl">
+            <div className="p-1.5 sm:p-2 bg-white dark:bg-slate-800/80 rounded-lg sm:rounded-xl text-amber-600 dark:text-amber-400 shrink-0 shadow-xs sm:shadow-none">
+              <Clock className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
             <div>
               <div className="text-[10px] uppercase font-mono tracking-wider text-slate-500 dark:text-slate-400">Updated</div>
@@ -169,13 +183,13 @@ export const TelemetryHUD: React.FC<TelemetryHUDProps> = ({
             </div>
           </div>
 
-          {/* Close button to return to all vehicles overview */}
+          {/* Close button to return to all vehicles overview on Desktop */}
           {onClose && (
             <button
               onClick={onClose}
               aria-label="Deselect vehicle and return to all vehicles overview"
               title="Deselect vehicle (Overview)"
-              className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white transition-colors"
+              className="hidden sm:flex p-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white transition-colors shrink-0"
             >
               <X className="w-4 h-4" />
             </button>
