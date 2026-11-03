@@ -54,13 +54,17 @@ describe('DailyDistanceTable', () => {
     expect(screen.getByText('EV-01')).toBeInTheDocument();
     expect(screen.getAllByText('18.50 km').length).toBeGreaterThan(0);
 
+    // Verify percent bar and percentage labels are NOT rendered
+    expect(screen.queryByText(/%/)).toBeNull();
+    expect(screen.queryByText(/progress vs/i)).toBeNull();
+
     // Click open button
     const openBtn = screen.getByRole('button', { name: /open map for ev-01/i });
     fireEvent.click(openBtn);
     expect(handleOpenMap).toHaveBeenCalledWith('EV-01');
   });
 
-  it('triggers onOpenVehicleMap when clicking desktop row', () => {
+  it('does not trigger onOpenVehicleMap when clicking desktop row, only on Open Map button', () => {
     const handleOpenMap = vi.fn();
     const metrics: DailyMetricsMap = {
       'EV-01': {
@@ -86,6 +90,10 @@ describe('DailyDistanceTable', () => {
 
     const row = screen.getByTestId('vehicle-row-EV-01');
     fireEvent.click(row);
+    expect(handleOpenMap).not.toHaveBeenCalled();
+
+    const openBtn = screen.getByRole('button', { name: /open map for ev-01/i });
+    fireEvent.click(openBtn);
     expect(handleOpenMap).toHaveBeenCalledWith('EV-01');
   });
 
@@ -298,7 +306,7 @@ describe('DailyDistanceTable', () => {
     expect(screen.getAllByText('1h 5m').length).toBeGreaterThan(0);
   });
 
-  it('handles mobile card clicks with accessible min-h-[44px] targets', () => {
+  it('handles mobile card clicks only via action button with accessible min-h-[44px] targets', () => {
     const handleOpenMap = vi.fn();
     const metrics: DailyMetricsMap = {
       'EV-01': {
@@ -324,7 +332,14 @@ describe('DailyDistanceTable', () => {
 
     const mobileCard = screen.getByTestId('mobile-vehicle-card-EV-01');
     expect(mobileCard.className).toContain('min-h-[44px]');
+    // Clicking the card body should not trigger map open
     fireEvent.click(mobileCard);
+    expect(handleOpenMap).not.toHaveBeenCalled();
+
+    // Clicking the Open Map action button on the mobile card triggers map open
+    const openBtn = screen.getByRole('button', { name: /view map for ev-01/i });
+    expect(openBtn.className).toContain('min-h-[44px]');
+    fireEvent.click(openBtn);
     expect(handleOpenMap).toHaveBeenCalledWith('EV-01');
   });
 

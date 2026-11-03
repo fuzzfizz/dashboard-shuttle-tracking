@@ -80,11 +80,6 @@ export const DailyDistanceTable: React.FC<DailyDistanceTableProps> = ({
   const onlineCount = useMemo(() => rows.filter((r) => r.isOnline).length, [rows]);
   const offlineCount = useMemo(() => rows.filter((r) => !r.isOnline).length, [rows]);
 
-  const maxDistance = useMemo(() => {
-    const max = Math.max(...rows.map((r) => r.distanceKm), 0);
-    return max > 0 ? max : 1;
-  }, [rows]);
-
   const filteredRows = useMemo(() => {
     return rows.filter((row) => {
       if (statusFilter === 'online' && !row.isOnline) return false;
@@ -312,14 +307,12 @@ export const DailyDistanceTable: React.FC<DailyDistanceTableProps> = ({
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
                 {sortedRows.map((row) => {
                   const isSelected = selectedVehicleId === row.vehicleId;
-                  const progressPercent = Math.min(100, Math.round((row.distanceKm / maxDistance) * 100));
 
                   return (
                     <tr
                       key={row.vehicleId}
                       data-testid={`vehicle-row-${row.vehicleId}`}
-                      onClick={() => onOpenVehicleMap(row.vehicleId)}
-                      className={`cursor-pointer transition-colors group ${
+                      className={`transition-colors group ${
                         isSelected
                           ? 'bg-emerald-500/10'
                           : 'hover:bg-slate-50 dark:hover:bg-slate-800/50'
@@ -361,20 +354,9 @@ export const DailyDistanceTable: React.FC<DailyDistanceTableProps> = ({
                         </div>
                       </td>
 
-                      {/* Today's Distance Column with Progress Bar */}
-                      <td className="py-3 px-3 min-w-[160px]">
-                        <div className="flex items-center justify-between font-mono font-semibold text-slate-800 dark:text-slate-200">
-                          <span>{row.distanceKm.toFixed(2)} km</span>
-                          <span className="text-[10px] text-slate-400 dark:text-slate-500 font-normal">
-                            {progressPercent}%
-                          </span>
-                        </div>
-                        <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-1.5 overflow-hidden mt-1">
-                          <div
-                            className="bg-emerald-500 h-1.5 rounded-full transition-all duration-300"
-                            style={{ width: `${progressPercent}%` }}
-                          />
-                        </div>
+                      {/* Today's Distance Column */}
+                      <td className="py-3 px-3 font-mono font-semibold text-slate-800 dark:text-slate-200">
+                        {row.distanceKm.toFixed(2)} km
                       </td>
 
                       {/* Active Time Column */}
@@ -386,10 +368,7 @@ export const DailyDistanceTable: React.FC<DailyDistanceTableProps> = ({
                       <td className="py-3 px-3 text-right">
                         <button
                           type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onOpenVehicleMap(row.vehicleId);
-                          }}
+                          onClick={() => onOpenVehicleMap(row.vehicleId)}
                           aria-label={`Open map for ${row.vehicleId}`}
                           title={`Open map for ${row.vehicleId}`}
                           className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-slate-900 border border-slate-200 dark:bg-slate-800 dark:hover:bg-slate-750 dark:text-slate-300 dark:hover:text-white dark:border-slate-700/80 text-xs font-medium transition-all group-hover:border-emerald-500/50"
@@ -409,14 +388,12 @@ export const DailyDistanceTable: React.FC<DailyDistanceTableProps> = ({
           <div className="sm:hidden space-y-3">
             {sortedRows.map((row) => {
               const isSelected = selectedVehicleId === row.vehicleId;
-              const progressPercent = Math.min(100, Math.round((row.distanceKm / maxDistance) * 100));
 
               return (
                 <div
                   key={row.vehicleId}
                   data-testid={`mobile-vehicle-card-${row.vehicleId}`}
-                  onClick={() => onOpenVehicleMap(row.vehicleId)}
-                  className={`p-4 rounded-2xl border transition-all cursor-pointer min-h-[44px] flex flex-col gap-3 shadow-sm active:scale-[0.99] ${
+                  className={`p-4 rounded-2xl border transition-all min-h-[44px] flex flex-col gap-3 shadow-sm ${
                     isSelected
                       ? 'bg-emerald-500/10 border-emerald-500/80 shadow-md ring-1 ring-emerald-500/30'
                       : 'bg-white border-slate-200 hover:border-slate-300 dark:bg-slate-850 dark:border-slate-800 dark:hover:border-slate-700'
@@ -476,32 +453,16 @@ export const DailyDistanceTable: React.FC<DailyDistanceTableProps> = ({
                     </div>
                   </div>
 
-                  {/* Progress Bar with Percentage Label */}
-                  <div className="flex flex-col gap-1">
-                    <div className="flex items-center justify-between text-[10px] text-slate-400 dark:text-slate-500 font-mono">
-                      <span>Progress vs. highest distance</span>
-                      <span>{progressPercent}%</span>
-                    </div>
-                    <div className="w-full bg-slate-100 dark:bg-slate-900 rounded-full h-2 overflow-hidden border border-slate-200/60 dark:border-slate-800/60">
-                      <div
-                        className="bg-emerald-500 h-2 rounded-full transition-all duration-300"
-                        style={{ width: `${progressPercent}%` }}
-                      />
-                    </div>
-                  </div>
-
                   {/* Mobile Action Button with min-h-[44px] Accessible Target */}
                   <button
                     type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onOpenVehicleMap(row.vehicleId);
-                    }}
+                    onClick={() => onOpenVehicleMap(row.vehicleId)}
                     aria-label={`View map for ${row.vehicleId}`}
+                    title={`Open map for ${row.vehicleId}`}
                     className="w-full min-h-[44px] flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 active:bg-slate-300 text-slate-800 border border-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 dark:active:bg-slate-650 dark:text-slate-200 dark:border-slate-700 text-xs font-semibold transition-all shadow-sm"
                   >
                     <Maximize2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                    <span>View on Map</span>
+                    <span>Open Map</span>
                   </button>
                 </div>
               );
