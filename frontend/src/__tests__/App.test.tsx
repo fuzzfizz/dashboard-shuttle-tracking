@@ -71,7 +71,7 @@ describe('App Integration', () => {
   it('renders FleetDistanceAnalyticsCard between the live map and daily distance table in Layout Option A', () => {
     render(<App />);
     expect(screen.getByRole('region', { name: /Fleet Mileage Analytics Card/i })).toBeInTheDocument();
-    expect(screen.getByText('สถิติและกราฟวิเคราะห์การเดินรถ')).toBeInTheDocument();
+    expect(screen.getByText('กราฟวิเคราะห์การเดินรถ')).toBeInTheDocument();
     expect(screen.getByText('เปรียบเทียบรายคัน')).toBeInTheDocument();
   });
 

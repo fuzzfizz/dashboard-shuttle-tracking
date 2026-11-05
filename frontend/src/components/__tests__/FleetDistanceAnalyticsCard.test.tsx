@@ -31,7 +31,7 @@ describe('FleetDistanceAnalyticsCard', () => {
     'BUS-02': { vehicle_id: 'BUS-02', lat: 18.80, lng: 98.99, speed: 15, timestamp: Date.now() },
   };
 
-  it('renders all 4 executive KPI highlight cards with accurate values', () => {
+  it('renders analytics chart card without executive KPI stat cards, focusing on charts', () => {
     render(
       <FleetDistanceAnalyticsCard
         dailyMetrics={mockDailyMetrics}
@@ -40,10 +40,15 @@ describe('FleetDistanceAnalyticsCard', () => {
       />
     );
 
-    expect(screen.getByText('80.00')).toBeInTheDocument(); // 45 + 35
-    expect(screen.getByText('40.00')).toBeInTheDocument(); // Average
-    expect(screen.getAllByText(/BUS-01/i).length).toBeGreaterThanOrEqual(1); // Top vehicle and chart
-    expect(screen.getByText(/3 ชม. 30 นาที/i)).toBeInTheDocument(); // 210 mins
+    // Header title
+    expect(screen.getByText('กราฟวิเคราะห์การเดินรถ')).toBeInTheDocument();
+    // Executive KPI stat cards are removed as requested
+    expect(screen.queryByText('ระยะทางรวมวันนี้')).toBeNull();
+    expect(screen.queryByText('เฉลี่ยต่อคัน')).toBeNull();
+    expect(screen.queryByText('คันที่วิ่งมากสุด')).toBeNull();
+    expect(screen.queryByText('เวลาวิ่งสะสมรวม')).toBeNull();
+    // Default chart: By vehicle comparison
+    expect(screen.getAllByText(/BUS-01/i).length).toBeGreaterThanOrEqual(1);
   });
 
   it('switches between By Vehicle, 7-Day Trend, and Hourly Activity tabs', () => {
