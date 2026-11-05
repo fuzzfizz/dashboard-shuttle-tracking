@@ -17,8 +17,9 @@ export function useDailyMetrics(vehicles: FleetMap) {
   const [dailyMetrics, setDailyMetrics] = useState<DailyMetricsMap>({});
   const [isLoading, setIsLoading] = useState<boolean>(false);
 
-  // In-memory tracking of previous coordinate per vehicle
+  // In-memory tracking of previous coordinate and active seconds per vehicle
   const prevCoordsRef = useRef<Record<string, CoordinatePoint>>({});
+  const activeSecondsRef = useRef<Record<string, number>>({});
 
   const todayStr = getBangkokDate();
 
@@ -42,6 +43,7 @@ export function useDailyMetrics(vehicles: FleetMap) {
             const existing = prev[vId];
             const remoteDistance = Number(row.total_distance_km) || 0;
             const remoteMaxSpeed = Number(row.max_speed_kmh) || 0;
+            const remoteActiveMinutes = Number(row.active_minutes) || 0;
 
             next[vId] = {
               vehicle_id: vId,
@@ -53,7 +55,9 @@ export function useDailyMetrics(vehicles: FleetMap) {
                 ? Math.max(existing.max_speed_kmh, remoteMaxSpeed)
                 : remoteMaxSpeed,
               avg_speed_kmh: Number(row.avg_speed_kmh) || (existing?.avg_speed_kmh ?? 0),
-              active_minutes: Number(row.active_minutes) || (existing?.active_minutes ?? 0),
+              active_minutes: existing
+                ? Math.max(existing.active_minutes, remoteActiveMinutes)
+                : remoteActiveMinutes,
               last_updated_at: row.last_updated_at || existing?.last_updated_at || new Date().toISOString(),
             };
           }
@@ -76,23 +80,42 @@ export function useDailyMetrics(vehicles: FleetMap) {
     }
   }, [fetchSupabaseMetrics]);
 
-  // Real-time incremental distance accumulation from live telemetry stream
+  // Real-time incremental distance and active running time accumulation from live telemetry stream
   useEffect(() => {
-    const updates: Record<string, { distance: number; maxSpeed: number }> = {};
+    const updates: Record<string, { distance: number; maxSpeed: number; addedMinutes: number }> = {};
 
     for (const vehicle of Object.values(vehicles)) {
       const { vehicle_id, lat, lng, speed, timestamp } = vehicle;
       const currPoint: CoordinatePoint = { lat, lng, speed, timestamp };
       const prevPoint = prevCoordsRef.current[vehicle_id];
 
+      let distanceIncrement = 0;
+      let addedMinutes = 0;
+
       if (prevPoint) {
-        const increment = calculateDistanceIncrement(prevPoint, currPoint);
-        if (increment > 0) {
-          updates[vehicle_id] = {
-            distance: increment,
-            maxSpeed: Math.round(speed * 10) / 10,
-          };
+        distanceIncrement = calculateDistanceIncrement(prevPoint, currPoint);
+
+        const timeDiffSec = Math.abs((currPoint.timestamp - prevPoint.timestamp) / 1000);
+        // Active moving threshold: speed >= 2.0 km/h or valid movement distance > 8m
+        const isMoving = currPoint.speed >= 2.0 || distanceIncrement > 0.008;
+
+        if (isMoving && timeDiffSec > 0 && timeDiffSec <= 120) {
+          const acc = (activeSecondsRef.current[vehicle_id] || 0) + timeDiffSec;
+          if (acc >= 60) {
+            addedMinutes = Math.floor(acc / 60);
+            activeSecondsRef.current[vehicle_id] = acc % 60;
+          } else {
+            activeSecondsRef.current[vehicle_id] = acc;
+          }
         }
+      }
+
+      if (distanceIncrement > 0 || addedMinutes > 0) {
+        updates[vehicle_id] = {
+          distance: distanceIncrement,
+          maxSpeed: Math.round(speed * 10) / 10,
+          addedMinutes,
+        };
       }
 
       prevCoordsRef.current[vehicle_id] = currPoint;
@@ -103,7 +126,7 @@ export function useDailyMetrics(vehicles: FleetMap) {
         const next: DailyMetricsMap = { ...prev };
         const nowIso = new Date().toISOString();
 
-        for (const [vehicleId, { distance, maxSpeed }] of Object.entries(updates)) {
+        for (const [vehicleId, { distance, maxSpeed, addedMinutes }] of Object.entries(updates)) {
           const rawExisting = prev[vehicleId];
           const isSameDay = rawExisting && rawExisting.date === todayStr;
 
@@ -121,11 +144,13 @@ export function useDailyMetrics(vehicles: FleetMap) {
 
           const updatedDistance = Math.round((existing.total_distance_km + distance) * 100) / 100;
           const updatedMaxSpeed = Math.max(existing.max_speed_kmh, maxSpeed);
+          const updatedActiveMinutes = existing.active_minutes + addedMinutes;
 
           next[vehicleId] = {
             ...existing,
             total_distance_km: updatedDistance,
             max_speed_kmh: updatedMaxSpeed,
+            active_minutes: updatedActiveMinutes,
             last_updated_at: nowIso,
           };
         }

@@ -261,4 +261,40 @@ describe('useDailyMetrics', () => {
     expect(result.current.totalFleetDistanceKm).toBe(0);
     expect(warnSpy).toHaveBeenCalled();
   });
+
+  it('accumulates active_minutes in real-time when vehicle moves at speed >= 2.0 km/h across multiple minutes', () => {
+    const { result, rerender } = renderHook(({ fleet }) => useDailyMetrics(fleet), {
+      initialProps: { fleet: {} as FleetMap },
+    });
+
+    // Initial position at t = 1000
+    rerender({
+      fleet: {
+        'shuttle-01': {
+          vehicle_id: 'shuttle-01',
+          lat: 13.7563,
+          lng: 100.5018,
+          speed: 25.0,
+          timestamp: 1000,
+        },
+      },
+    });
+
+    // Move after 65 seconds (65,000 ms) at speed 25 km/h
+    rerender({
+      fleet: {
+        'shuttle-01': {
+          vehicle_id: 'shuttle-01',
+          lat: 13.7600,
+          lng: 100.5018,
+          speed: 25.0,
+          timestamp: 66000,
+        },
+      },
+    });
+
+    const metric = result.current.dailyMetrics['shuttle-01'];
+    expect(metric).toBeDefined();
+    expect(metric.active_minutes).toBe(1);
+  });
 });

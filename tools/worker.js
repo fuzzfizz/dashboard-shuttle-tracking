@@ -76,18 +76,22 @@ export function startWorker(options = {}) {
   });
 
   async function flushVehicle(vehicle_id, state) {
-    if (!supabase || state.isFlushing || state.pendingDistanceKm <= 0) return;
+    const hasDistance = state.pendingDistanceKm > 0;
+    const hasActiveTime = (state.pendingActiveSeconds || 0) >= 30;
+    if (!supabase || state.isFlushing || (!hasDistance && !hasActiveTime)) return;
 
     state.isFlushing = true;
     const distanceToFlush = state.pendingDistanceKm;
+    const activeSecondsToFlush = state.pendingActiveSeconds || 0;
     state.pendingDistanceKm = 0;
+    state.pendingActiveSeconds = 0;
     state.lastFlushTime = Date.now();
     const today = state.currentDate || getBangkokDate();
 
     try {
       const { data: existing, error: fetchErr } = await supabase
         .from('daily_vehicle_metrics')
-        .select('total_distance_km, max_speed_kmh')
+        .select('total_distance_km, max_speed_kmh, active_minutes, avg_speed_kmh')
         .eq('vehicle_id', vehicle_id)
         .eq('date', today)
         .maybeSingle();
@@ -95,32 +99,47 @@ export function startWorker(options = {}) {
       if (fetchErr) {
         console.error(`[Worker Error] Failed to fetch current metrics for ${vehicle_id}:`, fetchErr.message);
         state.pendingDistanceKm += distanceToFlush;
+        state.pendingActiveSeconds += activeSecondsToFlush;
         return;
       }
 
       const existingDistance = Number(existing?.total_distance_km) || 0;
       const existingMaxSpeed = Number(existing?.max_speed_kmh) || 0;
+      const existingActiveMinutes = Number(existing?.active_minutes) || 0;
 
       const newTotalDistance = Math.round((existingDistance + distanceToFlush) * 100) / 100;
       const newMaxSpeed = Math.max(existingMaxSpeed, Math.round(state.maxSpeedKmh * 10) / 10);
+
+      const addedMinutes = Math.floor(activeSecondsToFlush / 60);
+      const remainingSeconds = activeSecondsToFlush % 60;
+      state.pendingActiveSeconds += remainingSeconds;
+      const newActiveMinutes = existingActiveMinutes + addedMinutes;
+
+      const newAvgSpeed = newActiveMinutes > 0 && newTotalDistance > 0
+        ? Math.round((newTotalDistance / (newActiveMinutes / 60)) * 10) / 10
+        : (Number(existing?.avg_speed_kmh) || 0);
 
       const { error: upsertErr } = await supabase.from('daily_vehicle_metrics').upsert({
         vehicle_id,
         date: today,
         total_distance_km: newTotalDistance,
         max_speed_kmh: newMaxSpeed,
+        avg_speed_kmh: newAvgSpeed,
+        active_minutes: newActiveMinutes,
         last_updated_at: new Date().toISOString(),
       });
 
       if (upsertErr) {
         console.error(`[Worker Error] Failed to upsert metrics for ${vehicle_id}:`, upsertErr.message);
         state.pendingDistanceKm += distanceToFlush;
+        state.pendingActiveSeconds += activeSecondsToFlush;
       } else {
-        console.log(`[Worker] Updated ${vehicle_id}: +${distanceToFlush.toFixed(3)} km (Total: ${newTotalDistance} km, Date: ${today})`);
+        console.log(`[Worker] Updated ${vehicle_id}: +${distanceToFlush.toFixed(3)} km, +${addedMinutes}m active (Total: ${newTotalDistance} km, ${newActiveMinutes} min, Date: ${today})`);
       }
     } catch (flushErr) {
       console.error(`[Worker Error] Unexpected error during flush for ${vehicle_id}:`, flushErr.message);
       state.pendingDistanceKm += distanceToFlush;
+      state.pendingActiveSeconds += activeSecondsToFlush;
     } finally {
       state.isFlushing = false;
     }
@@ -129,7 +148,9 @@ export function startWorker(options = {}) {
   async function flushAllVehicles() {
     const promises = [];
     for (const [vehicle_id, state] of vehicleState.entries()) {
-      if (state.pendingDistanceKm > 0 && !state.isFlushing) {
+      const hasDistance = state.pendingDistanceKm > 0;
+      const hasActiveTime = (state.pendingActiveSeconds || 0) >= 30;
+      if ((hasDistance || hasActiveTime) && !state.isFlushing) {
         promises.push(flushVehicle(vehicle_id, state));
       }
     }
@@ -165,6 +186,7 @@ export function startWorker(options = {}) {
           lastBreadcrumbLat: lat,
           lastBreadcrumbLng: lng,
           pendingDistanceKm: 0,
+          pendingActiveSeconds: 0,
           maxSpeedKmh: numericSpeed,
           lastFlushTime: now,
           isFlushing: false,
@@ -175,10 +197,12 @@ export function startWorker(options = {}) {
         if (state.currentDate !== today) {
           state.currentDate = today;
           state.maxSpeedKmh = numericSpeed;
+          state.pendingActiveSeconds = 0;
         }
 
         const dist = haversineDistance(state.lastLat, state.lastLng, lat, lng);
-        const timeElapsedHours = Math.abs((timestamp || now) - state.lastTime) / 3600000;
+        const timeElapsedSec = Math.abs((timestamp || now) - state.lastTime) / 1000;
+        const timeElapsedHours = timeElapsedSec / 3600;
         const impliedSpeed = timeElapsedHours > 0 ? dist / timeElapsedHours : 0;
 
         const isJitter = dist < 0.008 && numericSpeed < 1.5;
@@ -186,6 +210,13 @@ export function startWorker(options = {}) {
 
         if (!isJitter && !isTeleportGlitch) {
           state.pendingDistanceKm += dist;
+        }
+
+        // Active running time: vehicle is moving (speed >= 2.0 km/h or dist >= 0.008 km)
+        // and time gap between consecutive pings is within 120 seconds
+        const isMoving = numericSpeed >= 2.0 || (!isJitter && !isTeleportGlitch && dist >= 0.008);
+        if (isMoving && timeElapsedSec > 0 && timeElapsedSec <= 120) {
+          state.pendingActiveSeconds = (state.pendingActiveSeconds || 0) + timeElapsedSec;
         }
 
         state.lastLat = lat;
