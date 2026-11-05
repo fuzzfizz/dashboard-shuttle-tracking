@@ -238,4 +238,29 @@ describe('ShuttleMap', () => {
     expect(recenterBtn).toBeInTheDocument();
     expect(getByText('รีเซ็ตมุมมอง')).toBeInTheDocument();
   });
+
+  it('renders MapRecenterButton with multiple fleet count in overview mode and fits bounds on click', () => {
+    const fitBoundsSpy = vi.spyOn(L.Map.prototype, 'fitBounds').mockImplementation(() => ({} as any));
+    const now = Date.now();
+    const vehicles: FleetMap = {
+      'BUS-01': { vehicle_id: 'BUS-01', lat: 18.79, lng: 98.98, speed: 20, timestamp: now },
+      'BUS-02': { vehicle_id: 'BUS-02', lat: 18.80, lng: 98.99, speed: 25, timestamp: now },
+    };
+
+    const { getByTestId, getByText } = render(
+      <ShuttleMap
+        vehicles={vehicles}
+        lastSeenMap={{ 'BUS-01': now, 'BUS-02': now }}
+        now={now}
+        selectedVehicleId={null}
+      />
+    );
+
+    const recenterBtn = getByTestId('map-recenter-button');
+    expect(getByText('จัดมุมมองรถทั้งหมด (2 คัน)')).toBeInTheDocument();
+
+    recenterBtn.click();
+    expect(fitBoundsSpy).toHaveBeenCalled();
+    fitBoundsSpy.mockRestore();
+  });
 });

@@ -3,7 +3,7 @@ import { MapContainer, TileLayer, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import { LocateFixed } from 'lucide-react';
 import { FleetMap, TelemetryPayload } from '../types/telemetry';
-import { computeVehicleStatus } from '../services/fleetStatus';
+import { computeVehicleStatus, OFFLINE_THRESHOLD_MS } from '../services/fleetStatus';
 import { isJumpTooLarge } from '../services/markerInterpolation';
 import { AnimatedVehicleMarker } from './AnimatedVehicleMarker';
 import { MAP_PROVIDERS } from '../services/mapProviders';
@@ -243,11 +243,32 @@ export function createVehicleIcon(
 
 export const MapRecenterButton: React.FC<{
   vehicles: FleetMap;
+  lastSeenMap?: Record<string, number>;
+  now?: number;
   selectedVehicleId: string | null;
   defaultCenter: [number, number];
   isFullscreen?: boolean;
-}> = ({ vehicles, selectedVehicleId, defaultCenter, isFullscreen }) => {
+}> = ({ vehicles, lastSeenMap, now, selectedVehicleId, defaultCenter, isFullscreen }) => {
   const map = useMap();
+  const vehicleList = Object.values(vehicles);
+  const currentTime = now ?? Date.now();
+
+  // 1. Filter only vehicles with valid numeric GPS coordinates (guard against 0,0 or NaN)
+  const validVehicles = vehicleList.filter(
+    (v) =>
+      typeof v.lat === 'number' &&
+      typeof v.lng === 'number' &&
+      !isNaN(v.lat) &&
+      !isNaN(v.lng) &&
+      (Math.abs(v.lat) > 0.001 || Math.abs(v.lng) > 0.001)
+  );
+
+  // 2. Identify active online vehicles
+  const onlineVehicles = validVehicles.filter((v) => {
+    const lastSeen = lastSeenMap?.[v.vehicle_id] ?? v.timestamp ?? 0;
+    return lastSeen > 0 && currentTime - lastSeen < OFFLINE_THRESHOLD_MS;
+  });
+
   const isFocusingVehicle = Boolean(selectedVehicleId && vehicles[selectedVehicleId]);
 
   const handleRecenter = (e: React.MouseEvent) => {
@@ -255,36 +276,66 @@ export const MapRecenterButton: React.FC<{
     e.preventDefault();
 
     if (selectedVehicleId && vehicles[selectedVehicleId]) {
+      // Single Vehicle Focus Mode: smoothly fly directly to the vehicle's live coordinates
       const target = vehicles[selectedVehicleId];
-      const currentZoom = map.getZoom();
-      const targetZoom = Math.max(currentZoom, 15);
-      map.flyTo([target.lat, target.lng], targetZoom, { duration: 0.8 });
+      if (
+        typeof target.lat === 'number' &&
+        typeof target.lng === 'number' &&
+        !isNaN(target.lat) &&
+        !isNaN(target.lng)
+      ) {
+        const currentZoom = map.getZoom();
+        const targetZoom = Math.max(currentZoom, 15);
+        map.flyTo([target.lat, target.lng], targetZoom, { duration: 0.8 });
+      }
     } else {
-      const vehicleList = Object.values(vehicles);
-      if (vehicleList.length > 1) {
-        const bounds = L.latLngBounds(vehicleList.map((v) => [v.lat, v.lng]));
-        map.fitBounds(bounds, { padding: [60, 60], maxZoom: 16, animate: true });
-      } else if (vehicleList.length === 1) {
-        map.flyTo([vehicleList[0].lat, vehicleList[0].lng], 15, { duration: 0.8 });
+      // Overview Mode: calculate bounding box to fit all active fleet vehicles on screen
+      const targetFleet = onlineVehicles.length > 0 ? onlineVehicles : validVehicles;
+
+      if (targetFleet.length > 1) {
+        const bounds = L.latLngBounds(targetFleet.map((v) => [v.lat, v.lng]));
+        if (bounds.isValid()) {
+          const sw = bounds.getSouthWest();
+          const ne = bounds.getNorthEast();
+          // If all vehicles are clustered at the exact same location (e.g. terminal / garage)
+          if (Math.abs(sw.lat - ne.lat) < 0.0001 && Math.abs(sw.lng - ne.lng) < 0.0001) {
+            map.flyTo([sw.lat, sw.lng], 15, { duration: 0.8 });
+          } else {
+            map.fitBounds(bounds, { padding: [60, 60], maxZoom: 16, animate: true });
+          }
+        }
+      } else if (targetFleet.length === 1) {
+        map.flyTo([targetFleet[0].lat, targetFleet[0].lng], 15, { duration: 0.8 });
       } else {
         map.flyTo(defaultCenter, 14, { duration: 0.8 });
       }
     }
   };
 
-  const labelText = isFocusingVehicle ? 'กลับสู่ตำแหน่งรถ' : 'รีเซ็ตมุมมอง';
-  const titleText = isFocusingVehicle
-    ? `กลับสู่ตำแหน่งของ ${selectedVehicleId}`
-    : 'รีเซ็ตมุมมองแผนที่ให้ครอบคลุมรถทั้งหมด';
+  const labelText = isFocusingVehicle
+    ? 'กลับสู่ตำแหน่งรถ'
+    : onlineVehicles.length > 1
+      ? `จัดมุมมองรถทั้งหมด (${onlineVehicles.length} คัน)`
+      : validVehicles.length > 1
+        ? `จัดมุมมองรถทั้งหมด (${validVehicles.length} คัน)`
+        : 'รีเซ็ตมุมมอง';
 
+  const titleText = isFocusingVehicle
+    ? `เลื่อนแผนที่กลับไปที่ตำแหน่งของ ${selectedVehicleId}`
+    : `จัดมุมมองแผนที่ให้เห็นรถที่ให้บริการทั้งหมด (${onlineVehicles.length || validVehicles.length} คัน)`;
+
+  // Avoid overlap with TelemetryHUD:
+  // When in fullscreen mode and focusing a vehicle, TelemetryHUD is rendered at the bottom (height ~140-160px on mobile).
+  // Position the button safely above TelemetryHUD (bottom-[180px] on mobile, sm:bottom-32 on desktop).
+  // When in overview mode or non-fullscreen mode, TelemetryHUD is not present at the bottom, so position at bottom-4 / sm:bottom-6.
   const positionClass =
     isFullscreen && isFocusingVehicle
-      ? 'bottom-24 right-3 sm:bottom-28 sm:right-4'
+      ? 'bottom-[180px] right-3 sm:bottom-32 sm:right-6'
       : 'bottom-4 right-3 sm:bottom-6 sm:right-4';
 
   return (
     <div
-      className={`absolute ${positionClass} z-[999] pointer-events-auto`}
+      className={`absolute ${positionClass} z-[1001] pointer-events-auto transition-all duration-200`}
       onMouseDown={(e) => e.stopPropagation()}
       onTouchStart={(e) => e.stopPropagation()}
       onDoubleClick={(e) => e.stopPropagation()}
@@ -295,7 +346,7 @@ export const MapRecenterButton: React.FC<{
         title={titleText}
         aria-label={titleText}
         data-testid="map-recenter-button"
-        className="flex items-center gap-2 px-3.5 py-2.5 sm:px-4 sm:py-2.5 rounded-2xl bg-white/95 dark:bg-slate-900/95 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-100 border border-slate-200/90 dark:border-slate-700/80 shadow-xl backdrop-blur-md text-xs sm:text-sm font-semibold transition-all hover:scale-105 active:scale-95 cursor-pointer group min-h-[42px]"
+        className="flex items-center gap-2 px-3.5 py-2.5 sm:px-4 sm:py-2.5 rounded-2xl bg-white/95 dark:bg-slate-900/95 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-100 border border-slate-200/90 dark:border-slate-700/80 shadow-2xl backdrop-blur-md text-xs sm:text-sm font-semibold transition-all hover:scale-105 active:scale-95 cursor-pointer group min-h-[42px]"
       >
         <LocateFixed className="w-4 h-4 text-emerald-600 dark:text-emerald-400 group-hover:rotate-45 transition-transform shrink-0" />
         <span className="font-sans leading-none">{labelText}</span>
@@ -363,6 +414,8 @@ export const ShuttleMap: React.FC<ShuttleMapProps> = ({
         {/* Floating Re-center / Focus map button */}
         <MapRecenterButton
           vehicles={effectiveVehicles}
+          lastSeenMap={lastSeenMap}
+          now={now}
           selectedVehicleId={selectedVehicleId}
           defaultCenter={defaultCenter}
           isFullscreen={isFullscreen}
