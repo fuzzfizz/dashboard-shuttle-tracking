@@ -38,6 +38,11 @@ function OperationalDashboard() {
     });
   }, []);
 
+  const telemetryVehicleIds = useMemo(
+    () => Object.keys(vehicles).sort().join(','),
+    [vehicles]
+  );
+
   const vehicleList = useMemo(() => {
     const listMap = new Map<string, string>();
     // 1. Populate real vehicles queried from database
@@ -53,7 +58,7 @@ function OperationalDashboard() {
       listMap.set(selectedVehicleId, selectedVehicleId);
     }
     return Array.from(listMap.entries()).map(([id, name]) => ({ id, name }));
-  }, [dbVehicles, vehicles, selectedVehicleId]);
+  }, [dbVehicles, telemetryVehicleIds, selectedVehicleId]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -309,8 +314,9 @@ function OperationalDashboard() {
       ) : (
         <main className="flex-1 w-full overflow-hidden">
           <HistoricalTripReplay
-            initialVehicleId={selectedVehicleId || vehicleList[0]?.id || ''}
+            initialVehicleId={selectedVehicleId || undefined}
             vehicleList={vehicleList}
+            onVehicleChange={setSelectedVehicleId}
           />
         </main>
       )}

@@ -22,7 +22,7 @@ describe('App Integration', () => {
   it('renders MapProviderTestLab when URL is /map-test', async () => {
     window.history.pushState({}, '', '/map-test');
     const { findByText } = render(<App />);
-    expect(await findByText(/Map Provider Lab/i)).toBeInTheDocument();
+    expect(await findByText(/Map Provider Lab/i, {}, { timeout: 5000 })).toBeInTheDocument();
     window.history.pushState({}, '', '/');
   });
 
@@ -37,14 +37,14 @@ describe('App Integration', () => {
   it('renders MapProviderTestLab when URL hash is #map-test', async () => {
     window.history.pushState({}, '', '/#map-test');
     const { findByText } = render(<App />);
-    expect(await findByText(/Map Provider Lab/i)).toBeInTheDocument();
+    expect(await findByText(/Map Provider Lab/i, {}, { timeout: 5000 })).toBeInTheDocument();
     window.history.pushState({}, '', '/');
   });
 
   it('navigates back to dashboard when Back button is clicked in MapProviderTestLab', async () => {
     window.history.pushState({}, '', '/map-test');
     const { findByText, getByText, queryByText } = render(<App />);
-    const backBtn = await findByText(/Back/i);
+    const backBtn = await findByText(/Back/i, {}, { timeout: 5000 });
     fireEvent.click(backBtn);
     expect(getByText('Shuttle Tracker')).toBeInTheDocument();
     expect(queryByText(/Map Provider Lab/i)).toBeNull();

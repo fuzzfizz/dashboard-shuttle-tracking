@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { ReplayToolbar } from './ReplayToolbar';
 import { ReplayMap } from './ReplayMap';
 import { ReplayPlayerBar } from './ReplayPlayerBar';
@@ -11,11 +11,13 @@ import { fetchHistoricalVehicles } from '../services/historicalTelemetryService'
 export interface HistoricalTripReplayProps {
   initialVehicleId?: string;
   vehicleList?: Array<{ id: string; name: string }>;
+  onVehicleChange?: (vehicleId: string) => void;
 }
 
 export const HistoricalTripReplay: React.FC<HistoricalTripReplayProps> = ({
   initialVehicleId,
   vehicleList: propVehicleList,
+  onVehicleChange,
 }) => {
   const [fetchedVehicles, setFetchedVehicles] = useState<Array<{ id: string; name: string }>>([]);
 
@@ -40,15 +42,30 @@ export const HistoricalTripReplay: React.FC<HistoricalTripReplayProps> = ({
   const [selectedVehicleId, setSelectedVehicleId] = useState<string>(
     initialVehicleId || vehicleList[0]?.id || ''
   );
+  const lastInitialVehicleIdRef = useRef<string | undefined>(initialVehicleId);
 
-  // Sync selectedVehicleId when vehicle list or initialVehicleId updates
+  // Adopt new initialVehicleId only when the prop explicitly changes to a different vehicle
   useEffect(() => {
-    if (initialVehicleId) {
+    if (initialVehicleId && initialVehicleId !== lastInitialVehicleIdRef.current) {
+      lastInitialVehicleIdRef.current = initialVehicleId;
       setSelectedVehicleId(initialVehicleId);
-    } else if (vehicleList.length > 0 && (!selectedVehicleId || !vehicleList.some((v) => v.id === selectedVehicleId))) {
-      setSelectedVehicleId(vehicleList[0].id);
     }
-  }, [vehicleList, initialVehicleId]);
+  }, [initialVehicleId]);
+
+  // If no vehicle was selected initially (e.g. list was loading), initialize with the first vehicle
+  useEffect(() => {
+    if (!selectedVehicleId && vehicleList.length > 0) {
+      const fallback = initialVehicleId || vehicleList[0].id;
+      setSelectedVehicleId(fallback);
+      lastInitialVehicleIdRef.current = fallback;
+    }
+  }, [vehicleList, selectedVehicleId, initialVehicleId]);
+
+  const handleVehicleChange = (id: string) => {
+    setSelectedVehicleId(id);
+    lastInitialVehicleIdRef.current = id;
+    onVehicleChange?.(id);
+  };
 
   const { points, summary, isLoading, refetch } = useHistoricalTrip(
     selectedVehicleId,
@@ -97,7 +114,7 @@ export const HistoricalTripReplay: React.FC<HistoricalTripReplayProps> = ({
         selectedDate={selectedDate}
         onDateChange={setSelectedDate}
         selectedVehicleId={selectedVehicleId}
-        onVehicleChange={setSelectedVehicleId}
+        onVehicleChange={handleVehicleChange}
         vehicleList={effectiveVehicleList}
         summary={summary}
         isLoading={isLoading}

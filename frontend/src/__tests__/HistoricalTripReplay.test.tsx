@@ -63,6 +63,62 @@ describe('HistoricalTripReplay', () => {
     expect(useHistoricalTripSpy).toHaveBeenCalledWith('shuttle-02', expect.any(String));
   });
 
+  it('does not bounce back or overwrite user-selected vehicle when vehicleList updates with new reference while telemetry is running', () => {
+    const useHistoricalTripSpy = vi.spyOn(tripHook, 'useHistoricalTrip');
+
+    const initialList = [
+      { id: 'shuttle-cm-01', name: 'Shuttle 1' },
+      { id: 'shuttle-cm-02', name: 'Shuttle 2' },
+    ];
+
+    const { rerender } = render(
+      <HistoricalTripReplay
+        initialVehicleId="shuttle-cm-01"
+        vehicleList={initialList}
+      />
+    );
+
+    const vehicleSelect = screen.getByLabelText(/select vehicle/i) as HTMLSelectElement;
+    expect(vehicleSelect.value).toBe('shuttle-cm-01');
+
+    // User chooses shuttle-cm-02 in the dropdown
+    fireEvent.change(vehicleSelect, { target: { value: 'shuttle-cm-02' } });
+
+    expect(useHistoricalTripSpy).toHaveBeenLastCalledWith('shuttle-cm-02', expect.any(String));
+    expect(vehicleSelect.value).toBe('shuttle-cm-02');
+
+    // Telemetry packet arrives: vehicleList prop re-renders with a new array reference
+    rerender(
+      <HistoricalTripReplay
+        initialVehicleId="shuttle-cm-01"
+        vehicleList={[...initialList]}
+      />
+    );
+
+    // MUST NOT bounce back to shuttle-cm-01!
+    expect(useHistoricalTripSpy).toHaveBeenLastCalledWith('shuttle-cm-02', expect.any(String));
+    expect(vehicleSelect.value).toBe('shuttle-cm-02');
+  });
+
+  it('notifies onVehicleChange callback when user changes vehicle in HistoricalTripReplay', () => {
+    const handleVehicleChange = vi.fn();
+    render(
+      <HistoricalTripReplay
+        initialVehicleId="shuttle-cm-01"
+        vehicleList={[
+          { id: 'shuttle-cm-01', name: 'Shuttle 1' },
+          { id: 'shuttle-cm-02', name: 'Shuttle 2' },
+        ]}
+        onVehicleChange={handleVehicleChange}
+      />
+    );
+
+    const vehicleSelect = screen.getByLabelText(/select vehicle/i);
+    fireEvent.change(vehicleSelect, { target: { value: 'shuttle-cm-02' } });
+
+    expect(handleVehicleChange).toHaveBeenCalledWith('shuttle-cm-02');
+  });
+
   it('updates date when date picker is changed', () => {
     const useHistoricalTripSpy = vi.spyOn(tripHook, 'useHistoricalTrip');
 
