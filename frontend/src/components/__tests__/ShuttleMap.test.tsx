@@ -201,4 +201,41 @@ describe('ShuttleMap', () => {
     );
     expect(getByText(/No GPS coordinates recorded for UNKNOWN-01/i)).toBeInTheDocument();
   });
+
+  it('renders MapRecenterButton and recenters map to focused vehicle on click', () => {
+    const flyToSpy = vi.spyOn(L.Map.prototype, 'flyTo').mockImplementation(() => ({} as any));
+    const vehicles: FleetMap = {
+      'BUS-01': {
+        vehicle_id: 'BUS-01',
+        lat: 18.7900,
+        lng: 98.9800,
+        speed: 20,
+        heading: 0,
+        timestamp: Date.now(),
+      },
+    };
+
+    const { getByTestId, getByText } = render(
+      <ShuttleMap vehicles={vehicles} selectedVehicleId="BUS-01" />
+    );
+
+    const recenterBtn = getByTestId('map-recenter-button');
+    expect(recenterBtn).toBeInTheDocument();
+    expect(getByText('กลับสู่ตำแหน่งรถ')).toBeInTheDocument();
+
+    recenterBtn.click();
+    expect(flyToSpy).toHaveBeenCalledWith([18.7900, 98.9800], expect.any(Number), { duration: 0.8 });
+
+    flyToSpy.mockRestore();
+  });
+
+  it('renders MapRecenterButton with overview label when no vehicle is selected', () => {
+    const { getByTestId, getByText } = render(
+      <ShuttleMap vehicles={{}} selectedVehicleId={null} />
+    );
+
+    const recenterBtn = getByTestId('map-recenter-button');
+    expect(recenterBtn).toBeInTheDocument();
+    expect(getByText('รีเซ็ตมุมมอง')).toBeInTheDocument();
+  });
 });

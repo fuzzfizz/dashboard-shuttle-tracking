@@ -217,13 +217,13 @@ function OperationalDashboard() {
                 <>
                   {/* Floating Top Controls */}
                   <div className="absolute top-2 left-2 right-2 sm:top-4 sm:left-4 sm:right-4 z-[1000] flex items-center justify-between pointer-events-none gap-2">
-                    <div className="flex items-center gap-2 sm:gap-2.5 bg-white/95 dark:bg-slate-900/90 backdrop-blur-md border border-slate-200 dark:border-slate-800 px-2.5 py-1.5 sm:px-3.5 sm:py-2 rounded-xl shadow-md dark:shadow-lg pointer-events-auto shrink-0">
+                    <div className="flex items-center gap-2 sm:gap-2.5 bg-white/95 dark:bg-slate-900/90 backdrop-blur-md border border-slate-200 dark:border-slate-800 px-3 py-2 sm:px-4 sm:py-2.5 rounded-2xl shadow-md dark:shadow-lg pointer-events-auto shrink-0">
                       <div className="p-1 sm:p-1.5 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 rounded-lg">
                         <Bus className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                       </div>
                       <div>
-                        <h1 className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-white">Shuttle Tracker</h1>
-                        <p className="text-[9px] sm:text-[10px] text-slate-500 dark:text-slate-400 font-mono">
+                        <h1 className="text-xs sm:text-sm font-bold uppercase tracking-wider text-slate-900 dark:text-white leading-tight">Shuttle Tracker</h1>
+                        <p className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 font-sans leading-tight">
                           {selectedVehicleId ? `กำลังติดตาม ${selectedVehicleId}` : `ออนไลน์ ${fleetStats.onlineVehicles} / ${fleetStats.totalVehicles} คัน`}
                         </p>
                       </div>
@@ -233,7 +233,7 @@ function OperationalDashboard() {
                       {selectedVehicleId && (
                         <button
                           onClick={() => setSelectedVehicleId(null)}
-                          className="flex items-center gap-1 px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-xl bg-white/95 hover:bg-slate-100 dark:bg-slate-900/90 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-800 shadow-md dark:shadow-xl backdrop-blur-md text-[11px] sm:text-xs font-medium transition-colors min-h-[36px]"
+                          className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/95 hover:bg-slate-100 dark:bg-slate-900/90 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-800 shadow-md dark:shadow-xl backdrop-blur-md text-xs sm:text-sm font-medium transition-colors min-h-[38px]"
                           title="ดูรถทั้งหมด"
                         >
                           <span>ดูรถทั้งหมด</span>

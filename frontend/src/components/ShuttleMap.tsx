@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { MapContainer, TileLayer, useMap } from 'react-leaflet';
 import L from 'leaflet';
+import { LocateFixed } from 'lucide-react';
 import { FleetMap, TelemetryPayload } from '../types/telemetry';
 import { computeVehicleStatus } from '../services/fleetStatus';
 import { isJumpTooLarge } from '../services/markerInterpolation';
@@ -240,6 +241,69 @@ export function createVehicleIcon(
   });
 }
 
+export const MapRecenterButton: React.FC<{
+  vehicles: FleetMap;
+  selectedVehicleId: string | null;
+  defaultCenter: [number, number];
+  isFullscreen?: boolean;
+}> = ({ vehicles, selectedVehicleId, defaultCenter, isFullscreen }) => {
+  const map = useMap();
+  const isFocusingVehicle = Boolean(selectedVehicleId && vehicles[selectedVehicleId]);
+
+  const handleRecenter = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+
+    if (selectedVehicleId && vehicles[selectedVehicleId]) {
+      const target = vehicles[selectedVehicleId];
+      const currentZoom = map.getZoom();
+      const targetZoom = Math.max(currentZoom, 15);
+      map.flyTo([target.lat, target.lng], targetZoom, { duration: 0.8 });
+    } else {
+      const vehicleList = Object.values(vehicles);
+      if (vehicleList.length > 1) {
+        const bounds = L.latLngBounds(vehicleList.map((v) => [v.lat, v.lng]));
+        map.fitBounds(bounds, { padding: [60, 60], maxZoom: 16, animate: true });
+      } else if (vehicleList.length === 1) {
+        map.flyTo([vehicleList[0].lat, vehicleList[0].lng], 15, { duration: 0.8 });
+      } else {
+        map.flyTo(defaultCenter, 14, { duration: 0.8 });
+      }
+    }
+  };
+
+  const labelText = isFocusingVehicle ? 'กลับสู่ตำแหน่งรถ' : 'รีเซ็ตมุมมอง';
+  const titleText = isFocusingVehicle
+    ? `กลับสู่ตำแหน่งของ ${selectedVehicleId}`
+    : 'รีเซ็ตมุมมองแผนที่ให้ครอบคลุมรถทั้งหมด';
+
+  const positionClass =
+    isFullscreen && isFocusingVehicle
+      ? 'bottom-24 right-3 sm:bottom-28 sm:right-4'
+      : 'bottom-4 right-3 sm:bottom-6 sm:right-4';
+
+  return (
+    <div
+      className={`absolute ${positionClass} z-[999] pointer-events-auto`}
+      onMouseDown={(e) => e.stopPropagation()}
+      onTouchStart={(e) => e.stopPropagation()}
+      onDoubleClick={(e) => e.stopPropagation()}
+    >
+      <button
+        onClick={handleRecenter}
+        type="button"
+        title={titleText}
+        aria-label={titleText}
+        data-testid="map-recenter-button"
+        className="flex items-center gap-2 px-3.5 py-2.5 sm:px-4 sm:py-2.5 rounded-2xl bg-white/95 dark:bg-slate-900/95 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-100 border border-slate-200/90 dark:border-slate-700/80 shadow-xl backdrop-blur-md text-xs sm:text-sm font-semibold transition-all hover:scale-105 active:scale-95 cursor-pointer group min-h-[42px]"
+      >
+        <LocateFixed className="w-4 h-4 text-emerald-600 dark:text-emerald-400 group-hover:rotate-45 transition-transform shrink-0" />
+        <span className="font-sans leading-none">{labelText}</span>
+      </button>
+    </div>
+  );
+};
+
 export const ShuttleMap: React.FC<ShuttleMapProps> = ({
   vehicles = {},
   lastSeenMap,
@@ -295,6 +359,14 @@ export const ShuttleMap: React.FC<ShuttleMapProps> = ({
 
         {/* Leaflet resize invalidation handler */}
         <MapResizeHandler isFullscreen={isFullscreen} />
+
+        {/* Floating Re-center / Focus map button */}
+        <MapRecenterButton
+          vehicles={effectiveVehicles}
+          selectedVehicleId={selectedVehicleId}
+          defaultCenter={defaultCenter}
+          isFullscreen={isFullscreen}
+        />
 
         {/* Render animated vehicle markers with 60 FPS gliding */}
         {vehicleList.map((v) => {

@@ -23,7 +23,8 @@ describe('TelemetryHUD', () => {
     expect(screen.getByText('shuttle-01')).toBeInTheDocument();
     expect(screen.getByText('32.4')).toBeInTheDocument();
     expect(screen.getByText(/km\/h/i)).toBeInTheDocument();
-    expect(screen.getByText('90°')).toBeInTheDocument();
+    // Heading is removed for passenger clarity
+    expect(screen.queryByText('90°')).toBeNull();
     expect(screen.queryByText('Signal Lost')).toBeNull();
   });
 
@@ -72,7 +73,7 @@ describe('TelemetryHUD', () => {
     );
     expect(screen.getByText('Overview (2 online)')).toBeInTheDocument();
     expect(screen.getByText(/Broker: connected/i)).toBeInTheDocument();
-    expect(screen.getAllByText('--')).toHaveLength(2);
+    expect(screen.getAllByText('--')).toHaveLength(1);
   });
 
   it('renders overview mode with calculated fleetStats and latest heartbeat', () => {
@@ -119,6 +120,30 @@ describe('TelemetryHUD', () => {
 
     expect(screen.getByText('shuttle-09')).toBeInTheDocument();
     expect(screen.getByText('Signal Lost')).toBeInTheDocument();
+  });
+
+  it('renders -- for speed when vehicle is offline instead of showing stale speed', () => {
+    const telemetry = {
+      vehicle_id: 'shuttle-offline-01',
+      lat: 13.7563,
+      lng: 100.5018,
+      speed: 45.8,
+      heading: 0,
+      timestamp: Date.now() - 30000,
+    };
+
+    render(
+      <TelemetryHUD
+        telemetry={telemetry}
+        status="connected"
+        lastSeen={Date.now() - 30000}
+        isOnline={false}
+      />
+    );
+
+    // Must NOT display old stale 45.8 km/h speed
+    expect(screen.queryByText('45.8')).toBeNull();
+    expect(screen.getByText('--')).toBeInTheDocument();
   });
 
   it('applies custom className when provided', () => {

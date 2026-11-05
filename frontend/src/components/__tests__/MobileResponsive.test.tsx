@@ -88,7 +88,8 @@ describe('Mobile Responsive Ergonomics & Clarity', () => {
     expect(screen.getByText('BUS-01')).toBeInTheDocument();
     expect(screen.getByText('36.5')).toBeInTheDocument();
     expect(screen.getByText('26.40')).toBeInTheDocument();
-    expect(screen.getByText('120°')).toBeInTheDocument();
+    // Heading is deliberately removed for passenger simplicity and clean typography
+    expect(screen.queryByText('120°')).toBeNull();
 
     // Verify close buttons on mobile
     const closeButtons = screen.getAllByRole('button', {
