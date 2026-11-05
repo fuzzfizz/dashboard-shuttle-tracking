@@ -125,17 +125,17 @@ export const DailyDistanceTable: React.FC<DailyDistanceTableProps> = ({
   const getStatusFilterLabel = (filter: StatusFilter) => {
     switch (filter) {
       case 'all':
-        return `สถานะ: ทั้งหมด (${allVehicleIds.length})`;
+        return `ทั้งหมด (${allVehicleIds.length})`;
       case 'online':
-        return `สถานะ: ออนไลน์ (${onlineCount})`;
+        return `ออนไลน์ (${onlineCount})`;
       case 'offline':
-        return `สถานะ: ขาดสัญญาณ (${offlineCount})`;
+        return `ขาดสัญญาณ (${offlineCount})`;
     }
   };
 
   const containerClasses =
     className ??
-    'bg-white border border-slate-200 text-slate-800 shadow-xl dark:bg-slate-900 dark:border-slate-800 dark:text-slate-100 rounded-2xl p-3.5 sm:p-5 flex flex-col gap-3.5 sm:gap-4 transition-colors';
+    'bg-white border border-slate-200 text-slate-800 shadow-xl dark:bg-slate-900 dark:border-slate-800 dark:text-slate-100 rounded-2xl p-3.5 sm:p-5 flex flex-col gap-3.5 sm:gap-4 transition-colors max-w-full';
 
   return (
     <div className={containerClasses}>
@@ -162,7 +162,7 @@ export const DailyDistanceTable: React.FC<DailyDistanceTableProps> = ({
       {/* Modern & Intuitive Filter Toolbar */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5 p-2.5 sm:p-3 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-200 dark:border-slate-800">
         {/* Search Input */}
-        <div className="relative w-full sm:flex-1 sm:max-w-sm">
+        <div className="relative w-full sm:flex-1 sm:max-w-xs md:max-w-sm">
           <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
           <input
             type="text"
@@ -182,18 +182,18 @@ export const DailyDistanceTable: React.FC<DailyDistanceTableProps> = ({
           )}
         </div>
 
-        {/* Filter and Sort row */}
-        <div className="flex items-center gap-2 w-full sm:w-auto">
+        {/* Filter and Sort row with responsive grid preventing any mobile overflow */}
+        <div className="grid grid-cols-2 sm:flex sm:items-center gap-2 w-full sm:w-auto">
           {/* Combined Status Filter Dropdown */}
-          <div ref={statusMenuRef} className="relative flex-1 sm:flex-none">
+          <div ref={statusMenuRef} className="relative w-full sm:w-auto min-w-0">
             <button
               type="button"
               onClick={() => setIsStatusMenuOpen(!isStatusMenuOpen)}
               aria-label="Filter by status"
               aria-expanded={isStatusMenuOpen}
-              className="w-full sm:w-auto flex items-center justify-between sm:justify-start gap-2 px-3.5 py-2 rounded-lg bg-white hover:bg-slate-100 text-slate-700 hover:text-slate-900 border border-slate-200 dark:bg-slate-900 dark:hover:bg-slate-800 dark:text-slate-300 dark:hover:text-white dark:border-slate-700/80 text-xs sm:text-sm font-medium transition-all shadow-sm min-h-[44px] sm:min-h-0"
+              className="w-full sm:w-auto flex items-center justify-between gap-1.5 px-3 py-2 sm:py-1.5 rounded-lg bg-white hover:bg-slate-100 text-slate-700 hover:text-slate-900 border border-slate-200 dark:bg-slate-900 dark:hover:bg-slate-800 dark:text-slate-300 dark:hover:text-white dark:border-slate-700/80 text-xs sm:text-sm font-medium transition-all shadow-sm min-h-[44px] sm:min-h-0 min-w-0"
             >
-              <div className="flex items-center gap-1.5 truncate">
+              <div className="flex items-center gap-1.5 min-w-0 overflow-hidden">
                 <Filter className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                 {statusFilter === 'online' && <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />}
                 {statusFilter === 'offline' && <span className="w-2 h-2 rounded-full bg-rose-500 shrink-0" />}
@@ -203,7 +203,7 @@ export const DailyDistanceTable: React.FC<DailyDistanceTableProps> = ({
             </button>
 
             {isStatusMenuOpen && (
-              <div className="absolute left-0 mt-1.5 w-full sm:w-56 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-xl py-1 z-[50]">
+              <div className="absolute left-0 mt-1.5 w-60 max-w-[calc(100vw-3rem)] bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-2xl py-1 z-[60]">
                 <button
                   type="button"
                   onClick={() => {
@@ -264,10 +264,10 @@ export const DailyDistanceTable: React.FC<DailyDistanceTableProps> = ({
             onClick={handleSortToggle}
             aria-label="Toggle sort"
             title={`Sort mode: ${sortMode}`}
-            className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 py-2 sm:py-1.5 rounded-lg bg-white hover:bg-slate-100 text-slate-700 hover:text-slate-900 border border-slate-200 dark:bg-slate-900 dark:hover:bg-slate-800 dark:text-slate-300 dark:hover:text-white dark:border-slate-700/80 text-xs font-medium transition-all shadow-sm min-h-[44px] sm:min-h-0"
+            className="w-full sm:w-auto flex items-center justify-center gap-1.5 px-3 py-2 sm:py-1.5 rounded-lg bg-white hover:bg-slate-100 text-slate-700 hover:text-slate-900 border border-slate-200 dark:bg-slate-900 dark:hover:bg-slate-800 dark:text-slate-300 dark:hover:text-white dark:border-slate-700/80 text-xs sm:text-sm font-medium transition-all shadow-sm min-h-[44px] sm:min-h-0 min-w-0"
           >
             <ArrowUpDown className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
-            <span className="truncate">เรียง: {getSortLabel(sortMode)}</span>
+            <span className="truncate">{getSortLabel(sortMode)}</span>
           </button>
         </div>
       </div>
