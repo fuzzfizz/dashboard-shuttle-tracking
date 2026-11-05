@@ -4,6 +4,7 @@ import { useDailyMetrics } from './hooks/useDailyMetrics';
 import { ShuttleMap, DEFAULT_CENTER } from './components/ShuttleMap';
 import { TelemetryHUD } from './components/TelemetryHUD';
 import { DailyDistanceTable } from './components/DailyDistanceTable';
+import { FleetDistanceAnalyticsCard } from './components/FleetDistanceAnalyticsCard';
 import { HistoricalTripReplay } from './components/HistoricalTripReplay';
 import { Bus, Maximize2, Minimize2, Sun, Moon } from 'lucide-react';
 import { calculateFleetStats, computeVehicleStatus } from './services/fleetStatus';
@@ -280,6 +281,16 @@ function OperationalDashboard() {
               )}
             </div>
           </div>
+
+          {/* Unified Fleet Distance Analytics Card (Option A) */}
+          {!isMapFullscreen && (
+            <FleetDistanceAnalyticsCard
+              dailyMetrics={dailyMetrics}
+              vehicles={vehicles}
+              lastSeenMap={lastSeenMap}
+              now={now}
+            />
+          )}
 
           {/* Full-Width Bottom Analytics Table */}
           {!isMapFullscreen && (

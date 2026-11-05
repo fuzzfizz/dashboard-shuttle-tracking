@@ -68,6 +68,13 @@ describe('App Integration', () => {
     expect(screen.getByText('Daily Distance Overview')).toBeInTheDocument();
   });
 
+  it('renders FleetDistanceAnalyticsCard between the live map and daily distance table in Layout Option A', () => {
+    render(<App />);
+    expect(screen.getByRole('region', { name: /Fleet Mileage Analytics Card/i })).toBeInTheDocument();
+    expect(screen.getByText('สถิติและกราฟวิเคราะห์การเดินรถ')).toBeInTheDocument();
+    expect(screen.getByText('เปรียบเทียบรายคัน')).toBeInTheDocument();
+  });
+
   it('does not render an analytics shortcut button in the header', () => {
     render(<App />);
     expect(screen.queryByRole('button', { name: /analytics/i })).toBeNull();
