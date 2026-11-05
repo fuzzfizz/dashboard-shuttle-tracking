@@ -1,6 +1,6 @@
 # Unified Fleet Distance Analytics Card Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Build and integrate a Unified Fleet Distance Analytics Card (`FleetDistanceAnalyticsCard.tsx`) between the Live Fleet Map and the Daily Distance Table, featuring 4 executive KPI counters and a 3-view switcher for By Vehicle, 7-Day Trend, and Hourly Activity charts.
 
@@ -31,7 +31,7 @@
   - `compute7DayTrendData(dailyMetrics: DailyMetricsMap, pastDailyRecords?: Array<{ date: string; total_distance_km: number }>): TrendDayPoint[]`
   - `computeHourlyActivityData(vehicles: FleetMap, dailyMetrics?: DailyMetricsMap): HourlyActivityPoint[]`
 
-- [ ] **Step 1: Write the failing test for analytics calculations**
+- [x] **Step 1: Write the failing test for analytics calculations**
 
 ```typescript
 // frontend/src/services/__tests__/analyticsCalculator.test.ts
@@ -117,12 +117,12 @@ describe('analyticsCalculator', () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `npm test --prefix frontend -- src/services/__tests__/analyticsCalculator.test.ts`
 Expected: FAIL (module not found)
 
-- [ ] **Step 3: Implement `frontend/src/services/analyticsCalculator.ts`**
+- [x] **Step 3: Implement `frontend/src/services/analyticsCalculator.ts`**
 
 ```typescript
 // frontend/src/services/analyticsCalculator.ts
@@ -314,12 +314,12 @@ export function computeHourlyActivityData(
 }
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `npm test --prefix frontend -- src/services/__tests__/analyticsCalculator.test.ts`
 Expected: PASS
 
-- [ ] **Step 5: Commit service**
+- [x] **Step 5: Commit service**
 
 Run: `git add frontend/src/services/analyticsCalculator.ts frontend/src/services/__tests__/analyticsCalculator.test.ts; git commit -m "feat(analytics): add pure analytics calculation service for fleet metrics"`
 
@@ -338,7 +338,7 @@ Run: `git add frontend/src/services/analyticsCalculator.ts frontend/src/services
 - `Trend7DayChartProps`: `{ points: TrendDayPoint[] }`
 - `HourlyActivityChartProps`: `{ hours: HourlyActivityPoint[] }`
 
-- [ ] **Step 1: Write tests for the 3 sub-chart components**
+- [x] **Step 1: Write tests for the 3 sub-chart components**
 
 ```typescript
 // frontend/src/components/charts/__tests__/FleetCharts.test.tsx
@@ -387,12 +387,12 @@ describe('Fleet Sub-Charts', () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `npm test --prefix frontend -- src/components/charts/__tests__/FleetCharts.test.tsx`
 Expected: FAIL (modules not found)
 
-- [ ] **Step 3: Implement `VehicleComparisonChart.tsx`**
+- [x] **Step 3: Implement `VehicleComparisonChart.tsx`**
 
 ```tsx
 // frontend/src/components/charts/VehicleComparisonChart.tsx
@@ -479,7 +479,7 @@ export const VehicleComparisonChart: React.FC<VehicleComparisonChartProps> = ({
 };
 ```
 
-- [ ] **Step 4: Implement `Trend7DayChart.tsx`**
+- [x] **Step 4: Implement `Trend7DayChart.tsx`**
 
 ```tsx
 // frontend/src/components/charts/Trend7DayChart.tsx
@@ -631,7 +631,7 @@ export const Trend7DayChart: React.FC<Trend7DayChartProps> = ({ points }) => {
 };
 ```
 
-- [ ] **Step 5: Implement `HourlyActivityChart.tsx`**
+- [x] **Step 5: Implement `HourlyActivityChart.tsx`**
 
 ```tsx
 // frontend/src/components/charts/HourlyActivityChart.tsx
@@ -711,12 +711,12 @@ export const HourlyActivityChart: React.FC<HourlyActivityChartProps> = ({ hours 
 };
 ```
 
-- [ ] **Step 6: Run tests to verify all 3 sub-charts pass**
+- [x] **Step 6: Run tests to verify all 3 sub-charts pass**
 
 Run: `npm test --prefix frontend -- src/components/charts/__tests__/FleetCharts.test.tsx`
 Expected: PASS
 
-- [ ] **Step 7: Commit sub-charts**
+- [x] **Step 7: Commit sub-charts**
 
 Run: `git add frontend/src/components/charts/; git commit -m "feat(charts): add pure SVG components for vehicle comparison, 7-day trend, and hourly activity"`
 
@@ -731,7 +731,7 @@ Run: `git add frontend/src/components/charts/; git commit -m "feat(charts): add 
 **Interfaces:**
 - Produces `FleetDistanceAnalyticsCard: React.FC<FleetDistanceAnalyticsCardProps>`
 
-- [ ] **Step 1: Write unit tests for `FleetDistanceAnalyticsCard`**
+- [x] **Step 1: Write unit tests for `FleetDistanceAnalyticsCard`**
 
 ```tsx
 // frontend/src/components/__tests__/FleetDistanceAnalyticsCard.test.tsx
@@ -825,12 +825,12 @@ describe('FleetDistanceAnalyticsCard', () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `npm test --prefix frontend -- src/components/__tests__/FleetDistanceAnalyticsCard.test.tsx`
 Expected: FAIL (module not found)
 
-- [ ] **Step 3: Implement `FleetDistanceAnalyticsCard.tsx`**
+- [x] **Step 3: Implement `FleetDistanceAnalyticsCard.tsx`**
 
 ```tsx
 // frontend/src/components/FleetDistanceAnalyticsCard.tsx
@@ -1071,12 +1071,12 @@ export const FleetDistanceAnalyticsCard: React.FC<FleetDistanceAnalyticsCardProp
 };
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `npm test --prefix frontend -- src/components/__tests__/FleetDistanceAnalyticsCard.test.tsx`
 Expected: PASS
 
-- [ ] **Step 5: Commit card component**
+- [x] **Step 5: Commit card component**
 
 Run: `git add frontend/src/components/FleetDistanceAnalyticsCard.tsx frontend/src/components/__tests__/FleetDistanceAnalyticsCard.test.tsx; git commit -m "feat(ui): implement Unified Fleet Distance Analytics Card with KPI row and view switcher"`
 
@@ -1091,7 +1091,7 @@ Run: `git add frontend/src/components/FleetDistanceAnalyticsCard.tsx frontend/sr
 **Interfaces:**
 - Imports `FleetDistanceAnalyticsCard` and renders between `ShuttleMap` container and `DailyDistanceTable`.
 
-- [ ] **Step 1: Write integration test in `App.test.tsx`**
+- [x] **Step 1: Write integration test in `App.test.tsx`**
 
 ```tsx
 // frontend/src/__tests__/App.test.tsx
@@ -1104,12 +1104,12 @@ it('renders FleetDistanceAnalyticsCard between the live map and daily distance t
 });
 ```
 
-- [ ] **Step 2: Run test to verify failure**
+- [x] **Step 2: Run test to verify failure**
 
 Run: `npm test --prefix frontend -- src/__tests__/App.test.tsx`
 Expected: FAIL (card not found)
 
-- [ ] **Step 3: Modify `App.tsx` to insert `FleetDistanceAnalyticsCard`**
+- [x] **Step 3: Modify `App.tsx` to insert `FleetDistanceAnalyticsCard`**
 
 ```tsx
 // In frontend/src/App.tsx:
@@ -1134,12 +1134,12 @@ import { FleetDistanceAnalyticsCard } from './components/FleetDistanceAnalyticsC
 )}
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `npm test --prefix frontend -- src/__tests__/App.test.tsx`
 Expected: PASS
 
-- [ ] **Step 5: Run full test suite and build verification**
+- [x] **Step 5: Run full test suite and build verification**
 
 Run: `npm test`
 Expected: 178+ tests PASS with 0 failures
@@ -1147,6 +1147,6 @@ Expected: 178+ tests PASS with 0 failures
 Run: `npm run build --prefix frontend`
 Expected: Built in ~8-10s with zero errors
 
-- [ ] **Step 6: Commit integration**
+- [x] **Step 6: Commit integration**
 
 Run: `git add frontend/src/App.tsx frontend/src/__tests__/App.test.tsx; git commit -m "feat(dashboard): integrate FleetDistanceAnalyticsCard between map and table (Option A)"`
