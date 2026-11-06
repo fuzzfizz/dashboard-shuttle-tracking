@@ -25,7 +25,7 @@ function OperationalDashboard() {
     now,
   } = useShuttleTelemetry();
 
-  const { dailyMetrics } = useDailyMetrics(vehicles);
+  const { dailyMetrics, past7DayRecords, hourlyDistanceMap } = useDailyMetrics(vehicles);
   const [isMapFullscreen, setIsMapFullscreen] = useState(false);
   const [activeTab, setActiveTab] = useState<'today' | 'history'>('today');
   const [dbVehicles, setDbVehicles] = useState<Array<{ id: string; name: string }>>([]);
@@ -293,6 +293,8 @@ function OperationalDashboard() {
               dailyMetrics={dailyMetrics}
               vehicles={vehicles}
               lastSeenMap={lastSeenMap}
+              past7DayRecords={past7DayRecords}
+              hourlyDistanceMap={hourlyDistanceMap}
               now={now}
             />
           )}

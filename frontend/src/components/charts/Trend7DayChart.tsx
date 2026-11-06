@@ -3,9 +3,15 @@ import { TrendDayPoint } from '../../services/analyticsCalculator';
 
 export interface Trend7DayChartProps {
   points: TrendDayPoint[];
+  selectedVehicleId?: string;
+  vehicleLabel?: string;
 }
 
-export const Trend7DayChart: React.FC<Trend7DayChartProps> = ({ points }) => {
+export const Trend7DayChart: React.FC<Trend7DayChartProps> = ({
+  points,
+  selectedVehicleId,
+  vehicleLabel,
+}) => {
   if (points.length === 0) {
     return (
       <div className="py-12 text-center text-slate-400 dark:text-slate-500 text-xs font-sans">
@@ -43,10 +49,15 @@ export const Trend7DayChart: React.FC<Trend7DayChartProps> = ({ points }) => {
     Z
   `;
 
+  const isVehicleSpecific = Boolean(selectedVehicleId && selectedVehicleId !== 'all');
+  const headerLabel = isVehicleSpecific
+    ? `ปริมาณระยะทางสะสมของ ${vehicleLabel || selectedVehicleId} (กม./วัน)`
+    : 'ปริมาณระยะทางสะสมของกองรถ (กม./วัน)';
+
   return (
     <div className="w-full overflow-hidden py-1">
       <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 px-1 mb-2 font-sans">
-        <span>ปริมาณระยะทางสะสมของกองรถ (กม./วัน)</span>
+        <span>{headerLabel}</span>
         <span className="font-mono text-emerald-600 dark:text-emerald-400 font-semibold">
           สูงสุด: {maxVal.toFixed(1)} km
         </span>

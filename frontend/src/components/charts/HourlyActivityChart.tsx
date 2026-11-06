@@ -3,9 +3,15 @@ import { HourlyActivityPoint } from '../../services/analyticsCalculator';
 
 export interface HourlyActivityChartProps {
   hours: HourlyActivityPoint[];
+  selectedVehicleId?: string;
+  vehicleLabel?: string;
 }
 
-export const HourlyActivityChart: React.FC<HourlyActivityChartProps> = ({ hours }) => {
+export const HourlyActivityChart: React.FC<HourlyActivityChartProps> = ({
+  hours,
+  selectedVehicleId,
+  vehicleLabel,
+}) => {
   if (hours.length === 0) {
     return (
       <div className="py-12 text-center text-slate-400 dark:text-slate-500 text-xs font-sans">
@@ -16,6 +22,11 @@ export const HourlyActivityChart: React.FC<HourlyActivityChartProps> = ({ hours 
 
   const maxDist = Math.max(...hours.map((h) => h.distanceKm), 1);
 
+  const isVehicleSpecific = Boolean(selectedVehicleId && selectedVehicleId !== 'all');
+  const subtitleLabel = isVehicleSpecific
+    ? `แสดงความหนาแน่นการวิ่งของ ${vehicleLabel || selectedVehicleId}`
+    : 'แสดงความหนาแน่นการวิ่งตลอดวัน';
+
   return (
     <div className="space-y-3 py-1">
       {/* Peak Info Header */}
@@ -25,7 +36,7 @@ export const HourlyActivityChart: React.FC<HourlyActivityChartProps> = ({ hours 
           <span>ช่วงเร่งด่วนเช้า (07:00–09:00) และเย็น (16:00–18:00)</span>
         </span>
         <span className="text-[11px] font-medium text-slate-400">
-          แสดงความหนาแน่นการวิ่งตลอดวัน
+          {subtitleLabel}
         </span>
       </div>
 

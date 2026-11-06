@@ -40,4 +40,31 @@ describe('Fleet Sub-Charts', () => {
     expect(screen.getByText('12:00')).toBeInTheDocument();
     expect(screen.getByText(/ช่วงเร่งด่วนเช้า/i)).toBeInTheDocument();
   });
+
+  it('renders charts with vehicle-specific labels and selection highlights', () => {
+    const items = [
+      { vehicleId: 'BUS-01', distanceKm: 40, percentageOfMax: 100, activeMinutes: 120 },
+      { vehicleId: 'BUS-02', distanceKm: 20, percentageOfMax: 50, activeMinutes: 60 },
+    ];
+    const { container: compContainer } = render(
+      <VehicleComparisonChart items={items} avgDistanceKm={30} selectedVehicleId="BUS-01" />
+    );
+    expect(compContainer.querySelector('[data-selected="true"]')).toHaveTextContent('BUS-01');
+
+    render(
+      <Trend7DayChart
+        points={[{ date: '2026-11-05', dayLabel: 'วันนี้', totalDistanceKm: 25, isToday: true }]}
+        selectedVehicleId="BUS-01"
+      />
+    );
+    expect(screen.getByText('ปริมาณระยะทางสะสมของ BUS-01 (กม./วัน)')).toBeInTheDocument();
+
+    render(
+      <HourlyActivityChart
+        hours={[{ hour: 8, hourLabel: '08:00', intensity: 0.8, distanceKm: 5, isPeak: true }]}
+        selectedVehicleId="BUS-01"
+      />
+    );
+    expect(screen.getByText('แสดงความหนาแน่นการวิ่งของ BUS-01')).toBeInTheDocument();
+  });
 });

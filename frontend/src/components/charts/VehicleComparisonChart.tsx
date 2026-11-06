@@ -5,11 +5,13 @@ import { VehicleComparisonItem } from '../../services/analyticsCalculator';
 export interface VehicleComparisonChartProps {
   items: VehicleComparisonItem[];
   avgDistanceKm: number;
+  selectedVehicleId?: string;
 }
 
 export const VehicleComparisonChart: React.FC<VehicleComparisonChartProps> = ({
   items,
   avgDistanceKm,
+  selectedVehicleId,
 }) => {
   if (items.length === 0) {
     return (
@@ -47,34 +49,60 @@ export const VehicleComparisonChart: React.FC<VehicleComparisonChartProps> = ({
           />
         )}
 
-        {items.map((item) => (
-          <div key={item.vehicleId} className="flex items-center gap-3 group">
-            {/* Vehicle Badge */}
-            <div className="w-20 shrink-0 flex items-center gap-1.5">
-              <Bus className="w-3.5 h-3.5 text-slate-400 group-hover:text-emerald-500 transition-colors" />
-              <span className="font-mono font-bold text-xs text-slate-700 dark:text-slate-200 truncate">
-                {item.vehicleId}
-              </span>
-            </div>
+        {items.map((item) => {
+          const isSelected = Boolean(
+            selectedVehicleId && selectedVehicleId !== 'all' && item.vehicleId === selectedVehicleId
+          );
 
-            {/* Bar Track */}
-            <div className="flex-1 bg-slate-100 dark:bg-slate-800 rounded-full h-4 overflow-hidden relative p-0.5">
-              <div
-                style={{ width: `${Math.max(item.percentageOfMax, 3)}%` }}
-                className={`h-full rounded-full transition-all duration-500 ${
-                  item.distanceKm >= avgDistanceKm
-                    ? 'bg-gradient-to-r from-emerald-500 to-teal-400 shadow-sm'
-                    : 'bg-gradient-to-r from-slate-400 to-slate-500 dark:from-slate-600 dark:to-slate-500'
-                }`}
-              />
-            </div>
+          return (
+            <div
+              key={item.vehicleId}
+              data-selected={isSelected ? 'true' : undefined}
+              className={`flex items-center gap-3 group p-1.5 -mx-1.5 rounded-lg transition-all ${
+                isSelected
+                  ? 'bg-emerald-50 dark:bg-emerald-950/40 ring-1 ring-emerald-500/50 shadow-sm'
+                  : 'hover:bg-slate-50 dark:hover:bg-slate-800/40'
+              }`}
+            >
+              {/* Vehicle Badge */}
+              <div className="w-20 shrink-0 flex items-center gap-1.5">
+                <Bus
+                  className={`w-3.5 h-3.5 transition-colors ${
+                    isSelected
+                      ? 'text-emerald-600 dark:text-emerald-400'
+                      : 'text-slate-400 group-hover:text-emerald-500'
+                  }`}
+                />
+                <span
+                  className={`font-mono font-bold text-xs truncate ${
+                    isSelected
+                      ? 'text-emerald-700 dark:text-emerald-300'
+                      : 'text-slate-700 dark:text-slate-200'
+                  }`}
+                >
+                  {item.vehicleId}
+                </span>
+              </div>
 
-            {/* Value Label */}
-            <div className="w-16 shrink-0 text-right font-mono font-bold text-xs text-slate-800 dark:text-slate-100">
-              {item.distanceKm.toFixed(1)} km
+              {/* Bar Track */}
+              <div className="flex-1 bg-slate-100 dark:bg-slate-800 rounded-full h-4 overflow-hidden relative p-0.5">
+                <div
+                  style={{ width: `${Math.max(item.percentageOfMax, 3)}%` }}
+                  className={`h-full rounded-full transition-all duration-500 ${
+                    item.distanceKm >= avgDistanceKm
+                      ? 'bg-gradient-to-r from-emerald-500 to-teal-400 shadow-sm'
+                      : 'bg-gradient-to-r from-slate-400 to-slate-500 dark:from-slate-600 dark:to-slate-500'
+                  }`}
+                />
+              </div>
+
+              {/* Value Label */}
+              <div className="w-16 shrink-0 text-right font-mono font-bold text-xs text-slate-800 dark:text-slate-100">
+                {item.distanceKm.toFixed(1)} km
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

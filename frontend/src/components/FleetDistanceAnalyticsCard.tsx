@@ -13,6 +13,7 @@ import {
   computeVehicleComparisonData,
   compute7DayTrendData,
   computeHourlyActivityData,
+  DailyRecordItem,
 } from '../services/analyticsCalculator';
 import { VehicleComparisonChart } from './charts/VehicleComparisonChart';
 import { Trend7DayChart } from './charts/Trend7DayChart';
@@ -24,6 +25,8 @@ export interface FleetDistanceAnalyticsCardProps {
   dailyMetrics: DailyMetricsMap;
   vehicles: FleetMap;
   lastSeenMap: Record<string, number>;
+  past7DayRecords?: DailyRecordItem[];
+  hourlyDistanceMap?: Record<string, Record<number, number>>;
   now?: number;
   className?: string;
   defaultTab?: AnalyticsTab;
@@ -32,12 +35,23 @@ export interface FleetDistanceAnalyticsCardProps {
 export const FleetDistanceAnalyticsCard: React.FC<FleetDistanceAnalyticsCardProps> = ({
   dailyMetrics,
   vehicles,
+  past7DayRecords,
+  hourlyDistanceMap,
   now,
   className,
   defaultTab = 'vehicles',
 }) => {
   const [activeTab, setActiveTab] = useState<AnalyticsTab>(defaultTab);
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [selectedVehicleId, setSelectedVehicleId] = useState<string>('all');
+
+  const uniqueVehicleIds = useMemo(() => {
+    const ids = new Set<string>();
+    Object.keys(vehicles).forEach((id) => ids.add(id));
+    Object.keys(dailyMetrics).forEach((id) => ids.add(id));
+    past7DayRecords?.forEach((r) => ids.add(r.vehicle_id));
+    return Array.from(ids).sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+  }, [vehicles, dailyMetrics, past7DayRecords]);
 
   const summary = useMemo(
     () => calculateFleetAnalyticsSummary(dailyMetrics, vehicles),
@@ -50,13 +64,24 @@ export const FleetDistanceAnalyticsCard: React.FC<FleetDistanceAnalyticsCardProp
   );
 
   const trend7DayPoints = useMemo(
-    () => compute7DayTrendData(dailyMetrics, [], now ? new Date(now) : undefined),
-    [dailyMetrics, now]
+    () =>
+      compute7DayTrendData(
+        dailyMetrics,
+        past7DayRecords ?? [],
+        now ? new Date(now) : undefined,
+        selectedVehicleId
+      ),
+    [dailyMetrics, past7DayRecords, now, selectedVehicleId]
   );
 
   const hourlyActivityPoints = useMemo(
-    () => computeHourlyActivityData(vehicles, dailyMetrics),
-    [vehicles, dailyMetrics]
+    () =>
+      computeHourlyActivityData(
+        hourlyDistanceMap ?? {},
+        selectedVehicleId,
+        dailyMetrics
+      ),
+    [hourlyDistanceMap, selectedVehicleId, dailyMetrics]
   );
 
   const containerClasses =
@@ -65,44 +90,68 @@ export const FleetDistanceAnalyticsCard: React.FC<FleetDistanceAnalyticsCardProp
 
   return (
     <section aria-label="Fleet Mileage Analytics Card" className={containerClasses}>
-      {/* Card Header with Collapse/Expand Toggle */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2.5">
-          <div className="p-2 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-xl">
+      {/* Card Header with Collapse/Expand Toggle & Vehicle Selector */}
+      <div className="flex flex-wrap sm:flex-nowrap items-center justify-between gap-3">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className="p-2 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-xl shrink-0">
             <BarChart3 className="w-4 h-4 sm:w-5 sm:h-5" />
           </div>
-          <div>
-            <h2 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+          <div className="min-w-0">
+            <h2 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white flex items-center gap-2 truncate">
               <span>กราฟวิเคราะห์การเดินรถ</span>
               <span className="text-xs font-normal text-slate-400 dark:text-slate-500 hidden sm:inline font-sans">
                 Fleet Distance Analytics
               </span>
             </h2>
-            <p className="text-xs text-slate-500 dark:text-slate-400 font-sans">
+            <p className="text-xs text-slate-500 dark:text-slate-400 font-sans truncate">
               เปรียบเทียบระยะทางรายคัน แนวโน้ม 7 วัน และความหนาแน่นรายชั่วโมง
             </p>
           </div>
         </div>
 
-        <button
-          type="button"
-          onClick={() => setIsCollapsed(!isCollapsed)}
-          aria-label={isCollapsed ? 'ขยายการ์ดกราฟ' : 'ย่อการ์ดกราฟ'}
-          title={isCollapsed ? 'ขยายการ์ดกราฟ' : 'ย่อการ์ดกราฟ'}
-          className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 transition-colors"
-        >
-          {isCollapsed ? (
-            <>
-              <span>ขยาย</span>
-              <ChevronDown className="w-3.5 h-3.5" />
-            </>
-          ) : (
-            <>
-              <span>ย่อ</span>
-              <ChevronUp className="w-3.5 h-3.5" />
-            </>
-          )}
-        </button>
+        <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+          {/* Vehicle Selector Dropdown */}
+          <div className="relative flex-1 sm:flex-initial">
+            <label htmlFor="vehicle-analytics-select" className="sr-only">
+              เลือกคันรถสำหรับดูกราฟ
+            </label>
+            <select
+              id="vehicle-analytics-select"
+              aria-label="เลือกคันรถสำหรับดูกราฟ"
+              value={selectedVehicleId}
+              onChange={(e) => setSelectedVehicleId(e.target.value)}
+              className="w-full sm:w-auto appearance-none bg-slate-100 hover:bg-slate-200/80 dark:bg-slate-800 dark:hover:bg-slate-700/80 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 text-xs font-medium rounded-lg pl-3 pr-8 py-2 sm:py-1.5 min-h-[42px] sm:min-h-0 cursor-pointer focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-colors"
+            >
+              <option value="all">🚐 ทุกคัน (รวมกองรถ)</option>
+              {uniqueVehicleIds.map((vId) => (
+                <option key={vId} value={vId}>
+                  🚌 {vId}
+                </option>
+              ))}
+            </select>
+            <ChevronDown className="w-3.5 h-3.5 text-slate-400 pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2" />
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setIsCollapsed(!isCollapsed)}
+            aria-label={isCollapsed ? 'ขยายการ์ดกราฟ' : 'ย่อการ์ดกราฟ'}
+            title={isCollapsed ? 'ขยายการ์ดกราฟ' : 'ย่อการ์ดกราฟ'}
+            className="flex items-center gap-1 px-2.5 py-2 sm:py-1.5 rounded-lg text-xs font-medium text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 transition-colors min-h-[42px] sm:min-h-0 shrink-0"
+          >
+            {isCollapsed ? (
+              <>
+                <span>ขยาย</span>
+                <ChevronDown className="w-3.5 h-3.5" />
+              </>
+            ) : (
+              <>
+                <span>ย่อ</span>
+                <ChevronUp className="w-3.5 h-3.5" />
+              </>
+            )}
+          </button>
+        </div>
       </div>
 
       {!isCollapsed && (
@@ -158,10 +207,21 @@ export const FleetDistanceAnalyticsCard: React.FC<FleetDistanceAnalyticsCardProp
               <VehicleComparisonChart
                 items={vehicleComparisonItems}
                 avgDistanceKm={summary.avgDistanceKm}
+                selectedVehicleId={selectedVehicleId}
               />
             )}
-            {activeTab === 'trend7d' && <Trend7DayChart points={trend7DayPoints} />}
-            {activeTab === 'hourly' && <HourlyActivityChart hours={hourlyActivityPoints} />}
+            {activeTab === 'trend7d' && (
+              <Trend7DayChart
+                points={trend7DayPoints}
+                selectedVehicleId={selectedVehicleId}
+              />
+            )}
+            {activeTab === 'hourly' && (
+              <HourlyActivityChart
+                hours={hourlyActivityPoints}
+                selectedVehicleId={selectedVehicleId}
+              />
+            )}
           </div>
         </>
       )}
