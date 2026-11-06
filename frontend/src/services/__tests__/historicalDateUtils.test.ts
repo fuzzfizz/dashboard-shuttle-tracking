@@ -4,6 +4,8 @@ import {
   getBangkokEndOfDayUtc,
   formatTimeHHmmss,
   formatDateDisplay,
+  getBangkokDate,
+  getBangkokHour,
 } from '../historicalDateUtils';
 
 describe('historicalDateUtils', () => {
@@ -33,4 +35,20 @@ describe('historicalDateUtils', () => {
   it('formats date string for readable display', () => {
     expect(formatDateDisplay('2026-10-28')).toBe('28/10/2026');
   });
+
+  it('formats date into Bangkok YYYY-MM-DD string with getBangkokDate', () => {
+    // UTC 2026-11-05 18:00:00 is Bangkok 2026-11-06 01:00:00 (+7)
+    const d = new Date('2026-11-05T18:00:00.000Z');
+    expect(getBangkokDate(d)).toBe('2026-11-06');
+  });
+
+  it('extracts Bangkok hour from ISO string or Date with getBangkokHour', () => {
+    // UTC 01:30:00 -> Bangkok 08:30:00 (hour 8)
+    expect(getBangkokHour('2026-10-28T01:30:00.000Z')).toBe(8);
+    // UTC 17:00:00 -> Bangkok 00:00:00 (hour 0)
+    expect(getBangkokHour(new Date('2026-10-28T17:00:00.000Z'))).toBe(0);
+    // Invalid date fallback
+    expect(getBangkokHour('invalid')).toBe(0);
+  });
 });
+

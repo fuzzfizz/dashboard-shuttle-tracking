@@ -1,7 +1,14 @@
 import { getSupabaseClient } from './supabaseClient';
 import { haversineDistance } from './distanceCalculator';
-import { getBangkokStartOfDayUtc, getBangkokEndOfDayUtc } from './historicalDateUtils';
+import {
+  getBangkokStartOfDayUtc,
+  getBangkokEndOfDayUtc,
+  getBangkokDate,
+  getBangkokHour,
+} from './historicalDateUtils';
 import { HistoricalPoint, HistoricalTripSummary } from '../types/historical';
+import { DailyRecordItem } from './analyticsCalculator';
+
 
 export async function fetchHistoricalTripData(
   vehicleId: string,
@@ -142,3 +149,117 @@ export async function fetchHistoricalVehicles(): Promise<Array<{ id: string; nam
     return [];
   }
 }
+
+export async function fetch7DayVehicleMetrics(
+  referenceDate: Date = new Date()
+): Promise<DailyRecordItem[]> {
+  const supabase = getSupabaseClient();
+  if (!supabase) return [];
+
+  try {
+    const todayDateStr = getBangkokDate(referenceDate);
+    const [year, month, day] = todayDateStr.split('-').map(Number);
+    const startDate = new Date(Date.UTC(year, month - 1, day));
+    startDate.setUTCDate(startDate.getUTCDate() - 6);
+    const startDateStr = startDate.toISOString().slice(0, 10);
+
+    const { data, error } = await supabase
+      .from('daily_vehicle_metrics')
+      .select('vehicle_id, date, total_distance_km')
+      .gte('date', startDateStr)
+      .lte('date', todayDateStr)
+      .order('date', { ascending: true });
+
+    if (error || !data) {
+      if (error) {
+        console.warn('Failed to fetch 7-day vehicle metrics from Supabase:', error);
+      }
+      return [];
+    }
+
+    return data.map((row: any) => ({
+      vehicle_id: String(row.vehicle_id || ''),
+      date: String(row.date),
+      total_distance_km: Number(row.total_distance_km) || 0,
+    }));
+  } catch (err) {
+    console.warn('Exception during fetch7DayVehicleMetrics:', err);
+    return [];
+  }
+}
+
+export async function fetchTodayHourlyDistanceMap(
+  dateStr: string
+): Promise<Record<string, Record<number, number>>> {
+  const supabase = getSupabaseClient();
+  if (!supabase || !dateStr) return {};
+
+  try {
+    const startUtc = getBangkokStartOfDayUtc(dateStr);
+    const endUtc = getBangkokEndOfDayUtc(dateStr);
+
+    let logsQuery = supabase
+      .from('telemetry_logs')
+      .select('vehicle_id, lat, lng, recorded_at')
+      .gte('recorded_at', startUtc)
+      .lte('recorded_at', endUtc)
+      .order('recorded_at', { ascending: true });
+
+    if (typeof (logsQuery as any).limit === 'function') {
+      logsQuery = (logsQuery as any).limit(25000);
+    }
+
+    const { data: logsData, error: logsError } = await logsQuery;
+
+    if (logsError || !logsData || logsData.length === 0) {
+      if (logsError) {
+        console.warn('Failed to fetch telemetry logs for hourly map:', logsError);
+      }
+      return {};
+    }
+
+    const pointsByVehicle: Record<
+      string,
+      Array<{ lat: number; lng: number; recorded_at: string }>
+    > = {};
+
+    for (const row of logsData) {
+      const vid = row.vehicle_id;
+      if (!vid) continue;
+      if (!pointsByVehicle[vid]) {
+        pointsByVehicle[vid] = [];
+      }
+      pointsByVehicle[vid].push({
+        lat: Number(row.lat),
+        lng: Number(row.lng),
+        recorded_at: row.recorded_at,
+      });
+    }
+
+    const resultMap: Record<string, Record<number, number>> = {};
+
+    for (const [vid, pts] of Object.entries(pointsByVehicle)) {
+      resultMap[vid] = {};
+      for (let i = 1; i < pts.length; i++) {
+        const prev = pts[i - 1];
+        const curr = pts[i];
+        const dist = haversineDistance(prev.lat, prev.lng, curr.lat, curr.lng);
+        if (dist > 0) {
+          const hour = getBangkokHour(curr.recorded_at);
+          resultMap[vid][hour] = (resultMap[vid][hour] || 0) + dist;
+        }
+      }
+
+      for (const h of Object.keys(resultMap[vid])) {
+        const hourNum = Number(h);
+        resultMap[vid][hourNum] = Math.round(resultMap[vid][hourNum] * 100) / 100;
+      }
+    }
+
+    return resultMap;
+  } catch (err) {
+    console.warn('Exception during fetchTodayHourlyDistanceMap:', err);
+    return {};
+  }
+}
+

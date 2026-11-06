@@ -3,15 +3,10 @@ import { FleetMap } from '../types/telemetry';
 import { DailyMetricsMap } from '../types/metrics';
 import { getSupabaseClient, isSupabaseConfigured } from '../services/supabaseClient';
 import { calculateDistanceIncrement, CoordinatePoint } from '../services/distanceCalculator';
+import { getBangkokDate } from '../services/historicalDateUtils';
 
-export function getBangkokDate(date: Date = new Date()): string {
-  return new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'Asia/Bangkok',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).format(date);
-}
+export { getBangkokDate };
+
 
 export function useDailyMetrics(vehicles: FleetMap) {
   const [dailyMetrics, setDailyMetrics] = useState<DailyMetricsMap>({});

@@ -34,3 +34,19 @@ export function formatDateDisplay(dateStr: string): string {
   const [year, month, day] = dateStr.split('-');
   return `${day}/${month}/${year}`;
 }
+
+export function getBangkokDate(date: Date = new Date()): string {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Bangkok',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(date);
+}
+
+export function getBangkokHour(isoStr: string | Date): number {
+  const d = typeof isoStr === 'string' ? new Date(isoStr) : isoStr;
+  if (isNaN(d.getTime())) return 0;
+  return (d.getUTCHours() + 7) % 24;
+}
+
