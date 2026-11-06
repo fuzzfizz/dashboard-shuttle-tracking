@@ -77,4 +77,103 @@ describe('analyticsCalculator', () => {
     expect(hourly[0].hourLabel).toBe('06:00');
     expect(hourly[hourly.length - 1].hourLabel).toBe('20:00');
   });
+
+  it('computes 7-day trend for a specific vehicle filtering out others', () => {
+    const refDate = new Date('2026-11-06T12:00:00Z');
+    const pastRecords = [
+      { vehicle_id: 'shuttle-01', date: '2026-11-05', total_distance_km: 4.91 },
+      { vehicle_id: 'shuttle-02', date: '2026-11-05', total_distance_km: 12.0 },
+      { vehicle_id: 'shuttle-01', date: '2026-11-04', total_distance_km: 3.2 },
+    ];
+    const dailyMetrics = {
+      'shuttle-01': {
+        vehicle_id: 'shuttle-01',
+        date: '2026-11-06',
+        total_distance_km: 1.5,
+        max_speed_kmh: 30,
+        avg_speed_kmh: 15,
+        active_minutes: 10,
+        last_updated_at: '',
+      },
+    };
+
+    const points = compute7DayTrendData(dailyMetrics, pastRecords, refDate, 'shuttle-01');
+    const yesterday = points.find((p) => p.date === '2026-11-05');
+    const today = points.find((p) => p.date === '2026-11-06');
+
+    expect(yesterday?.totalDistanceKm).toBe(4.91);
+    expect(today?.totalDistanceKm).toBe(1.5);
+  });
+
+  it('computes 7-day trend aggregating all vehicles when selectedVehicleId is all or null', () => {
+    const refDate = new Date('2026-11-06T12:00:00Z');
+    const pastRecords = [
+      { vehicle_id: 'shuttle-01', date: '2026-11-05', total_distance_km: 4.91 },
+      { vehicle_id: 'shuttle-02', date: '2026-11-05', total_distance_km: 12.0 },
+      { vehicle_id: 'shuttle-01', date: '2026-11-04', total_distance_km: 3.2 },
+    ];
+    const dailyMetrics = {
+      'shuttle-01': {
+        vehicle_id: 'shuttle-01',
+        date: '2026-11-06',
+        total_distance_km: 1.5,
+        max_speed_kmh: 30,
+        avg_speed_kmh: 15,
+        active_minutes: 10,
+        last_updated_at: '',
+      },
+      'shuttle-02': {
+        vehicle_id: 'shuttle-02',
+        date: '2026-11-06',
+        total_distance_km: 2.5,
+        max_speed_kmh: 30,
+        avg_speed_kmh: 15,
+        active_minutes: 10,
+        last_updated_at: '',
+      },
+    };
+
+    const pointsAll = compute7DayTrendData(dailyMetrics, pastRecords, refDate, 'all');
+    const yesterdayAll = pointsAll.find((p) => p.date === '2026-11-05');
+    const todayAll = pointsAll.find((p) => p.date === '2026-11-06');
+
+    expect(yesterdayAll?.totalDistanceKm).toBe(16.91);
+    expect(todayAll?.totalDistanceKm).toBe(4.0);
+
+    const pointsNull = compute7DayTrendData(dailyMetrics, pastRecords, refDate, null);
+    const yesterdayNull = pointsNull.find((p) => p.date === '2026-11-05');
+    expect(yesterdayNull?.totalDistanceKm).toBe(16.91);
+  });
+
+  it('computes hourly activity accurately for a selected vehicle', () => {
+    const hourlyMap = {
+      'shuttle-01': { 7: 1.8, 8: 2.5, 13: 4.9 },
+      'shuttle-02': { 7: 3.0, 9: 5.0 },
+    };
+
+    const points = computeHourlyActivityData(hourlyMap, 'shuttle-01');
+    const hour7 = points.find((p) => p.hour === 7);
+    const hour8 = points.find((p) => p.hour === 8);
+    const hour9 = points.find((p) => p.hour === 9);
+
+    expect(hour7?.distanceKm).toBe(1.8);
+    expect(hour8?.distanceKm).toBe(2.5);
+    expect(hour9?.distanceKm).toBe(0);
+  });
+
+  it('computes hourly activity aggregating all vehicles when selectedVehicleId is all or null', () => {
+    const hourlyMap = {
+      'shuttle-01': { 7: 1.8, 8: 2.5, 13: 4.9 },
+      'shuttle-02': { 7: 3.0, 9: 5.0 },
+    };
+
+    const points = computeHourlyActivityData(hourlyMap, 'all');
+    const hour7 = points.find((p) => p.hour === 7);
+    const hour8 = points.find((p) => p.hour === 8);
+    const hour9 = points.find((p) => p.hour === 9);
+
+    expect(hour7?.distanceKm).toBe(4.8);
+    expect(hour8?.distanceKm).toBe(2.5);
+    expect(hour9?.distanceKm).toBe(5.0);
+  });
 });
