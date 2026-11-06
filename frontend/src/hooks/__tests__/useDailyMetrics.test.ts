@@ -3,10 +3,14 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { useDailyMetrics } from '../useDailyMetrics';
 import { FleetMap } from '../../types/telemetry';
 import * as supabaseClientModule from '../../services/supabaseClient';
+import * as historicalTelemetryService from '../../services/historicalTelemetryService';
+import { getBangkokHour } from '../../services/historicalDateUtils';
 
 describe('useDailyMetrics', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
+    vi.spyOn(historicalTelemetryService, 'fetch7DayVehicleMetrics').mockResolvedValue([]);
+    vi.spyOn(historicalTelemetryService, 'fetchTodayHourlyDistanceMap').mockResolvedValue({});
   });
 
   afterEach(() => {
@@ -296,5 +300,85 @@ describe('useDailyMetrics', () => {
     const metric = result.current.dailyMetrics['shuttle-01'];
     expect(metric).toBeDefined();
     expect(metric.active_minutes).toBe(1);
+  });
+
+  it('exposes past7DayRecords and hourlyDistanceMap with initial defaults', () => {
+    const { result } = renderHook(() => useDailyMetrics({}));
+
+    expect(result.current.past7DayRecords).toEqual([]);
+    expect(result.current.hourlyDistanceMap).toEqual({});
+  });
+
+  it('fetches and populates past7DayRecords and hourlyDistanceMap when Supabase is configured', async () => {
+    vi.spyOn(supabaseClientModule, 'isSupabaseConfigured').mockReturnValue(true);
+
+    const mockFrom = vi.fn().mockReturnValue({
+      select: vi.fn().mockReturnValue({
+        eq: vi.fn().mockResolvedValue({
+          data: [],
+          error: null,
+        }),
+      }),
+    });
+    vi.spyOn(supabaseClientModule, 'getSupabaseClient').mockReturnValue({
+      from: mockFrom,
+    } as unknown as ReturnType<typeof supabaseClientModule.getSupabaseClient>);
+
+    const mock7DayData = [
+      { vehicle_id: 'shuttle-01', date: '2026-11-01', total_distance_km: 14.2 },
+      { vehicle_id: 'shuttle-02', date: '2026-11-01', total_distance_km: 21.0 },
+    ];
+    const mockHourlyData = {
+      'shuttle-01': { 8: 3.5, 9: 4.0 },
+    };
+
+    vi.spyOn(historicalTelemetryService, 'fetch7DayVehicleMetrics').mockResolvedValue(mock7DayData);
+    vi.spyOn(historicalTelemetryService, 'fetchTodayHourlyDistanceMap').mockResolvedValue(mockHourlyData);
+
+    const { result } = renderHook(() => useDailyMetrics({}));
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(result.current.past7DayRecords).toEqual(mock7DayData);
+    expect(result.current.hourlyDistanceMap).toEqual(mockHourlyData);
+  });
+
+  it('accumulates live telemetry movement into hourlyDistanceMap for the current Bangkok hour', () => {
+    const { result, rerender } = renderHook(({ fleet }) => useDailyMetrics(fleet), {
+      initialProps: { fleet: {} as FleetMap },
+    });
+
+    const currBangkokHour = getBangkokHour(new Date());
+
+    // Initial position
+    rerender({
+      fleet: {
+        'shuttle-01': {
+          vehicle_id: 'shuttle-01',
+          lat: 13.7563,
+          lng: 100.5018,
+          speed: 25.0,
+          timestamp: 1000,
+        },
+      },
+    });
+
+    // Move ~200m
+    rerender({
+      fleet: {
+        'shuttle-01': {
+          vehicle_id: 'shuttle-01',
+          lat: 13.7580,
+          lng: 100.5018,
+          speed: 30.0,
+          timestamp: 6000,
+        },
+      },
+    });
+
+    expect(result.current.hourlyDistanceMap['shuttle-01']).toBeDefined();
+    expect(result.current.hourlyDistanceMap['shuttle-01'][currBangkokHour]).toBeGreaterThan(0.1);
   });
 });

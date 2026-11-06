@@ -173,6 +173,8 @@ describe('App Integration', () => {
         },
       },
       totalFleetDistanceKm: 15.4,
+      past7DayRecords: [],
+      hourlyDistanceMap: {},
       isLoading: false,
       refetch: vi.fn(),
     });
@@ -255,6 +257,8 @@ describe('App Integration', () => {
         },
       },
       totalFleetDistanceKm: 18.25,
+      past7DayRecords: [],
+      hourlyDistanceMap: {},
       isLoading: false,
       refetch: vi.fn(),
     });

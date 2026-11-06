@@ -3,13 +3,19 @@ import { FleetMap } from '../types/telemetry';
 import { DailyMetricsMap } from '../types/metrics';
 import { getSupabaseClient, isSupabaseConfigured } from '../services/supabaseClient';
 import { calculateDistanceIncrement, CoordinatePoint } from '../services/distanceCalculator';
-import { getBangkokDate } from '../services/historicalDateUtils';
+import { getBangkokDate, getBangkokHour } from '../services/historicalDateUtils';
+import { DailyRecordItem } from '../services/analyticsCalculator';
+import {
+  fetch7DayVehicleMetrics,
+  fetchTodayHourlyDistanceMap,
+} from '../services/historicalTelemetryService';
 
 export { getBangkokDate };
 
-
 export function useDailyMetrics(vehicles: FleetMap) {
   const [dailyMetrics, setDailyMetrics] = useState<DailyMetricsMap>({});
+  const [past7DayRecords, setPast7DayRecords] = useState<DailyRecordItem[]>([]);
+  const [hourlyDistanceMap, setHourlyDistanceMap] = useState<Record<string, Record<number, number>>>({});
   const [isLoading, setIsLoading] = useState<boolean>(false);
 
   // In-memory tracking of previous coordinate and active seconds per vehicle
@@ -25,36 +31,66 @@ export function useDailyMetrics(vehicles: FleetMap) {
 
     try {
       setIsLoading(true);
-      const { data, error } = await supabase
-        .from('daily_vehicle_metrics')
-        .select('*')
-        .eq('date', todayStr);
 
-      if (!error && data) {
-        setDailyMetrics((prev) => {
-          const next: DailyMetricsMap = { ...prev };
-          for (const row of data) {
-            const vId = row.vehicle_id;
-            const existing = prev[vId];
-            const remoteDistance = Number(row.total_distance_km) || 0;
-            const remoteMaxSpeed = Number(row.max_speed_kmh) || 0;
-            const remoteActiveMinutes = Number(row.active_minutes) || 0;
+      const [metricsResult, sevenDayResult, hourlyResult] = await Promise.allSettled([
+        supabase
+          .from('daily_vehicle_metrics')
+          .select('*')
+          .eq('date', todayStr),
+        fetch7DayVehicleMetrics(),
+        fetchTodayHourlyDistanceMap(todayStr),
+      ]);
 
-            next[vId] = {
-              vehicle_id: vId,
-              date: row.date,
-              total_distance_km: existing
-                ? Math.max(existing.total_distance_km, remoteDistance)
-                : remoteDistance,
-              max_speed_kmh: existing
-                ? Math.max(existing.max_speed_kmh, remoteMaxSpeed)
-                : remoteMaxSpeed,
-              avg_speed_kmh: Number(row.avg_speed_kmh) || (existing?.avg_speed_kmh ?? 0),
-              active_minutes: existing
-                ? Math.max(existing.active_minutes, remoteActiveMinutes)
-                : remoteActiveMinutes,
-              last_updated_at: row.last_updated_at || existing?.last_updated_at || new Date().toISOString(),
-            };
+      if (metricsResult.status === 'fulfilled') {
+        const { data, error } = metricsResult.value;
+        if (!error && data) {
+          setDailyMetrics((prev) => {
+            const next: DailyMetricsMap = { ...prev };
+            for (const row of data) {
+              const vId = row.vehicle_id;
+              const existing = prev[vId];
+              const remoteDistance = Number(row.total_distance_km) || 0;
+              const remoteMaxSpeed = Number(row.max_speed_kmh) || 0;
+              const remoteActiveMinutes = Number(row.active_minutes) || 0;
+
+              next[vId] = {
+                vehicle_id: vId,
+                date: row.date,
+                total_distance_km: existing
+                  ? Math.max(existing.total_distance_km, remoteDistance)
+                  : remoteDistance,
+                max_speed_kmh: existing
+                  ? Math.max(existing.max_speed_kmh, remoteMaxSpeed)
+                  : remoteMaxSpeed,
+                avg_speed_kmh: Number(row.avg_speed_kmh) || (existing?.avg_speed_kmh ?? 0),
+                active_minutes: existing
+                  ? Math.max(existing.active_minutes, remoteActiveMinutes)
+                  : remoteActiveMinutes,
+                last_updated_at: row.last_updated_at || existing?.last_updated_at || new Date().toISOString(),
+              };
+            }
+            return next;
+          });
+        }
+      } else {
+        console.warn('Supabase daily metrics query error:', metricsResult.reason);
+      }
+
+      if (sevenDayResult.status === 'fulfilled' && sevenDayResult.value) {
+        setPast7DayRecords(sevenDayResult.value);
+      }
+
+      if (hourlyResult.status === 'fulfilled' && hourlyResult.value) {
+        const remoteHourly = hourlyResult.value;
+        setHourlyDistanceMap((prev) => {
+          const next: Record<string, Record<number, number>> = { ...prev };
+          for (const [vid, hourDistances] of Object.entries(remoteHourly)) {
+            next[vid] = { ...(next[vid] || {}) };
+            for (const [hStr, dist] of Object.entries(hourDistances)) {
+              const h = Number(hStr);
+              const existingDist = next[vid][h] || 0;
+              next[vid][h] = Math.max(existingDist, dist);
+            }
           }
           return next;
         });
@@ -78,6 +114,7 @@ export function useDailyMetrics(vehicles: FleetMap) {
   // Real-time incremental distance and active running time accumulation from live telemetry stream
   useEffect(() => {
     const updates: Record<string, { distance: number; maxSpeed: number; addedMinutes: number }> = {};
+    const hourlyUpdates: Record<string, number> = {};
 
     for (const vehicle of Object.values(vehicles)) {
       const { vehicle_id, lat, lng, speed, timestamp } = vehicle;
@@ -111,6 +148,9 @@ export function useDailyMetrics(vehicles: FleetMap) {
           maxSpeed: Math.round(speed * 10) / 10,
           addedMinutes,
         };
+        if (distanceIncrement > 0) {
+          hourlyUpdates[vehicle_id] = distanceIncrement;
+        }
       }
 
       prevCoordsRef.current[vehicle_id] = currPoint;
@@ -153,6 +193,20 @@ export function useDailyMetrics(vehicles: FleetMap) {
         return next;
       });
     }
+
+    if (Object.keys(hourlyUpdates).length > 0) {
+      const currBangkokHour = getBangkokHour(new Date());
+      setHourlyDistanceMap((prev) => {
+        const next: Record<string, Record<number, number>> = { ...prev };
+        for (const [vehicleId, dist] of Object.entries(hourlyUpdates)) {
+          const vehicleHours = { ...(next[vehicleId] || {}) };
+          const currentDist = vehicleHours[currBangkokHour] || 0;
+          vehicleHours[currBangkokHour] = Math.round((currentDist + dist) * 100) / 100;
+          next[vehicleId] = vehicleHours;
+        }
+        return next;
+      });
+    }
   }, [vehicles, todayStr]);
 
   const totalFleetDistanceKm = Math.round(
@@ -162,6 +216,8 @@ export function useDailyMetrics(vehicles: FleetMap) {
   return {
     dailyMetrics,
     totalFleetDistanceKm,
+    past7DayRecords,
+    hourlyDistanceMap,
     isLoading,
     refetch: fetchSupabaseMetrics,
   };
