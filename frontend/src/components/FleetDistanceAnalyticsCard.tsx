@@ -49,7 +49,9 @@ export const FleetDistanceAnalyticsCard: React.FC<FleetDistanceAnalyticsCardProp
     const ids = new Set<string>();
     Object.keys(vehicles).forEach((id) => ids.add(id));
     Object.keys(dailyMetrics).forEach((id) => ids.add(id));
-    past7DayRecords?.forEach((r) => ids.add(r.vehicle_id));
+    past7DayRecords?.forEach((r) => {
+      if (r.vehicle_id) ids.add(r.vehicle_id);
+    });
     return Array.from(ids).sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
   }, [vehicles, dailyMetrics, past7DayRecords]);
 
