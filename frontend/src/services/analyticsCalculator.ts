@@ -1,5 +1,6 @@
 import { DailyMetricsMap } from '../types/metrics';
 import { FleetMap } from '../types/telemetry';
+import { getBangkokDate } from './historicalDateUtils';
 
 export interface FleetAnalyticsSummary {
   totalDistanceKm: number;
@@ -132,7 +133,7 @@ export function compute7DayTrendData(
   for (let i = 6; i >= 0; i--) {
     const d = new Date(referenceDate);
     d.setDate(d.getDate() - i);
-    const dateStr = d.toISOString().slice(0, 10);
+    const dateStr = getBangkokDate(d);
     const isToday = i === 0;
 
     let dist = isToday ? todayDistance : recordsMap.get(dateStr) ?? 0;

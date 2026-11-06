@@ -244,7 +244,8 @@ export async function fetchTodayHourlyDistanceMap(
         const prev = pts[i - 1];
         const curr = pts[i];
         const dist = haversineDistance(prev.lat, prev.lng, curr.lat, curr.lng);
-        if (dist > 0) {
+        // Stationary jitter threshold filter: movement must exceed 8 meters (0.008 km)
+        if (dist >= 0.008) {
           const hour = getBangkokHour(curr.recorded_at);
           resultMap[vid][hour] = (resultMap[vid][hour] || 0) + dist;
         }
