@@ -210,9 +210,9 @@ export function createVehicleIcon(
   const screwBorder = !isOnline ? '#94a3b8' : '#475569';
 
   const html = `
-    <div style="position: relative; width: 52px; height: 52px; display: flex; align-items: center; justify-content: center; opacity: ${overallOpacity};">
+    <div class="vehicle-marker-inner" style="position: relative; width: 52px; height: 52px; display: flex; align-items: center; justify-content: center; opacity: ${overallOpacity}; cursor: pointer; transform-origin: center center; transition: transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1), filter 0.22s ease;">
       <!-- Vehicle License Plate Frame with Thick Border & Downward Pointer Arrow (กรอบป้ายทะเบียนรถขอบหนาพร้อมลูกศรชี้ลง - Fixed horizontal orientation) -->
-      <div class="vehicle-license-plate" style="position: absolute; top: -14px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 4.5px; background: ${plateBg}; color: ${plateTextColor}; font-size: 9.5px; font-weight: 800; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace; letter-spacing: 0.6px; padding: 2px 6.5px; border-radius: 4px; border: ${plateBorder}; box-shadow: ${plateShadow}; white-space: nowrap; pointer-events: none; z-index: 10; text-transform: uppercase;">
+      <div class="vehicle-license-plate" style="position: absolute; top: -14px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 4.5px; background: ${plateBg}; color: ${plateTextColor}; font-size: 9.5px; font-weight: 800; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace; letter-spacing: 0.6px; padding: 2px 6.5px; border-radius: 4px; border: ${plateBorder}; box-shadow: ${plateShadow}; white-space: nowrap; pointer-events: none; z-index: 10; text-transform: uppercase; transition: box-shadow 0.22s ease;">
         <span style="display: inline-block; width: 3.5px; height: 3.5px; border-radius: 50%; background: ${screwColor}; border: 0.8px solid ${screwBorder}; flex-shrink: 0;"></span>
         <span style="line-height: 1.1;">${safeVehicleId}</span>
         <span style="display: inline-block; width: 3.5px; height: 3.5px; border-radius: 50%; background: ${screwColor}; border: 0.8px solid ${screwBorder}; flex-shrink: 0;"></span>

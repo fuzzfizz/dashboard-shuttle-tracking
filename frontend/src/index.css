@@ -36,8 +36,29 @@ body, #root {
   background-color: #f8fafc;
 }
 
-/* Leaflet marker transparent background fix */
+/* Leaflet marker transparent background and interactive hover scaling */
 .custom-vehicle-marker {
   background: transparent !important;
   border: none !important;
+  cursor: pointer !important;
+}
+
+.custom-vehicle-marker:hover {
+  z-index: 1000 !important;
+}
+
+.custom-vehicle-marker .vehicle-marker-inner {
+  transform-origin: center center;
+  transition: transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1), filter 0.22s ease;
+}
+
+.custom-vehicle-marker:hover .vehicle-marker-inner,
+.vehicle-marker-inner:hover {
+  transform: scale(1.18);
+  filter: drop-shadow(0 6px 16px rgba(0, 0, 0, 0.42));
+}
+
+.custom-vehicle-marker:hover .vehicle-license-plate,
+.vehicle-marker-inner:hover .vehicle-license-plate {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4), inset 0 0 0 1px rgba(0, 0, 0, 0.15) !important;
 }

@@ -113,6 +113,10 @@ describe('ShuttleMap', () => {
     expect(html).not.toContain('Wheels');
     // Rooftop AC / ventilation unit
     expect(html).toContain('stroke-opacity="0.8"');
+    // Interactive hover wrapper container
+    expect(html).toContain('vehicle-marker-inner');
+    expect(html).toContain('cursor: pointer');
+    expect(html).toContain('transition: transform');
   });
 
   it('renders vehicle name in a realistic license plate frame with thick stamped border, mounting rivets, and downward pointer arrow', () => {
