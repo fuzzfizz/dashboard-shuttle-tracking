@@ -1,6 +1,6 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
-import { DailyDistanceTable } from '../DailyDistanceTable';
+import { DailyDistanceTable, LicensePlateBadge } from '../DailyDistanceTable';
 import { DailyMetricsMap } from '../../types/metrics';
 import { FleetMap } from '../../types/telemetry';
 
@@ -51,7 +51,7 @@ describe('DailyDistanceTable', () => {
       />
     );
 
-    expect(screen.getByText('EV-01')).toBeInTheDocument();
+    expect(screen.getAllByText('EV-01').length).toBeGreaterThan(0);
     expect(screen.getAllByText('18.50 km').length).toBeGreaterThan(0);
 
     // Verify percent bar and percentage labels are NOT rendered
@@ -370,5 +370,55 @@ describe('DailyDistanceTable', () => {
     expect(mobileCard).toHaveTextContent('15.50 km');
     expect(mobileCard).toHaveTextContent(/1 ชม\. 15 นาที|1h 15m/);
     expect(mobileCard).not.toHaveTextContent('48.0 km/h');
+  });
+
+  it('renders license plate badge for vehicle ID in both desktop and mobile views', () => {
+    const metrics: DailyMetricsMap = {
+      'EV-01': {
+        vehicle_id: 'EV-01',
+        date: '2026-10-26',
+        total_distance_km: 15.5,
+        max_speed_kmh: 48.0,
+        avg_speed_kmh: 24.0,
+        active_minutes: 75,
+        last_updated_at: new Date().toISOString(),
+      },
+    };
+
+    render(
+      <DailyDistanceTable
+        dailyMetrics={metrics}
+        vehicles={{}}
+        lastSeenMap={{ 'EV-01': Date.now() }}
+        selectedVehicleId="EV-01"
+        onOpenVehicleMap={vi.fn()}
+      />
+    );
+
+    // Both desktop row and mobile card should render LicensePlateBadge
+    const badges = screen.getAllByTestId('license-plate-badge');
+    expect(badges.length).toBeGreaterThanOrEqual(2);
+    badges.forEach((badge) => {
+      expect(badge).toHaveTextContent('EV-01');
+      expect(badge).toHaveAttribute('title', 'ป้ายทะเบียน: EV-01');
+      expect(badge.className).toContain('border-[#4a7c0b]');
+    });
+  });
+
+  describe('LicensePlateBadge', () => {
+    it('renders normal unselected plate badge', () => {
+      render(<LicensePlateBadge plateNumber="1กก-9999" isSelected={false} />);
+      const badge = screen.getByTestId('license-plate-badge');
+      expect(badge).toHaveTextContent('1กก-9999');
+      expect(badge.className).toContain('border-slate-800');
+    });
+
+    it('renders selected plate badge with brand olive green border and ring', () => {
+      render(<LicensePlateBadge plateNumber="EV-CMU-01" isSelected={true} />);
+      const badge = screen.getByTestId('license-plate-badge');
+      expect(badge).toHaveTextContent('EV-CMU-01');
+      expect(badge.className).toContain('border-[#4a7c0b]');
+      expect(badge.className).toContain('ring-[#5c990e]/35');
+    });
   });
 });

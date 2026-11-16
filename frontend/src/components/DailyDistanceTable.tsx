@@ -17,6 +17,48 @@ export interface DailyDistanceTableProps {
   className?: string;
 }
 
+export interface LicensePlateBadgeProps {
+  plateNumber: string;
+  isSelected?: boolean;
+  className?: string;
+}
+
+/**
+ * LicensePlateBadge renders an authentic vehicle license plate frame
+ * with white enamel surface, 2px stamped metal border, and mounting rivets.
+ */
+export const LicensePlateBadge: React.FC<LicensePlateBadgeProps> = ({
+  plateNumber,
+  isSelected = false,
+  className = '',
+}) => {
+  return (
+    <div
+      data-testid="license-plate-badge"
+      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[4px] bg-white border-2 transition-all select-none shadow-xs ${
+        isSelected
+          ? 'border-[#4a7c0b] ring-2 ring-[#5c990e]/35 shadow-sm'
+          : 'border-slate-800 dark:border-slate-700 hover:border-slate-900 dark:hover:border-slate-600'
+      } ${className}`}
+      style={{
+        boxShadow: isSelected
+          ? '0 0 0 2px rgba(92, 153, 14, 0.3), 0 2px 4px rgba(0,0,0,0.1), inset 0 0 0 1px rgba(0,0,0,0.1)'
+          : '0 1px 3px rgba(0,0,0,0.12), inset 0 0 0 1px rgba(0,0,0,0.08)',
+      }}
+      title={`ป้ายทะเบียน: ${plateNumber}`}
+    >
+      {/* Left Stamped Rivet Screw */}
+      <span className="w-1 h-1 rounded-full bg-slate-300 dark:bg-slate-400 border border-slate-500 shrink-0" />
+      {/* License Plate String */}
+      <span className="font-mono font-black text-slate-900 text-xs tracking-wider uppercase leading-none">
+        {plateNumber}
+      </span>
+      {/* Right Stamped Rivet Screw */}
+      <span className="w-1 h-1 rounded-full bg-slate-300 dark:bg-slate-400 border border-slate-500 shrink-0" />
+    </div>
+  );
+};
+
 export const DailyDistanceTable: React.FC<DailyDistanceTableProps> = ({
   dailyMetrics,
   vehicles,
@@ -327,12 +369,17 @@ export const DailyDistanceTable: React.FC<DailyDistanceTableProps> = ({
                         data-testid="vehicle-id-cell"
                         className="py-3 px-3 flex items-center gap-2.5"
                       >
-                        <div className="p-1 bg-slate-100 dark:bg-slate-800 rounded-lg text-emerald-600 dark:text-emerald-400">
+                        <div className={`p-1.5 rounded-lg shrink-0 transition-colors ${
+                          row.isOnline
+                            ? 'bg-[#5c990e]/10 text-[#5c990e]'
+                            : 'bg-slate-100 dark:bg-slate-800 text-slate-400'
+                        }`}>
                           <Bus className="w-3.5 h-3.5" />
                         </div>
-                        <span className="font-mono font-bold text-slate-800 dark:text-slate-100">
-                          {row.vehicleId}
-                        </span>
+                        <LicensePlateBadge
+                          plateNumber={row.vehicleId}
+                          isSelected={isSelected}
+                        />
                       </td>
 
                       {/* Status Column */}
@@ -406,12 +453,19 @@ export const DailyDistanceTable: React.FC<DailyDistanceTableProps> = ({
                   {/* Card Header: Vehicle Identity & Live Status Badge */}
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2.5">
-                      <div className="p-2 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-xl border border-emerald-500/20">
+                      <div className={`p-2 rounded-xl border shrink-0 transition-colors ${
+                        row.isOnline
+                          ? 'bg-[#5c990e]/10 text-[#5c990e] border-[#5c990e]/20'
+                          : 'bg-slate-100 dark:bg-slate-800 text-slate-400 border-slate-200 dark:border-slate-700'
+                      }`}>
                         <Bus className="w-4 h-4" />
                       </div>
-                      <div>
-                        <div className="text-sm font-bold text-slate-900 dark:text-white font-mono tracking-tight">
-                          รถบริการ #{row.vehicleId}
+                      <div className="flex flex-col gap-1">
+                        <div className="flex items-center gap-1.5">
+                          <LicensePlateBadge
+                            plateNumber={row.vehicleId}
+                            isSelected={isSelected}
+                          />
                         </div>
                         <div className="text-xs text-slate-500 dark:text-slate-400">
                           {row.isOnline ? 'เชื่อมต่อสด (Connected)' : 'ขาดการเชื่อมต่อ (Signal Lost)'}
