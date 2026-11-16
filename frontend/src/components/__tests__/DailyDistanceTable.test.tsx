@@ -1,6 +1,6 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
-import { DailyDistanceTable, LicensePlateBadge } from '../DailyDistanceTable';
+import { DailyDistanceTable, LicensePlateBadge, convertDistance, formatDistance } from '../DailyDistanceTable';
 import { DailyMetricsMap } from '../../types/metrics';
 import { FleetMap } from '../../types/telemetry';
 
@@ -419,6 +419,126 @@ describe('DailyDistanceTable', () => {
       expect(badge).toHaveTextContent('EV-CMU-01');
       expect(badge.className).toContain('border-[#4a7c0b]');
       expect(badge.className).toContain('ring-[#5c990e]/35');
+    });
+  });
+
+  describe('Distance Unit Switching (km <-> mile)', () => {
+    it('converts and formats distance correctly between km and mile', () => {
+      expect(convertDistance(10, 'km')).toBe(10);
+      expect(convertDistance(10, 'mile')).toBeCloseTo(6.2137, 3);
+
+      expect(formatDistance(10, 'km')).toBe('10.00 km');
+      expect(formatDistance(10, 'mile')).toBe('6.21 mile');
+      expect(formatDistance(18.5, 'mile')).toBe('11.50 mile');
+    });
+
+    it('toggles distance display between km and mile via header unit switch buttons', () => {
+      const metrics: DailyMetricsMap = {
+        'EV-01': {
+          vehicle_id: 'EV-01',
+          date: '2026-10-26',
+          total_distance_km: 18.5,
+          max_speed_kmh: 45,
+          avg_speed_kmh: 25,
+          active_minutes: 60,
+          last_updated_at: new Date().toISOString(),
+        },
+      };
+
+      render(
+        <DailyDistanceTable
+          dailyMetrics={metrics}
+          vehicles={{}}
+          lastSeenMap={{}}
+          selectedVehicleId={null}
+          onOpenVehicleMap={vi.fn()}
+        />
+      );
+
+      // Default unit is km
+      expect(screen.getAllByText('18.50 km').length).toBeGreaterThan(0);
+
+      // Click mile button
+      const mileBtn = screen.getByTestId('unit-mile-btn');
+      fireEvent.click(mileBtn);
+
+      // Now displayed in miles (18.5 km ~ 11.50 mile)
+      expect(screen.getAllByText('11.50 mile').length).toBeGreaterThan(0);
+      expect(screen.queryByText('18.50 km')).toBeNull();
+
+      // Click km button to switch back
+      const kmBtn = screen.getByTestId('unit-km-btn');
+      fireEvent.click(kmBtn);
+      expect(screen.getAllByText('18.50 km').length).toBeGreaterThan(0);
+      expect(screen.queryByText('11.50 mile')).toBeNull();
+    });
+
+    it('toggles unit when clicking the table header column for distance', () => {
+      const metrics: DailyMetricsMap = {
+        'EV-01': {
+          vehicle_id: 'EV-01',
+          date: '2026-10-26',
+          total_distance_km: 35.0,
+          max_speed_kmh: 45,
+          avg_speed_kmh: 25,
+          active_minutes: 60,
+          last_updated_at: new Date().toISOString(),
+        },
+      };
+
+      render(
+        <DailyDistanceTable
+          dailyMetrics={metrics}
+          vehicles={{}}
+          lastSeenMap={{}}
+          selectedVehicleId={null}
+          onOpenVehicleMap={vi.fn()}
+        />
+      );
+
+      expect(screen.getAllByText('35.00 km').length).toBeGreaterThan(0);
+
+      // Column header has title "คลิกเพื่อสลับหน่วยระหว่าง km และ mile"
+      const colHeader = screen.getByTitle(/คลิกเพื่อสลับหน่วยระหว่าง km และ mile/i);
+      fireEvent.click(colHeader);
+
+      // 35 km * 0.621371 = 21.75 mile
+      expect(screen.getAllByText('21.75 mile').length).toBeGreaterThan(0);
+    });
+
+    it('calls onDistanceUnitChange when controlled props are provided', () => {
+      const handleUnitChange = vi.fn();
+      const metrics: DailyMetricsMap = {
+        'EV-01': {
+          vehicle_id: 'EV-01',
+          date: '2026-10-26',
+          total_distance_km: 10.0,
+          max_speed_kmh: 40,
+          avg_speed_kmh: 20,
+          active_minutes: 30,
+          last_updated_at: new Date().toISOString(),
+        },
+      };
+
+      render(
+        <DailyDistanceTable
+          dailyMetrics={metrics}
+          vehicles={{}}
+          lastSeenMap={{}}
+          selectedVehicleId={null}
+          onOpenVehicleMap={vi.fn()}
+          distanceUnit="mile"
+          onDistanceUnitChange={handleUnitChange}
+        />
+      );
+
+      // Rendered in miles initially because distanceUnit="mile"
+      expect(screen.getAllByText('6.21 mile').length).toBeGreaterThan(0);
+
+      // Click km button
+      const kmBtn = screen.getByTestId('unit-km-btn');
+      fireEvent.click(kmBtn);
+      expect(handleUnitChange).toHaveBeenCalledWith('km');
     });
   });
 });

@@ -12,6 +12,7 @@ export interface TelemetryHUDProps {
   now?: number;
   className?: string;
   dailyDistanceKm?: number;
+  distanceUnit?: 'km' | 'mile';
   onClose?: () => void;
 }
 
@@ -25,6 +26,7 @@ export const TelemetryHUD: React.FC<TelemetryHUDProps> = ({
   now,
   className,
   dailyDistanceKm,
+  distanceUnit = 'km',
   onClose,
 }) => {
   const getStatusColor = (s: ConnectionStatus) => {
@@ -158,8 +160,12 @@ export const TelemetryHUD: React.FC<TelemetryHUDProps> = ({
               <div>
                 <div className="text-xs font-medium text-slate-500 dark:text-slate-400 leading-normal">ระยะทางวันนี้</div>
                 <div className="text-base sm:text-lg font-bold font-mono text-slate-900 dark:text-white leading-tight">
-                  {dailyDistanceKm.toFixed(2)}
-                  <span className="text-xs font-normal text-slate-500 dark:text-slate-400 ml-1">km</span>
+                  {distanceUnit === 'mile'
+                    ? (dailyDistanceKm * 0.621371192).toFixed(2)
+                    : dailyDistanceKm.toFixed(2)}
+                  <span className="text-xs font-normal text-slate-500 dark:text-slate-400 ml-1">
+                    {distanceUnit === 'mile' ? 'mile' : 'km'}
+                  </span>
                 </div>
               </div>
             </div>

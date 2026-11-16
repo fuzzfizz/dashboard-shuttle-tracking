@@ -6,6 +6,18 @@ import { OFFLINE_THRESHOLD_MS } from '../services/fleetStatus';
 
 export type SortMode = 'distance-desc' | 'id-asc';
 export type StatusFilter = 'all' | 'online' | 'offline';
+export type DistanceUnit = 'km' | 'mile';
+
+export const KM_TO_MILES = 0.621371192;
+
+export const convertDistance = (distanceKm: number, unit: DistanceUnit): number => {
+  return unit === 'mile' ? distanceKm * KM_TO_MILES : distanceKm;
+};
+
+export const formatDistance = (distanceKm: number, unit: DistanceUnit): string => {
+  const converted = convertDistance(distanceKm, unit);
+  return `${converted.toFixed(2)} ${unit}`;
+};
 
 export interface DailyDistanceTableProps {
   dailyMetrics: DailyMetricsMap;
@@ -15,6 +27,8 @@ export interface DailyDistanceTableProps {
   onOpenVehicleMap: (vehicleId: string) => void;
   now?: number;
   className?: string;
+  distanceUnit?: DistanceUnit;
+  onDistanceUnitChange?: (unit: DistanceUnit) => void;
 }
 
 export interface LicensePlateBadgeProps {
@@ -67,7 +81,38 @@ export const DailyDistanceTable: React.FC<DailyDistanceTableProps> = ({
   onOpenVehicleMap,
   now,
   className,
+  distanceUnit: controlledUnit,
+  onDistanceUnitChange,
 }) => {
+  const [internalUnit, setInternalUnit] = useState<DistanceUnit>(() => {
+    try {
+      const saved = localStorage.getItem('shuttle_distance_unit');
+      if (saved === 'km' || saved === 'mile') return saved;
+    } catch {
+      // ignore
+    }
+    return 'km';
+  });
+
+  const distanceUnit = controlledUnit ?? internalUnit;
+
+  const handleUnitChange = (unit: DistanceUnit) => {
+    if (onDistanceUnitChange) {
+      onDistanceUnitChange(unit);
+    } else {
+      setInternalUnit(unit);
+    }
+    try {
+      localStorage.setItem('shuttle_distance_unit', unit);
+    } catch {
+      // ignore
+    }
+  };
+
+  const handleToggleUnit = () => {
+    handleUnitChange(distanceUnit === 'km' ? 'mile' : 'km');
+  };
+
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [isStatusMenuOpen, setIsStatusMenuOpen] = useState(false);
@@ -195,9 +240,49 @@ export const DailyDistanceTable: React.FC<DailyDistanceTableProps> = ({
           </div>
         </div>
 
-        {/* Vehicle count badge */}
-        <div className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
-          <span>{allVehicleIds.length} คัน</span>
+        {/* Right Header Area: Distance Unit Toggle & Vehicle count badge */}
+        <div className="flex items-center gap-2 sm:gap-2.5">
+          {/* Segmented Unit Toggle (km / mile) */}
+          <div
+            role="group"
+            data-testid="distance-unit-toggle"
+            aria-label="Toggle distance unit between km and mile"
+            className="inline-flex items-center p-0.5 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700/80 text-xs font-medium"
+          >
+            <button
+              type="button"
+              data-testid="unit-km-btn"
+              onClick={() => handleUnitChange('km')}
+              aria-label="Switch distance unit to km"
+              aria-pressed={distanceUnit === 'km'}
+              className={`px-2.5 py-1 rounded-md text-xs transition-all font-semibold ${
+                distanceUnit === 'km'
+                  ? 'bg-white dark:bg-slate-900 text-[#4a7c0b] dark:text-[#5c990e] shadow-xs font-bold'
+                  : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'
+              }`}
+            >
+              km
+            </button>
+            <button
+              type="button"
+              data-testid="unit-mile-btn"
+              onClick={() => handleUnitChange('mile')}
+              aria-label="Switch distance unit to mile"
+              aria-pressed={distanceUnit === 'mile'}
+              className={`px-2.5 py-1 rounded-md text-xs transition-all font-semibold ${
+                distanceUnit === 'mile'
+                  ? 'bg-white dark:bg-slate-900 text-[#4a7c0b] dark:text-[#5c990e] shadow-xs font-bold'
+                  : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'
+              }`}
+            >
+              mile
+            </button>
+          </div>
+
+          {/* Vehicle count badge */}
+          <div className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+            <span>{allVehicleIds.length} คัน</span>
+          </div>
         </div>
       </div>
 
@@ -345,7 +430,18 @@ export const DailyDistanceTable: React.FC<DailyDistanceTableProps> = ({
                 <tr className="border-b border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 uppercase text-[10px] tracking-wider">
                   <th className="py-2.5 px-3 font-semibold">หมายเลขรถ</th>
                   <th className="py-2.5 px-3 font-semibold">สถานะ</th>
-                  <th className="py-2.5 px-3 font-semibold">ระยะทางวันนี้</th>
+                  <th
+                    onClick={handleToggleUnit}
+                    className="py-2.5 px-3 font-semibold cursor-pointer select-none hover:text-slate-800 dark:hover:text-slate-200 transition-colors"
+                    title="คลิกเพื่อสลับหน่วยระหว่าง km และ mile"
+                  >
+                    <div className="flex items-center gap-1">
+                      <span>ระยะทางวันนี้</span>
+                      <span className="text-[10px] lowercase px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-mono font-bold">
+                        ({distanceUnit})
+                      </span>
+                    </div>
+                  </th>
                   <th className="py-2.5 px-3 font-semibold">เวลาวิ่งสะสม</th>
                   <th className="py-2.5 px-3 font-semibold text-right">แผนที่</th>
                 </tr>
@@ -400,7 +496,7 @@ export const DailyDistanceTable: React.FC<DailyDistanceTableProps> = ({
 
                       {/* Today's Distance Column */}
                       <td className="py-3 px-3 font-mono font-semibold text-slate-800 dark:text-slate-200">
-                        {row.distanceKm.toFixed(2)} km
+                        {formatDistance(row.distanceKm, distanceUnit)}
                       </td>
 
                       {/* Active Time Column */}
@@ -482,9 +578,11 @@ export const DailyDistanceTable: React.FC<DailyDistanceTableProps> = ({
                   {/* 2-Metric Grid (Distance & Active Time) with high-contrast typography */}
                   <div className="grid grid-cols-2 gap-2.5 text-xs">
                     <div className="bg-slate-50 dark:bg-slate-900/60 rounded-xl p-3 border border-slate-200/80 dark:border-slate-800/80">
-                      <span className="text-xs font-medium text-slate-500 dark:text-slate-400 block mb-1">ระยะทางวันนี้</span>
+                      <span className="text-xs font-medium text-slate-500 dark:text-slate-400 block mb-1">
+                        ระยะทางวันนี้ ({distanceUnit})
+                      </span>
                       <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400 text-sm sm:text-base">
-                        {row.distanceKm.toFixed(2)} km
+                        {formatDistance(row.distanceKm, distanceUnit)}
                       </span>
                     </div>
                     <div className="bg-slate-50 dark:bg-slate-900/60 rounded-xl p-3 border border-slate-200/80 dark:border-slate-800/80">

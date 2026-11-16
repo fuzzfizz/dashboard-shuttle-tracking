@@ -3,7 +3,7 @@ import { useShuttleTelemetry } from './hooks/useShuttleTelemetry';
 import { useDailyMetrics } from './hooks/useDailyMetrics';
 import { ShuttleMap, DEFAULT_CENTER } from './components/ShuttleMap';
 import { TelemetryHUD } from './components/TelemetryHUD';
-import { DailyDistanceTable } from './components/DailyDistanceTable';
+import { DailyDistanceTable, DistanceUnit } from './components/DailyDistanceTable';
 import { FleetDistanceAnalyticsCard } from './components/FleetDistanceAnalyticsCard';
 import { HistoricalTripReplay } from './components/HistoricalTripReplay';
 import { Bus, Maximize2, Minimize2, Sun, Moon } from 'lucide-react';
@@ -29,6 +29,24 @@ function OperationalDashboard() {
   const [isMapFullscreen, setIsMapFullscreen] = useState(false);
   const [activeTab, setActiveTab] = useState<'today' | 'history'>('today');
   const [dbVehicles, setDbVehicles] = useState<Array<{ id: string; name: string }>>([]);
+  const [distanceUnit, setDistanceUnit] = useState<DistanceUnit>(() => {
+    try {
+      const saved = localStorage.getItem('shuttle_distance_unit');
+      if (saved === 'km' || saved === 'mile') return saved;
+    } catch {
+      // ignore
+    }
+    return 'km';
+  });
+
+  const handleDistanceUnitChange = (unit: DistanceUnit) => {
+    setDistanceUnit(unit);
+    try {
+      localStorage.setItem('shuttle_distance_unit', unit);
+    } catch {
+      // ignore
+    }
+  };
 
   useEffect(() => {
     fetchHistoricalVehicles().then((list) => {
@@ -279,6 +297,7 @@ function OperationalDashboard() {
                       isOnline={isOnline}
                       now={now}
                       dailyDistanceKm={selectedVehicleId ? dailyMetrics[selectedVehicleId]?.total_distance_km : undefined}
+                      distanceUnit={distanceUnit}
                       onClose={() => setSelectedVehicleId(null)}
                     />
                   )}
@@ -309,6 +328,8 @@ function OperationalDashboard() {
                 selectedVehicleId={selectedVehicleId}
                 onOpenVehicleMap={handleOpenVehicleMap}
                 now={now}
+                distanceUnit={distanceUnit}
+                onDistanceUnitChange={handleDistanceUnitChange}
               />
             </section>
           )}

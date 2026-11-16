@@ -157,4 +157,29 @@ describe('TelemetryHUD', () => {
     );
     expect(container.firstChild).toHaveClass('custom-hud-class');
   });
+
+  it('renders daily distance in miles when distanceUnit is set to mile', () => {
+    const telemetry = {
+      vehicle_id: 'shuttle-01',
+      lat: 13.7563,
+      lng: 100.5018,
+      speed: 25.0,
+      heading: 0,
+      timestamp: Date.now(),
+    };
+
+    render(
+      <TelemetryHUD
+        telemetry={telemetry}
+        status="connected"
+        lastSeen={Date.now()}
+        dailyDistanceKm={18.5}
+        distanceUnit="mile"
+      />
+    );
+
+    // 18.5 km * 0.621371 = 11.50 mile
+    expect(screen.getByText('11.50')).toBeInTheDocument();
+    expect(screen.getByText('mile')).toBeInTheDocument();
+  });
 });
