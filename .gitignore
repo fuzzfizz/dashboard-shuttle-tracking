@@ -21,6 +21,7 @@ Thumbs.db
 .claude/
 .gemini/
 docs/superpowers/
+idea.md
 *.png
 *.patch
 *.diff
