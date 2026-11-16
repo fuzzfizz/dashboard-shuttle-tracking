@@ -98,6 +98,44 @@ describe('ShuttleMap', () => {
     expect(html).toContain('shuttle-van-body');
   });
 
+  it('renders minimalist top-down vehicle icon without cluttered wheels or side mirrors', () => {
+    const icon = createVehicleIcon(45, false, 'EV-01', true);
+    const html = icon.options.html as string;
+
+    // Minimalist unibody and clean panoramic windshield
+    expect(html).toContain('shuttle-van-body');
+    expect(html).toContain('headlight-beam');
+    // Minimal unibody chassis & LED lightbar
+    expect(html).toContain('fill="#0f172a"');
+    // Does NOT contain noisy cluttered elements
+    expect(html).not.toContain('Side Mirrors');
+    expect(html).not.toContain('Wheels');
+  });
+
+  it('renders vehicle name in a realistic license plate frame with stamped border and mounting rivets', () => {
+    const thaiPlate = '1กข 9999';
+    const icon = createVehicleIcon(0, false, thaiPlate, true);
+    const html = icon.options.html as string;
+
+    expect(html).toContain('vehicle-license-plate');
+    expect(html).toContain('1กข 9999');
+    // Realistic license plate design cues: white plate background, crisp border, rivets
+    expect(html).toContain('background: #ffffff');
+    expect(html).toContain('border: 1.5px solid #1e293b');
+    expect(html).toContain('border-radius: 3.5px');
+    // Contains screw rivets
+    expect(html).toContain('border-radius: 50%');
+  });
+
+  it('highlights license plate frame with glowing accent when selected', () => {
+    const selectedIcon = createVehicleIcon(0, true, 'VAN-01', true);
+    const html = selectedIcon.options.html as string;
+
+    expect(html).toContain('vehicle-license-plate');
+    expect(html).toContain('0 0 0 2px #10b981');
+    expect(html).toContain('1.5px solid #059669');
+  });
+
   it('dims marker styling and disables pulse animation when vehicle is offline', () => {
     const onlineIcon = createVehicleIcon(90, false, 'EV-01', true);
     expect(onlineIcon.options.html).toContain('animation: pulse');

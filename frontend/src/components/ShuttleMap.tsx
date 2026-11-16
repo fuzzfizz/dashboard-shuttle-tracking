@@ -155,7 +155,7 @@ export const MapResizeHandler: React.FC<{ isFullscreen?: boolean }> = ({ isFulls
   return null;
 };
 
-// SVG top-down shuttle van marker with headlight beam, van body, and fixed vehicle badge
+// SVG top-down minimalist shuttle marker with headlight beam, unibody, and vehicle license plate frame
 export function createVehicleIcon(
   heading: number = 0,
   isSelected: boolean = false,
@@ -176,7 +176,7 @@ export function createVehicleIcon(
   const headlightGradient = isOnline
     ? `<defs>
         <linearGradient id="${gradientId}" x1="0%" y1="100%" x2="0%" y2="0%">
-          <stop offset="0%" stop-color="${primaryColor}" stop-opacity="0.6"/>
+          <stop offset="0%" stop-color="${primaryColor}" stop-opacity="0.45"/>
           <stop offset="100%" stop-color="${primaryColor}" stop-opacity="0"/>
         </linearGradient>
        </defs>`
@@ -186,49 +186,52 @@ export function createVehicleIcon(
     ? `<path class="headlight-beam" d="M 9 10 L 3 0 L 23 0 L 17 10 Z" fill="url(#${gradientId})" pointer-events="none" />`
     : '';
 
+  // License plate frame styling (กรอบป้ายทะเบียนรถ)
+  const plateBg = isOnline ? '#ffffff' : '#f1f5f9';
+  const plateTextColor = isOnline ? '#0f172a' : '#64748b';
+  const plateBorder = !isOnline
+    ? '1.5px solid #94a3b8'
+    : isSelected
+      ? '1.5px solid #059669'
+      : '1.5px solid #1e293b';
+  const plateShadow = !isOnline
+    ? '0 1px 3px rgba(0,0,0,0.2), inset 0 0 0 1px rgba(0,0,0,0.08)'
+    : isSelected
+      ? '0 0 0 2px #10b981, 0 3px 8px rgba(0,0,0,0.35), inset 0 0 0 1px rgba(0,0,0,0.15)'
+      : '0 2px 5px rgba(0,0,0,0.35), inset 0 0 0 1px rgba(0,0,0,0.12)';
+  const screwColor = !isOnline ? '#cbd5e1' : '#94a3b8';
+  const screwBorder = !isOnline ? '#94a3b8' : '#475569';
+
   const html = `
     <div style="position: relative; width: 52px; height: 52px; display: flex; align-items: center; justify-content: center; opacity: ${overallOpacity};">
-      <!-- Vehicle ID Pill Badge (Fixed horizontal orientation) -->
-      <div style="position: absolute; top: -14px; background: rgba(15, 23, 42, 0.95); color: #ffffff; font-size: 9px; font-weight: bold; font-family: monospace; padding: 1px 6px; border-radius: 4px; border: 1px solid ${borderColor}; white-space: nowrap; box-shadow: 0 2px 5px rgba(0,0,0,0.3); pointer-events: none; z-index: 10;">
-        ${safeVehicleId}
+      <!-- Vehicle License Plate Frame (กรอบป้ายทะเบียนรถ - Fixed horizontal orientation) -->
+      <div class="vehicle-license-plate" style="position: absolute; top: -16px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 4px; background: ${plateBg}; color: ${plateTextColor}; font-size: 9.5px; font-weight: 800; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace; letter-spacing: 0.6px; padding: 1.5px 6px; border-radius: 3.5px; border: ${plateBorder}; box-shadow: ${plateShadow}; white-space: nowrap; pointer-events: none; z-index: 10; text-transform: uppercase;">
+        <span style="display: inline-block; width: 3px; height: 3px; border-radius: 50%; background: ${screwColor}; border: 0.5px solid ${screwBorder}; flex-shrink: 0;"></span>
+        <span style="line-height: 1.1;">${safeVehicleId}</span>
+        <span style="display: inline-block; width: 3px; height: 3px; border-radius: 50%; background: ${screwColor}; border: 0.5px solid ${screwBorder}; flex-shrink: 0;"></span>
       </div>
       <!-- Pulse Ring -->
       ${pulseHtml}
-      <!-- Rotational Top-Down Van Body -->
+      <!-- Rotational Top-Down Minimalist Car Body -->
       <div class="shuttle-van-body" style="position: relative; width: 26px; height: 42px; display: flex; align-items: center; justify-content: center; transform: rotate(${heading}deg); transition: transform 0.4s cubic-bezier(0.2, 0, 0, 1);">
         <svg width="26" height="42" viewBox="0 0 26 42" fill="none" xmlns="http://www.w3.org/2000/svg">
           ${headlightGradient}
           <!-- Forward Headlight Beam Cone -->
           ${headlightBeam}
-          <!-- Side Mirrors -->
-          <rect x="1" y="14" width="2" height="4" rx="1" fill="${borderColor}" />
-          <rect x="23" y="14" width="2" height="4" rx="1" fill="${borderColor}" />
-          <!-- Wheels -->
-          <rect x="1.5" y="10" width="1.5" height="5" rx="0.75" fill="#0f172a" />
-          <rect x="23" y="10" width="1.5" height="5" rx="0.75" fill="#0f172a" />
-          <rect x="1.5" y="28" width="1.5" height="5" rx="0.75" fill="#0f172a" />
-          <rect x="23" y="28" width="1.5" height="5" rx="0.75" fill="#0f172a" />
-          <!-- Van Chassis Shell -->
-          <rect x="3" y="9" width="20" height="28" rx="4" fill="#0f172a" stroke="${borderColor}" stroke-width="1.8" />
-          <!-- Front Hood Curve -->
-          <path d="M 4 12 C 4 9.5 7 8 13 8 C 19 8 22 9.5 22 12 Z" fill="#1e293b" />
-          <!-- Windshield Glass -->
-          <path d="M 5 14 C 5 12.5 8 11.5 13 11.5 C 18 11.5 21 12.5 21 14 L 20 18 L 6 18 Z" fill="#38bdf8" fill-opacity="0.85" />
-          <!-- Front Headlight Lamps -->
-          <circle cx="6" cy="9.5" r="1.5" fill="${primaryColor}" />
-          <circle cx="20" cy="9.5" r="1.5" fill="${primaryColor}" />
-          <!-- Side Passenger Windows -->
-          <rect x="4.5" y="19.5" width="2" height="12" rx="0.8" fill="#38bdf8" fill-opacity="0.65" />
-          <rect x="19.5" y="19.5" width="2" height="12" rx="0.8" fill="#38bdf8" fill-opacity="0.65" />
-          <!-- Shuttle Passenger Cabin Roof Ridge -->
-          <line x1="8.5" y1="20" x2="8.5" y2="31" stroke="${primaryColor}" stroke-width="1" stroke-opacity="0.4" />
-          <line x1="17.5" y1="20" x2="17.5" y2="31" stroke="${primaryColor}" stroke-width="1" stroke-opacity="0.4" />
-          <rect x="10" y="22" width="6" height="8" rx="1.5" fill="#1e293b" stroke="${primaryColor}" stroke-width="1" stroke-opacity="0.5" />
-          <!-- Rear Window Glass -->
-          <rect x="6" y="33.5" width="14" height="2" rx="0.8" fill="#38bdf8" fill-opacity="0.7" />
-          <!-- Rear Taillights -->
-          <rect x="4.5" y="36" width="2.5" height="1" rx="0.5" fill="#ef4444" />
-          <rect x="19" y="36" width="2.5" height="1" rx="0.5" fill="#ef4444" />
+          <!-- Subtle vehicle drop shadow -->
+          <path d="M 6.5 15.5 C 6.5 10.5 9 9 13 9 C 17 9 19.5 10.5 19.5 15.5 L 19.5 33 C 19.5 36.5 17 38 13 38 C 9 38 6.5 36.5 6.5 33 Z" fill="rgba(0,0,0,0.22)" transform="translate(0, 1.5)"/>
+          <!-- Minimalist Car Body (Aerodynamic unibody) -->
+          <path d="M 6.5 15 C 6.5 10.5 9 9 13 9 C 17 9 19.5 10.5 19.5 15 L 19.5 33 C 19.5 36.5 17 38 13 38 C 9 38 6.5 36.5 6.5 33 Z" fill="#0f172a" stroke="${borderColor}" stroke-width="1.5" stroke-linejoin="round"/>
+          <!-- Panoramic Curved Front Windshield -->
+          <path d="M 8 15 C 8 12.2 9.8 11.2 13 11.2 C 16.2 11.2 18 12.2 18 15 L 17.5 18 C 17.5 18.6 16.2 19.2 13 19.2 C 9.8 19.2 8.5 18.6 8.5 18 Z" fill="#38bdf8" fill-opacity="0.9"/>
+          <!-- Minimalist Roof -->
+          <rect x="8.5" y="20.5" width="9" height="9" rx="2" fill="#1e293b" fill-opacity="0.9"/>
+          <!-- Rear Glass Strip -->
+          <path d="M 8.8 31.8 C 9.8 31.4 11.2 31.2 13 31.2 C 14.8 31.2 16.2 31.4 17.2 31.8 L 17 33 C 16 33.4 14.5 33.6 13 33.6 C 11.5 33.6 10 33.4 9 33 Z" fill="#38bdf8" fill-opacity="0.75"/>
+          <!-- Front LED Light Bar (Direction & Status Indicator) -->
+          <path d="M 8.5 9.8 C 10 9.2 11.5 9 13 9 C 14.5 9 16 9.2 17.5 9.8" stroke="${primaryColor}" stroke-width="1.6" stroke-linecap="round"/>
+          <!-- Rear Taillight Bar -->
+          <path d="M 8.5 37 C 10 37.4 11.5 37.6 13 37.6 C 14.5 37.6 16 37.4 17.5 37" stroke="#ef4444" stroke-width="1.4" stroke-linecap="round"/>
         </svg>
       </div>
     </div>
