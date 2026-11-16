@@ -212,26 +212,36 @@ export function createVehicleIcon(
       </div>
       <!-- Pulse Ring -->
       ${pulseHtml}
-      <!-- Rotational Top-Down Minimalist Car Body -->
+      <!-- Rotational Top-Down Minimalist Shuttle Bus Body -->
       <div class="shuttle-van-body" style="position: relative; width: 26px; height: 42px; display: flex; align-items: center; justify-content: center; transform: rotate(${heading}deg); transition: transform 0.4s cubic-bezier(0.2, 0, 0, 1);">
         <svg width="26" height="42" viewBox="0 0 26 42" fill="none" xmlns="http://www.w3.org/2000/svg">
           ${headlightGradient}
           <!-- Forward Headlight Beam Cone -->
           ${headlightBeam}
-          <!-- Subtle vehicle drop shadow -->
-          <path d="M 6.5 15.5 C 6.5 10.5 9 9 13 9 C 17 9 19.5 10.5 19.5 15.5 L 19.5 33 C 19.5 36.5 17 38 13 38 C 9 38 6.5 36.5 6.5 33 Z" fill="rgba(0,0,0,0.22)" transform="translate(0, 1.5)"/>
-          <!-- Minimalist Car Body (Aerodynamic unibody) -->
-          <path d="M 6.5 15 C 6.5 10.5 9 9 13 9 C 17 9 19.5 10.5 19.5 15 L 19.5 33 C 19.5 36.5 17 38 13 38 C 9 38 6.5 36.5 6.5 33 Z" fill="#0f172a" stroke="${borderColor}" stroke-width="1.5" stroke-linejoin="round"/>
-          <!-- Panoramic Curved Front Windshield -->
-          <path d="M 8 15 C 8 12.2 9.8 11.2 13 11.2 C 16.2 11.2 18 12.2 18 15 L 17.5 18 C 17.5 18.6 16.2 19.2 13 19.2 C 9.8 19.2 8.5 18.6 8.5 18 Z" fill="#38bdf8" fill-opacity="0.9"/>
-          <!-- Minimalist Roof -->
-          <rect x="8.5" y="20.5" width="9" height="9" rx="2" fill="#1e293b" fill-opacity="0.9"/>
-          <!-- Rear Glass Strip -->
-          <path d="M 8.8 31.8 C 9.8 31.4 11.2 31.2 13 31.2 C 14.8 31.2 16.2 31.4 17.2 31.8 L 17 33 C 16 33.4 14.5 33.6 13 33.6 C 11.5 33.6 10 33.4 9 33 Z" fill="#38bdf8" fill-opacity="0.75"/>
-          <!-- Front LED Light Bar (Direction & Status Indicator) -->
-          <path d="M 8.5 9.8 C 10 9.2 11.5 9 13 9 C 14.5 9 16 9.2 17.5 9.8" stroke="${primaryColor}" stroke-width="1.6" stroke-linecap="round"/>
-          <!-- Rear Taillight Bar -->
-          <path d="M 8.5 37 C 10 37.4 11.5 37.6 13 37.6 C 14.5 37.6 16 37.4 17.5 37" stroke="#ef4444" stroke-width="1.4" stroke-linecap="round"/>
+          <!-- Subtle Bus Drop Shadow -->
+          <rect x="4.5" y="9.5" width="17" height="30" rx="3.5" fill="rgba(0,0,0,0.22)" />
+          <!-- Minimalist Shuttle Bus Chassis (Elongated rectangular bus body) -->
+          <rect x="4.5" y="8.5" width="17" height="30" rx="3.5" fill="#0f172a" stroke="${borderColor}" stroke-width="1.5" />
+          <!-- Wide Front Bus Windshield (Span across front with short nose) -->
+          <path d="M 5.8 12.5 C 6.5 10 9 9 13 9 C 17 9 19.5 10 20.2 12.5 L 19.8 15 L 6.2 15 Z" fill="#38bdf8" fill-opacity="0.9" />
+          <!-- Passenger Cabin Side Windows (Continuous tinted glass strips) -->
+          <rect x="5.5" y="16.5" width="1.8" height="17.5" rx="0.9" fill="#38bdf8" fill-opacity="0.65" />
+          <rect x="18.7" y="16.5" width="1.8" height="17.5" rx="0.9" fill="#38bdf8" fill-opacity="0.65" />
+          <!-- Shuttle Passenger Cabin Roof Panel -->
+          <rect x="8" y="16" width="10" height="19" rx="1.5" fill="#1e293b" fill-opacity="0.9" />
+          <!-- Rooftop AC / Ventilation Unit (Distinctive Shuttle Bus / Van signature) -->
+          <rect x="9.5" y="21" width="7" height="9" rx="1.5" fill="#0f172a" stroke="${primaryColor}" stroke-width="0.8" stroke-opacity="0.6" />
+          <line x1="11" y1="23.5" x2="15" y2="23.5" stroke="${primaryColor}" stroke-width="0.8" stroke-opacity="0.5" />
+          <line x1="11" y1="25.5" x2="15" y2="25.5" stroke="${primaryColor}" stroke-width="0.8" stroke-opacity="0.5" />
+          <line x1="11" y1="27.5" x2="15" y2="27.5" stroke="${primaryColor}" stroke-width="0.8" stroke-opacity="0.5" />
+          <!-- Rear Window Glass -->
+          <rect x="7" y="36" width="12" height="1.8" rx="0.8" fill="#38bdf8" fill-opacity="0.75" />
+          <!-- Front Headlight LED Lamps -->
+          <circle cx="6.5" cy="9.5" r="1.2" fill="${primaryColor}" />
+          <circle cx="19.5" cy="9.5" r="1.2" fill="${primaryColor}" />
+          <!-- Rear Taillights -->
+          <rect x="5.5" y="37.2" width="2.5" height="1" rx="0.5" fill="#ef4444" />
+          <rect x="18" y="37.2" width="2.5" height="1" rx="0.5" fill="#ef4444" />
         </svg>
       </div>
     </div>

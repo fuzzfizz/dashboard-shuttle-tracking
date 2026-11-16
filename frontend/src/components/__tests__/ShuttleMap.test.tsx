@@ -98,18 +98,19 @@ describe('ShuttleMap', () => {
     expect(html).toContain('shuttle-van-body');
   });
 
-  it('renders minimalist top-down vehicle icon without cluttered wheels or side mirrors', () => {
+  it('renders minimalist top-down shuttle bus icon with bus body, wide windshield, and rooftop AC unit', () => {
     const icon = createVehicleIcon(45, false, 'EV-01', true);
     const html = icon.options.html as string;
 
-    // Minimalist unibody and clean panoramic windshield
+    // Minimalist shuttle bus body
     expect(html).toContain('shuttle-van-body');
     expect(html).toContain('headlight-beam');
-    // Minimal unibody chassis & LED lightbar
     expect(html).toContain('fill="#0f172a"');
-    // Does NOT contain noisy cluttered elements
+    // Does NOT contain noisy cluttered elements like protruding wheels or mirrors
     expect(html).not.toContain('Side Mirrors');
     expect(html).not.toContain('Wheels');
+    // Rooftop AC / ventilation unit
+    expect(html).toContain('stroke-opacity="0.6"');
   });
 
   it('renders vehicle name in a realistic license plate frame with stamped border and mounting rivets', () => {
