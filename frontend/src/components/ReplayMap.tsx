@@ -143,11 +143,7 @@ export const ReplayMap: React.FC<ReplayMapProps> = ({
               true
             )}
             zIndexOffset={1000}
-          >
-            <Tooltip permanent={false} direction="top" offset={[0, -28]}>
-              {currentPoint.vehicle_id} ({currentPoint.speed.toFixed(1)} กม./ชม.)
-            </Tooltip>
-          </Marker>
+          />
         )}
       </MapContainer>
 

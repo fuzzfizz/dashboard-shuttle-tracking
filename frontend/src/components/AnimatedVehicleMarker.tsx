@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { Marker, Tooltip } from 'react-leaflet';
+import { Marker } from 'react-leaflet';
 import L from 'leaflet';
 import { TelemetryPayload } from '../types/telemetry';
 import { createVehicleIcon } from './ShuttleMap';
@@ -179,14 +179,6 @@ export const AnimatedVehicleMarker: React.FC<AnimatedVehicleMarkerProps> = ({
       eventHandlers={{
         click: () => onSelectVehicle?.(vehicle.vehicle_id),
       }}
-    >
-      <Tooltip direction="top" offset={[0, -20]} opacity={0.95}>
-        <div className="text-xs font-sans">
-          <strong>{vehicle.vehicle_id}</strong>
-          <br />
-          Speed: {(vehicle.speed ?? 0).toFixed(1)} km/h
-        </div>
-      </Tooltip>
-    </Marker>
+    />
   );
 };
