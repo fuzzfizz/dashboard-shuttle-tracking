@@ -113,7 +113,7 @@ describe('ShuttleMap', () => {
     expect(html).toContain('stroke-opacity="0.6"');
   });
 
-  it('renders vehicle name in a realistic license plate frame with stamped border and mounting rivets', () => {
+  it('renders vehicle name in a realistic license plate frame with stamped border, mounting rivets, and downward pointer arrow', () => {
     const thaiPlate = '1กข 9999';
     const icon = createVehicleIcon(0, false, thaiPlate, true);
     const html = icon.options.html as string;
@@ -126,15 +126,20 @@ describe('ShuttleMap', () => {
     expect(html).toContain('border-radius: 3.5px');
     // Contains screw rivets
     expect(html).toContain('border-radius: 50%');
+    // Contains downward pointer arrow connecting badge to vehicle
+    expect(html).toContain('plate-pointer');
+    expect(html).toContain('stroke="#1e293b"');
   });
 
-  it('highlights license plate frame with glowing accent when selected', () => {
+  it('highlights license plate frame and downward pointer with glowing accent when selected', () => {
     const selectedIcon = createVehicleIcon(0, true, 'VAN-01', true);
     const html = selectedIcon.options.html as string;
 
     expect(html).toContain('vehicle-license-plate');
     expect(html).toContain('0 0 0 2px #10b981');
     expect(html).toContain('1.5px solid #059669');
+    expect(html).toContain('plate-pointer');
+    expect(html).toContain('stroke="#059669"');
   });
 
   it('dims marker styling and disables pulse animation when vehicle is offline', () => {

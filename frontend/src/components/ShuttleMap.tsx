@@ -189,11 +189,12 @@ export function createVehicleIcon(
   // License plate frame styling (กรอบป้ายทะเบียนรถ)
   const plateBg = isOnline ? '#ffffff' : '#f1f5f9';
   const plateTextColor = isOnline ? '#0f172a' : '#64748b';
-  const plateBorder = !isOnline
-    ? '1.5px solid #94a3b8'
+  const plateBorderColor = !isOnline
+    ? '#94a3b8'
     : isSelected
-      ? '1.5px solid #059669'
-      : '1.5px solid #1e293b';
+      ? '#059669'
+      : '#1e293b';
+  const plateBorder = `1.5px solid ${plateBorderColor}`;
   const plateShadow = !isOnline
     ? '0 1px 3px rgba(0,0,0,0.2), inset 0 0 0 1px rgba(0,0,0,0.08)'
     : isSelected
@@ -204,11 +205,16 @@ export function createVehicleIcon(
 
   const html = `
     <div style="position: relative; width: 52px; height: 52px; display: flex; align-items: center; justify-content: center; opacity: ${overallOpacity};">
-      <!-- Vehicle License Plate Frame (กรอบป้ายทะเบียนรถ - Fixed horizontal orientation) -->
-      <div class="vehicle-license-plate" style="position: absolute; top: -16px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 4px; background: ${plateBg}; color: ${plateTextColor}; font-size: 9.5px; font-weight: 800; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace; letter-spacing: 0.6px; padding: 1.5px 6px; border-radius: 3.5px; border: ${plateBorder}; box-shadow: ${plateShadow}; white-space: nowrap; pointer-events: none; z-index: 10; text-transform: uppercase;">
+      <!-- Vehicle License Plate Frame with Downward Pointer Arrow (กรอบป้ายทะเบียนรถพร้อมลูกศรชี้ลง - Fixed horizontal orientation) -->
+      <div class="vehicle-license-plate" style="position: absolute; top: -14px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 4px; background: ${plateBg}; color: ${plateTextColor}; font-size: 9.5px; font-weight: 800; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace; letter-spacing: 0.6px; padding: 1.5px 6px; border-radius: 3.5px; border: ${plateBorder}; box-shadow: ${plateShadow}; white-space: nowrap; pointer-events: none; z-index: 10; text-transform: uppercase;">
         <span style="display: inline-block; width: 3px; height: 3px; border-radius: 50%; background: ${screwColor}; border: 0.5px solid ${screwBorder}; flex-shrink: 0;"></span>
         <span style="line-height: 1.1;">${safeVehicleId}</span>
         <span style="display: inline-block; width: 3px; height: 3px; border-radius: 50%; background: ${screwColor}; border: 0.5px solid ${screwBorder}; flex-shrink: 0;"></span>
+        <!-- Downward Arrow Pointer towards Vehicle (ลูกศรชี้ลงไปที่ตัวรถ) -->
+        <svg class="plate-pointer" width="8" height="5" viewBox="0 0 8 5" fill="none" xmlns="http://www.w3.org/2000/svg" style="position: absolute; bottom: -4px; left: 50%; transform: translateX(-50%); pointer-events: none; overflow: visible;">
+          <path d="M 0 0 L 4 4.5 L 8 0 Z" fill="${plateBg}" />
+          <path d="M 0.5 0 L 4 4 L 7.5 0" stroke="${plateBorderColor}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
       </div>
       <!-- Pulse Ring -->
       ${pulseHtml}
