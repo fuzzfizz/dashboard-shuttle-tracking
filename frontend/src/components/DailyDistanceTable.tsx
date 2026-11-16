@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
-import { Bus, Route, ArrowUpDown, Maximize2, Search, X, Filter, ChevronDown } from 'lucide-react';
+import { Route, ArrowUpDown, Maximize2, Search, X, Filter, ChevronDown } from 'lucide-react';
 import { DailyMetricsMap } from '../types/metrics';
 import { FleetMap } from '../types/telemetry';
 import { OFFLINE_THRESHOLD_MS } from '../services/fleetStatus';
@@ -367,15 +367,8 @@ export const DailyDistanceTable: React.FC<DailyDistanceTableProps> = ({
                       {/* Vehicle Column */}
                       <td
                         data-testid="vehicle-id-cell"
-                        className="py-3 px-3 flex items-center gap-2.5"
+                        className="py-3 px-3 flex items-center"
                       >
-                        <div className={`p-1.5 rounded-lg shrink-0 transition-colors ${
-                          row.isOnline
-                            ? 'bg-[#5c990e]/10 text-[#5c990e]'
-                            : 'bg-slate-100 dark:bg-slate-800 text-slate-400'
-                        }`}>
-                          <Bus className="w-3.5 h-3.5" />
-                        </div>
                         <LicensePlateBadge
                           plateNumber={row.vehicleId}
                           isSelected={isSelected}
@@ -452,24 +445,15 @@ export const DailyDistanceTable: React.FC<DailyDistanceTableProps> = ({
                 >
                   {/* Card Header: Vehicle Identity & Live Status Badge */}
                   <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2.5">
-                      <div className={`p-2 rounded-xl border shrink-0 transition-colors ${
-                        row.isOnline
-                          ? 'bg-[#5c990e]/10 text-[#5c990e] border-[#5c990e]/20'
-                          : 'bg-slate-100 dark:bg-slate-800 text-slate-400 border-slate-200 dark:border-slate-700'
-                      }`}>
-                        <Bus className="w-4 h-4" />
+                    <div className="flex flex-col gap-1">
+                      <div className="flex items-center gap-1.5">
+                        <LicensePlateBadge
+                          plateNumber={row.vehicleId}
+                          isSelected={isSelected}
+                        />
                       </div>
-                      <div className="flex flex-col gap-1">
-                        <div className="flex items-center gap-1.5">
-                          <LicensePlateBadge
-                            plateNumber={row.vehicleId}
-                            isSelected={isSelected}
-                          />
-                        </div>
-                        <div className="text-xs text-slate-500 dark:text-slate-400">
-                          {row.isOnline ? 'เชื่อมต่อสด (Connected)' : 'ขาดการเชื่อมต่อ (Signal Lost)'}
-                        </div>
+                      <div className="text-xs text-slate-500 dark:text-slate-400">
+                        {row.isOnline ? 'เชื่อมต่อสด (Connected)' : 'ขาดการเชื่อมต่อ (Signal Lost)'}
                       </div>
                     </div>
 
