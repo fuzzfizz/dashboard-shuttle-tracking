@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, Suspense, lazy } from 'react';
 import { useShuttleTelemetry } from './hooks/useShuttleTelemetry';
 import { useDailyMetrics } from './hooks/useDailyMetrics';
+import { useVehicleTripRoute } from './hooks/useVehicleTripRoute';
 import { ShuttleMap, DEFAULT_CENTER } from './components/ShuttleMap';
 import { TelemetryHUD } from './components/TelemetryHUD';
 import { DailyDistanceTable, DistanceUnit } from './components/DailyDistanceTable';
@@ -26,6 +27,26 @@ function OperationalDashboard() {
   } = useShuttleTelemetry();
 
   const { dailyMetrics, past7DayRecords, hourlyDistanceMap } = useDailyMetrics(vehicles);
+  const {
+    trips,
+    actualPaths,
+    pinMode,
+    isCalculating: isCalculatingRoute,
+    error: routeError,
+    startTrip,
+    clearTrip,
+    recordVehicleBreadcrumb,
+    setPinMode,
+  } = useVehicleTripRoute();
+
+  const [pendingPoint, setPendingPoint] = useState<{ lat: number; lng: number } | null>(null);
+
+  useEffect(() => {
+    Object.values(vehicles).forEach((v) => {
+      recordVehicleBreadcrumb(v.vehicle_id, v.lat, v.lng);
+    });
+  }, [vehicles, recordVehicleBreadcrumb]);
+
   const [isMapFullscreen, setIsMapFullscreen] = useState(false);
   const [activeTab, setActiveTab] = useState<'today' | 'history'>('today');
   const [dbVehicles, setDbVehicles] = useState<Array<{ id: string; name: string }>>([]);
@@ -233,6 +254,17 @@ function OperationalDashboard() {
                   defaultCenter={DEFAULT_CENTER}
                   zoom={14}
                   isFullscreen={isMapFullscreen}
+                  activeTrip={selectedVehicleId ? trips[selectedVehicleId] : undefined}
+                  actualPath={selectedVehicleId ? actualPaths[selectedVehicleId] : undefined}
+                  pinMode={pinMode}
+                  onSetPinMode={setPinMode}
+                  onStartTrip={startTrip}
+                  onClearTrip={clearTrip}
+                  pendingPoint={pendingPoint}
+                  onMapClick={(lat, lng) => setPendingPoint({ lat, lng })}
+                  isCalculatingRoute={isCalculatingRoute}
+                  routeError={routeError}
+                  vehicleIds={vehicleList.map((v) => v.id)}
                 />
               </div>
 

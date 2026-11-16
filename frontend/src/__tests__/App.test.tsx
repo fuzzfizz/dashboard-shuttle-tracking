@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { App } from '../App';
 import * as shuttleHook from '../hooks/useShuttleTelemetry';
 import * as dailyMetricsHook from '../hooks/useDailyMetrics';
+import * as tripRouteService from '../services/tripRouteService';
 
 describe('App Integration', () => {
   beforeEach(() => {
@@ -338,5 +339,53 @@ describe('App Integration', () => {
     expect(screen.getByText('Fleet Live Map')).toBeInTheDocument();
     expect(screen.getByText('Daily Distance Overview')).toBeInTheDocument();
     expect(screen.queryByLabelText(/select date/i)).toBeNull();
+  });
+
+  it('renders route test button and records breadcrumbs without triggering route API on telemetry ticks (strict zero-loop compliance)', () => {
+    const calculateTripRouteSpy = vi.spyOn(tripRouteService, 'calculateTripRoute');
+
+    const testVehicle = {
+      vehicle_id: 'BUS-01',
+      lat: 18.7900,
+      lng: 98.9800,
+      speed: 25,
+      timestamp: Date.now(),
+    };
+
+    const telemetryMock = {
+      status: 'connected' as const,
+      vehicles: { 'BUS-01': testVehicle },
+      lastSeenMap: { 'BUS-01': Date.now() },
+      selectedVehicleId: 'BUS-01',
+      setSelectedVehicleId: vi.fn(),
+      telemetry: testVehicle,
+      lastSeen: Date.now(),
+      now: Date.now(),
+    };
+
+    vi.spyOn(shuttleHook, 'useShuttleTelemetry').mockReturnValue(telemetryMock);
+
+    const { rerender } = render(<App />);
+
+    expect(screen.getByRole('button', { name: /ทดสอบเส้นทาง/i })).toBeInTheDocument();
+    expect(calculateTripRouteSpy).not.toHaveBeenCalled();
+
+    // Simulate telemetry tick updates
+    const updatedVehicle = {
+      ...testVehicle,
+      lat: 18.7905,
+      lng: 98.9805,
+      timestamp: Date.now() + 5000,
+    };
+    vi.spyOn(shuttleHook, 'useShuttleTelemetry').mockReturnValue({
+      ...telemetryMock,
+      vehicles: { 'BUS-01': updatedVehicle },
+    });
+
+    rerender(<App />);
+
+    // Strict Zero-Loop Rule: Zero routing search API calls on telemetry tick updates
+    expect(calculateTripRouteSpy).not.toHaveBeenCalled();
+    calculateTripRouteSpy.mockRestore();
   });
 });

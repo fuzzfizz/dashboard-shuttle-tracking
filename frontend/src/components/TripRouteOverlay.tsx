@@ -62,6 +62,11 @@ export const TripRouteOverlay: React.FC<TripRouteOverlayProps> = ({
       {/* Planned Route (แนวเส้นทางตามใบจอง): Semi-transparent Dashed line */}
       {hasPlannedPath && (
         <Polyline
+          eventHandlers={{
+            add: (e) => {
+              e.target.getElement()?.setAttribute('data-testid', 'planned-route-polyline');
+            },
+          }}
           data-testid="planned-route-polyline"
           positions={trip.plannedPath}
           pathOptions={{
@@ -78,6 +83,11 @@ export const TripRouteOverlay: React.FC<TripRouteOverlayProps> = ({
       {/* Actual Path (เส้นทางที่รถวิ่งจริง): High-contrast Solid line */}
       {hasActualPath && (
         <Polyline
+          eventHandlers={{
+            add: (e) => {
+              e.target.getElement()?.setAttribute('data-testid', 'actual-path-polyline');
+            },
+          }}
           data-testid="actual-path-polyline"
           positions={actualPath}
           pathOptions={{
@@ -93,6 +103,11 @@ export const TripRouteOverlay: React.FC<TripRouteOverlayProps> = ({
       {/* Pickup Location Marker */}
       {trip?.pickup && (
         <Marker
+          eventHandlers={{
+            add: (e) => {
+              e.target.getElement()?.setAttribute('data-testid', 'pickup-marker');
+            },
+          }}
           data-testid="pickup-marker"
           position={[trip.pickup.lat, trip.pickup.lng]}
           icon={createPinIcon('pickup', trip.pickup.name || 'จุดรับ')}
@@ -102,6 +117,11 @@ export const TripRouteOverlay: React.FC<TripRouteOverlayProps> = ({
       {/* Dropoff Location Marker */}
       {trip?.dropoff && (
         <Marker
+          eventHandlers={{
+            add: (e) => {
+              e.target.getElement()?.setAttribute('data-testid', 'dropoff-marker');
+            },
+          }}
           data-testid="dropoff-marker"
           position={[trip.dropoff.lat, trip.dropoff.lng]}
           icon={createPinIcon('dropoff', trip.dropoff.name || 'จุดส่ง')}

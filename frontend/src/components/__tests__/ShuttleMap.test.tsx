@@ -1,8 +1,9 @@
-import { render } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import L from 'leaflet';
 import { ShuttleMap, escapeHtml, createVehicleIcon, tileUrl, tileAttribution, LONGDO_MAP_CONFIG } from '../ShuttleMap';
 import { FleetMap } from '../../types/telemetry';
+import { VehicleTrip } from '../../types/trip';
 
 describe('ShuttleMap', () => {
   beforeEach(() => {
@@ -313,5 +314,74 @@ describe('ShuttleMap', () => {
     recenterBtn.click();
     expect(fitBoundsSpy).toHaveBeenCalled();
     fitBoundsSpy.mockRestore();
+  });
+
+  it('renders TripRouteOverlay when active vehicle has an assigned trip', () => {
+    const mockTrip: VehicleTrip = {
+      vehicleId: 'BUS-01',
+      pickup: { lat: 18.788, lng: 98.985 },
+      dropoff: { lat: 18.790, lng: 98.990 },
+      plannedPath: [[18.788, 98.985], [18.790, 98.990]],
+      createdAt: Date.now(),
+    };
+
+    render(
+      <ShuttleMap
+        vehicles={{
+          'BUS-01': { vehicle_id: 'BUS-01', lat: 18.79, lng: 98.98, speed: 20, timestamp: Date.now() },
+        }}
+        selectedVehicleId="BUS-01"
+        activeTrip={mockTrip}
+      />
+    );
+
+    expect(screen.getByTestId('planned-route-polyline')).toBeInTheDocument();
+  });
+
+  it('renders actualPath polyline when actualPath is provided', () => {
+    render(
+      <ShuttleMap
+        vehicles={{
+          'BUS-01': { vehicle_id: 'BUS-01', lat: 18.79, lng: 98.98, speed: 20, timestamp: Date.now() },
+        }}
+        selectedVehicleId="BUS-01"
+        actualPath={[
+          [18.788, 98.985],
+          [18.789, 98.987],
+        ]}
+      />
+    );
+
+    expect(screen.getByTestId('actual-path-polyline')).toBeInTheDocument();
+  });
+
+  it('does not render route polylines when activeTrip and actualPath are not provided', () => {
+    render(
+      <ShuttleMap
+        vehicles={{
+          'BUS-01': { vehicle_id: 'BUS-01', lat: 18.79, lng: 98.98, speed: 20, timestamp: Date.now() },
+        }}
+        selectedVehicleId="BUS-01"
+      />
+    );
+
+    expect(screen.queryByTestId('planned-route-polyline')).toBeNull();
+    expect(screen.queryByTestId('actual-path-polyline')).toBeNull();
+  });
+
+  it('renders TripTestPanel floating toggle button when onStartTrip and vehicleIds are provided', () => {
+    const onStartTripMock = vi.fn();
+    render(
+      <ShuttleMap
+        vehicles={{
+          'BUS-01': { vehicle_id: 'BUS-01', lat: 18.79, lng: 98.98, speed: 20, timestamp: Date.now() },
+        }}
+        selectedVehicleId="BUS-01"
+        vehicleIds={['BUS-01']}
+        onStartTrip={onStartTripMock}
+      />
+    );
+
+    expect(screen.getByRole('button', { name: /ทดสอบเส้นทาง/i })).toBeInTheDocument();
   });
 });

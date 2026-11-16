@@ -7,6 +7,9 @@ import { computeVehicleStatus, OFFLINE_THRESHOLD_MS } from '../services/fleetSta
 import { isJumpTooLarge } from '../services/markerInterpolation';
 import { AnimatedVehicleMarker } from './AnimatedVehicleMarker';
 import { MAP_PROVIDERS } from '../services/mapProviders';
+import { VehicleTrip, TripLocation, MapPinMode } from '../types/trip';
+import { TripRouteOverlay } from './TripRouteOverlay';
+import { TripTestPanel } from './TripTestPanel';
 
 // Primary map provider: Longdo Map (Thai localized high-detail cartography)
 export const LONGDO_MAP_CONFIG = MAP_PROVIDERS.longdomap;
@@ -39,6 +42,17 @@ export interface ShuttleMapProps {
   defaultCenter?: [number, number];
   zoom?: number;
   isFullscreen?: boolean;
+  activeTrip?: VehicleTrip;
+  actualPath?: Array<[number, number]>;
+  pinMode?: MapPinMode;
+  onSetPinMode?: (mode: MapPinMode) => void;
+  onStartTrip?: (vehicleId: string, pickup: TripLocation, dropoff: TripLocation) => void;
+  onClearTrip?: (vehicleId: string) => void;
+  pendingPoint?: { lat: number; lng: number } | null;
+  onMapClick?: (lat: number, lng: number) => void;
+  isCalculatingRoute?: boolean;
+  routeError?: string | null;
+  vehicleIds?: string[];
 }
 
 // Camera auto controller: handles overview (fitBounds) or focused tracking (panTo)
@@ -392,6 +406,17 @@ export const ShuttleMap: React.FC<ShuttleMapProps> = ({
   defaultCenter = DEFAULT_CENTER,
   zoom = 15,
   isFullscreen = false,
+  activeTrip,
+  actualPath,
+  pinMode = 'idle',
+  onSetPinMode,
+  onStartTrip,
+  onClearTrip,
+  pendingPoint,
+  onMapClick,
+  isCalculatingRoute = false,
+  routeError = null,
+  vehicleIds,
 }) => {
   // Merge backward compatibility prop telemetry if vehicles is empty
   const effectiveVehicles: FleetMap =
@@ -415,6 +440,37 @@ export const ShuttleMap: React.FC<ShuttleMapProps> = ({
           </span>
         </div>
       )}
+
+      {/* Floating Route Testing Panel */}
+      {(onStartTrip || (vehicleIds && vehicleIds.length > 0)) && (
+        <div
+          className={`absolute ${isFullscreen ? 'top-14 right-3 sm:top-16 sm:right-4' : 'top-3 right-3 sm:top-4 sm:right-4'} z-[1001] pointer-events-auto`}
+          onMouseDown={(e) => e.stopPropagation()}
+          onTouchStart={(e) => e.stopPropagation()}
+          onDoubleClick={(e) => e.stopPropagation()}
+        >
+          <TripTestPanel
+            vehicleIds={
+              vehicleIds && vehicleIds.length > 0
+                ? vehicleIds
+                : Object.keys(effectiveVehicles).length > 0
+                  ? Object.keys(effectiveVehicles)
+                  : ['EV-01']
+            }
+            selectedVehicleId={selectedVehicleId}
+            onSelectVehicle={onSelectVehicle || (() => {})}
+            activeTrip={activeTrip}
+            pinMode={pinMode || 'idle'}
+            onSetPinMode={onSetPinMode || (() => {})}
+            onStartTrip={onStartTrip || (() => {})}
+            onClearTrip={onClearTrip || (() => {})}
+            pendingPoint={pendingPoint}
+            isCalculating={isCalculatingRoute}
+            error={routeError}
+          />
+        </div>
+      )}
+
       <MapContainer
         center={defaultCenter}
         zoom={zoom}
@@ -446,6 +502,14 @@ export const ShuttleMap: React.FC<ShuttleMapProps> = ({
           selectedVehicleId={selectedVehicleId}
           defaultCenter={defaultCenter}
           isFullscreen={isFullscreen}
+        />
+
+        {/* Planned Route & Live Path Overlay */}
+        <TripRouteOverlay
+          trip={activeTrip}
+          actualPath={actualPath}
+          pinMode={pinMode}
+          onMapClick={onMapClick}
         />
 
         {/* Render animated vehicle markers with 60 FPS gliding */}
