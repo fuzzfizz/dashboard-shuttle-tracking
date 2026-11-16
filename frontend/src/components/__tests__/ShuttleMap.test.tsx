@@ -115,22 +115,23 @@ describe('ShuttleMap', () => {
     expect(html).toContain('stroke-opacity="0.8"');
   });
 
-  it('renders vehicle name in a realistic license plate frame with stamped border, mounting rivets, and downward pointer arrow', () => {
+  it('renders vehicle name in a realistic license plate frame with thick stamped border, mounting rivets, and downward pointer arrow', () => {
     const thaiPlate = '1กข 9999';
     const icon = createVehicleIcon(0, false, thaiPlate, true);
     const html = icon.options.html as string;
 
     expect(html).toContain('vehicle-license-plate');
     expect(html).toContain('1กข 9999');
-    // Realistic license plate design cues: white plate background, crisp border, rivets
+    // Realistic license plate design cues: white plate background, thick crisp border, rivets
     expect(html).toContain('background: #ffffff');
-    expect(html).toContain('border: 1.5px solid #1e293b');
-    expect(html).toContain('border-radius: 3.5px');
+    expect(html).toContain('border: 2px solid #1e293b');
+    expect(html).toContain('border-radius: 4px');
     // Contains screw rivets
     expect(html).toContain('border-radius: 50%');
     // Contains downward pointer arrow connecting badge to vehicle
     expect(html).toContain('plate-pointer');
     expect(html).toContain('stroke="#1e293b"');
+    expect(html).toContain('stroke-width="2"');
   });
 
   it('highlights license plate frame and downward pointer with glowing accent when selected', () => {
@@ -139,7 +140,7 @@ describe('ShuttleMap', () => {
 
     expect(html).toContain('vehicle-license-plate');
     expect(html).toContain('0 0 0 2px #5c990e');
-    expect(html).toContain('1.5px solid #4a7c0b');
+    expect(html).toContain('2px solid #4a7c0b');
     expect(html).toContain('plate-pointer');
     expect(html).toContain('stroke="#4a7c0b"');
   });
