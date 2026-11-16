@@ -156,6 +156,7 @@ export const MapResizeHandler: React.FC<{ isFullscreen?: boolean }> = ({ isFulls
 };
 
 // SVG top-down minimalist shuttle marker with headlight beam, unibody, and vehicle license plate frame
+// Styled in Faculty of Pharmacy, Chiang Mai University theme (สีเขียวมะกอก #5c990e & สีม่วงดอกรัก มช. #9e76b4)
 export function createVehicleIcon(
   heading: number = 0,
   isSelected: boolean = false,
@@ -163,11 +164,16 @@ export function createVehicleIcon(
   isOnline: boolean = true
 ) {
   const safeVehicleId = escapeHtml(vehicleId);
-  const primaryColor = !isOnline ? '#64748b' : isSelected ? '#34d399' : '#10b981';
-  const borderColor = !isOnline ? '#94a3b8' : isSelected ? '#6ee7b7' : '#ffffff';
+
+  // Pharmacy CMU Theme:
+  // Primary Faculty Color: Olive Green (สีเขียวมะกอก #5c990e / #4a7c0b)
+  // CMU Dok Rak Purple Accent: #9e76b4
+  const primaryColor = !isOnline ? '#64748b' : isSelected ? '#7bc818' : '#5c990e';
+  const borderColor = !isOnline ? '#94a3b8' : isSelected ? '#bef264' : '#ffffff';
+  const bodyColor = !isOnline ? '#334155' : isSelected ? '#43700b' : '#4a7c0b';
   const overallOpacity = !isOnline ? '0.6' : '1';
   const pulseHtml = isOnline
-    ? `<div style="position: absolute; width: 44px; height: 44px; background: rgba(16, 185, 129, ${isSelected ? '0.35' : '0.15'}); border-radius: 9999px; animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;"></div>`
+    ? `<div style="position: absolute; width: 44px; height: 44px; background: rgba(92, 153, 14, ${isSelected ? '0.4' : '0.18'}); border-radius: 9999px; animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;"></div>`
     : '';
 
   const cleanId = vehicleId ? vehicleId.replace(/[^a-zA-Z0-9_-]/g, '_') : 'default';
@@ -176,7 +182,7 @@ export function createVehicleIcon(
   const headlightGradient = isOnline
     ? `<defs>
         <linearGradient id="${gradientId}" x1="0%" y1="100%" x2="0%" y2="0%">
-          <stop offset="0%" stop-color="${primaryColor}" stop-opacity="0.45"/>
+          <stop offset="0%" stop-color="${primaryColor}" stop-opacity="0.5"/>
           <stop offset="100%" stop-color="${primaryColor}" stop-opacity="0"/>
         </linearGradient>
        </defs>`
@@ -192,13 +198,13 @@ export function createVehicleIcon(
   const plateBorderColor = !isOnline
     ? '#94a3b8'
     : isSelected
-      ? '#059669'
+      ? '#4a7c0b'
       : '#1e293b';
   const plateBorder = `1.5px solid ${plateBorderColor}`;
   const plateShadow = !isOnline
     ? '0 1px 3px rgba(0,0,0,0.2), inset 0 0 0 1px rgba(0,0,0,0.08)'
     : isSelected
-      ? '0 0 0 2px #10b981, 0 3px 8px rgba(0,0,0,0.35), inset 0 0 0 1px rgba(0,0,0,0.15)'
+      ? '0 0 0 2px #5c990e, 0 3px 8px rgba(0,0,0,0.35), inset 0 0 0 1px rgba(0,0,0,0.15)'
       : '0 2px 5px rgba(0,0,0,0.35), inset 0 0 0 1px rgba(0,0,0,0.12)';
   const screwColor = !isOnline ? '#cbd5e1' : '#94a3b8';
   const screwBorder = !isOnline ? '#94a3b8' : '#475569';
@@ -226,20 +232,22 @@ export function createVehicleIcon(
           ${headlightBeam}
           <!-- Subtle Bus Drop Shadow -->
           <rect x="4.5" y="9.5" width="17" height="30" rx="3.5" fill="rgba(0,0,0,0.22)" />
-          <!-- Minimalist Shuttle Bus Chassis (Elongated rectangular bus body) -->
-          <rect x="4.5" y="8.5" width="17" height="30" rx="3.5" fill="#0f172a" stroke="${borderColor}" stroke-width="1.5" />
+          <!-- Pharmacy CMU Olive Green Shuttle Bus Chassis -->
+          <rect x="4.5" y="8.5" width="17" height="30" rx="3.5" fill="${bodyColor}" stroke="${borderColor}" stroke-width="1.5" />
           <!-- Wide Front Bus Windshield (Span across front with short nose) -->
           <path d="M 5.8 12.5 C 6.5 10 9 9 13 9 C 17 9 19.5 10 20.2 12.5 L 19.8 15 L 6.2 15 Z" fill="#38bdf8" fill-opacity="0.9" />
           <!-- Passenger Cabin Side Windows (Continuous tinted glass strips) -->
           <rect x="5.5" y="16.5" width="1.8" height="17.5" rx="0.9" fill="#38bdf8" fill-opacity="0.65" />
           <rect x="18.7" y="16.5" width="1.8" height="17.5" rx="0.9" fill="#38bdf8" fill-opacity="0.65" />
-          <!-- Shuttle Passenger Cabin Roof Panel -->
-          <rect x="8" y="16" width="10" height="19" rx="1.5" fill="#1e293b" fill-opacity="0.9" />
+          <!-- Shuttle Passenger Cabin Roof Panel with CMU Brand Accent -->
+          <rect x="8" y="16" width="10" height="19" rx="1.5" fill="#2d4b06" fill-opacity="0.9" />
+          <!-- CMU Dok Rak Purple Accent Stripe on Roof (มหาวิทยาลัยเชียงใหม่) -->
+          <rect x="9.5" y="17" width="7" height="2" rx="0.5" fill="#9e76b4" fill-opacity="0.9" />
           <!-- Rooftop AC / Ventilation Unit (Distinctive Shuttle Bus / Van signature) -->
-          <rect x="9.5" y="21" width="7" height="9" rx="1.5" fill="#0f172a" stroke="${primaryColor}" stroke-width="0.8" stroke-opacity="0.6" />
-          <line x1="11" y1="23.5" x2="15" y2="23.5" stroke="${primaryColor}" stroke-width="0.8" stroke-opacity="0.5" />
-          <line x1="11" y1="25.5" x2="15" y2="25.5" stroke="${primaryColor}" stroke-width="0.8" stroke-opacity="0.5" />
-          <line x1="11" y1="27.5" x2="15" y2="27.5" stroke="${primaryColor}" stroke-width="0.8" stroke-opacity="0.5" />
+          <rect x="9.5" y="21" width="7" height="9" rx="1.5" fill="#1e3204" stroke="${primaryColor}" stroke-width="0.8" stroke-opacity="0.8" />
+          <line x1="11" y1="23.5" x2="15" y2="23.5" stroke="${primaryColor}" stroke-width="0.8" stroke-opacity="0.7" />
+          <line x1="11" y1="25.5" x2="15" y2="25.5" stroke="${primaryColor}" stroke-width="0.8" stroke-opacity="0.7" />
+          <line x1="11" y1="27.5" x2="15" y2="27.5" stroke="${primaryColor}" stroke-width="0.8" stroke-opacity="0.7" />
           <!-- Rear Window Glass -->
           <rect x="7" y="36" width="12" height="1.8" rx="0.8" fill="#38bdf8" fill-opacity="0.75" />
           <!-- Front Headlight LED Lamps -->

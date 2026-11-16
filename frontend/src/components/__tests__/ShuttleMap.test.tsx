@@ -98,19 +98,21 @@ describe('ShuttleMap', () => {
     expect(html).toContain('shuttle-van-body');
   });
 
-  it('renders minimalist top-down shuttle bus icon with bus body, wide windshield, and rooftop AC unit', () => {
+  it('renders minimalist top-down shuttle bus icon in Pharmacy CMU theme with rooftop AC unit', () => {
     const icon = createVehicleIcon(45, false, 'EV-01', true);
     const html = icon.options.html as string;
 
-    // Minimalist shuttle bus body
+    // Minimalist shuttle bus body with Pharmacy CMU Olive Green
     expect(html).toContain('shuttle-van-body');
     expect(html).toContain('headlight-beam');
-    expect(html).toContain('fill="#0f172a"');
+    expect(html).toContain('fill="#4a7c0b"');
+    // CMU Dok Rak Purple accent on roof
+    expect(html).toContain('fill="#9e76b4"');
     // Does NOT contain noisy cluttered elements like protruding wheels or mirrors
     expect(html).not.toContain('Side Mirrors');
     expect(html).not.toContain('Wheels');
     // Rooftop AC / ventilation unit
-    expect(html).toContain('stroke-opacity="0.6"');
+    expect(html).toContain('stroke-opacity="0.8"');
   });
 
   it('renders vehicle name in a realistic license plate frame with stamped border, mounting rivets, and downward pointer arrow', () => {
@@ -136,10 +138,10 @@ describe('ShuttleMap', () => {
     const html = selectedIcon.options.html as string;
 
     expect(html).toContain('vehicle-license-plate');
-    expect(html).toContain('0 0 0 2px #10b981');
-    expect(html).toContain('1.5px solid #059669');
+    expect(html).toContain('0 0 0 2px #5c990e');
+    expect(html).toContain('1.5px solid #4a7c0b');
     expect(html).toContain('plate-pointer');
-    expect(html).toContain('stroke="#059669"');
+    expect(html).toContain('stroke="#4a7c0b"');
   });
 
   it('dims marker styling and disables pulse animation when vehicle is offline', () => {
