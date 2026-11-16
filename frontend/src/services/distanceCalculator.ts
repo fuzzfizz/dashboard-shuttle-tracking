@@ -31,6 +31,18 @@ export function haversineDistance(
   return EARTH_RADIUS_KM * c;
 }
 
+/**
+ * Calculates great-circle distance between two GPS coordinates in meters.
+ */
+export function haversineDistanceMeters(
+  lat1: number,
+  lng1: number,
+  lat2: number,
+  lng2: number
+): number {
+  return haversineDistance(lat1, lng1, lat2, lng2) * 1000.0;
+}
+
 export interface CoordinatePoint {
   lat: number;
   lng: number;
