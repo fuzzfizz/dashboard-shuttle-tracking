@@ -137,8 +137,16 @@ describe('TripTestPanel', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /ทดสอบเส้นทาง/i }));
 
-    expect(screen.getByText(/ระยะทางใบจอง: 2.50 km/)).toBeInTheDocument();
-    expect(screen.getByText(/จุดพิกัดถนน: 2 จุด/)).toBeInTheDocument();
+    // Verifies new card: Total Distance and Remaining Time
+    expect(screen.getByText(/ระยะทางจุดเริ่ม ➔ จุดสิ้นสุด/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/2.50/).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText(/เวลาที่เหลือจนถึงจุดส่ง/i)).toBeInTheDocument();
+    expect(screen.getByText(/เหลืออีก 2.50 กม./i)).toBeInTheDocument();
+
+    // Verifies old card was removed
+    expect(screen.queryByText(/ระยะทางใบจอง/i)).toBeNull();
+    expect(screen.queryByText(/จุดพิกัดถนน/i)).toBeNull();
+    expect(screen.queryByText(/เส้นทางจริงตามถนน/i)).toBeNull();
 
     const clearBtn = screen.getByRole('button', { name: /ล้างเส้นทาง/i });
     fireEvent.click(clearBtn);

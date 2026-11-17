@@ -482,6 +482,21 @@ export const ShuttleMap: React.FC<ShuttleMapProps> = ({
             onSelectVehicle={onSelectVehicle || (() => {})}
             activeTrip={activeTrip}
             roundStage={roundStage}
+            currentLocation={
+              activeTrip?.vehicleId && effectiveVehicles[activeTrip.vehicleId]
+                ? {
+                    lat: effectiveVehicles[activeTrip.vehicleId].lat,
+                    lng: effectiveVehicles[activeTrip.vehicleId].lng,
+                    speed: effectiveVehicles[activeTrip.vehicleId].speed,
+                  }
+                : selectedVehicleId && effectiveVehicles[selectedVehicleId]
+                  ? {
+                      lat: effectiveVehicles[selectedVehicleId].lat,
+                      lng: effectiveVehicles[selectedVehicleId].lng,
+                      speed: effectiveVehicles[selectedVehicleId].speed,
+                    }
+                  : undefined
+            }
             pinMode={pinMode || 'idle'}
             onSetPinMode={onSetPinMode || (() => {})}
             onStartTrip={onStartTrip || (() => {})}

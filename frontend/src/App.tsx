@@ -291,9 +291,9 @@ function OperationalDashboard() {
                   defaultCenter={DEFAULT_CENTER}
                   zoom={14}
                   isFullscreen={isMapFullscreen}
-                  activeTrip={selectedVehicleId ? trips[selectedVehicleId] : undefined}
-                  actualPath={selectedVehicleId ? actualPaths[selectedVehicleId] : undefined}
-                  roundStage={selectedVehicleId ? roundStages[selectedVehicleId] : undefined}
+                  activeTrip={selectedVehicleId ? trips[selectedVehicleId] : (trips['shuttle-test-01'] || Object.values(trips)[0])}
+                  actualPath={selectedVehicleId ? actualPaths[selectedVehicleId] : (actualPaths['shuttle-test-01'] || Object.values(actualPaths)[0])}
+                  roundStage={selectedVehicleId ? roundStages[selectedVehicleId] : (roundStages['shuttle-test-01'] || Object.values(roundStages)[0])}
                   pinMode={pinMode}
                   onSetPinMode={setPinMode}
                   onStartTrip={startTrip}
