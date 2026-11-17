@@ -21,6 +21,7 @@ import { calculateTripRoute } from '../services/tripRouteService';
 import {
   calculateMapboxTripRouteDetailed,
   MapboxRoutingProfile,
+  getDivergentSegments,
 } from '../services/mapboxRouteService';
 import { TripRouteOverlay } from './TripRouteOverlay';
 import { POPULAR_LOCATIONS, parseCoordinateString } from './TripTestPanel';
@@ -84,6 +85,7 @@ export const RouteCompareLab: React.FC<RouteCompareLabProps> = ({ onBack }) => {
   const [hybridAlternatives, setHybridAlternatives] = useState<boolean>(true);
   const [hybridExcludeToll, setHybridExcludeToll] = useState<boolean>(false);
   const [hybridExcludeMotorway, setHybridExcludeMotorway] = useState<boolean>(false);
+  const [hideOverlapping, setHideOverlapping] = useState<boolean>(true);
   const [alternativeTrips, setAlternativeTrips] = useState<VehicleTrip[]>([]);
   const [activeRouteIndex, setActiveRouteIndex] = useState<number>(0);
 
@@ -703,6 +705,19 @@ export const RouteCompareLab: React.FC<RouteCompareLabProps> = ({ onBack }) => {
                       />
                       <span>ทางสำรอง</span>
                     </label>
+                    <label
+                      className="flex items-center gap-1 cursor-pointer text-slate-700 dark:text-slate-300"
+                      title="ซ่อนช่วงที่เส้นทางสำรองวิ่งทับกับเส้นทางหลัก เพื่อให้เห็นเฉพาะจุดที่แยกตัวออก"
+                    >
+                      <input
+                        type="checkbox"
+                        aria-label="ซ่อนทางสำรองที่ทับกับทางหลัก"
+                        checked={hideOverlapping}
+                        onChange={(e) => setHideOverlapping(e.target.checked)}
+                        className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 w-3.5 h-3.5"
+                      />
+                      <span className="font-semibold text-emerald-700 dark:text-emerald-300">ซ่อนส่วนทับซ้อน</span>
+                    </label>
                     <label className="flex items-center gap-1 cursor-pointer text-slate-700 dark:text-slate-300">
                       <input
                         type="checkbox"
@@ -776,34 +791,50 @@ export const RouteCompareLab: React.FC<RouteCompareLabProps> = ({ onBack }) => {
                     url={LONGDO_TILE_URL}
                     attribution='&copy; <a href="https://map.longdo.com/">Longdo Map</a>'
                   />
-                  {/* Render ghost polylines for unselected alternative paths */}
+                  {/* Render ghost polylines for unselected alternative paths (filtered if hideOverlapping is on) */}
                   {alternativeTrips.map((alt, idx) => {
                     if (activeRouteIndex === idx + 1) return null;
-                    return (
+                    const primaryCoords = mapboxTrip?.plannedPath || [];
+                    const branches = hideOverlapping
+                      ? getDivergentSegments(alt.plannedPath, primaryCoords, 12)
+                      : [alt.plannedPath];
+
+                    return branches.map((branchCoords, branchIdx) => (
                       <Polyline
-                        key={alt.vehicleId}
-                        positions={alt.plannedPath}
+                        key={`${alt.vehicleId}-branch-${branchIdx}`}
+                        positions={branchCoords}
                         pathOptions={{
                           color: '#f59e0b',
                           weight: 4,
                           dashArray: '6, 8',
-                          opacity: 0.7,
+                          opacity: 0.85,
                         }}
                       />
-                    );
+                    ));
                   })}
-                  {activeRouteIndex > 0 && mapboxTrip && (
-                    <Polyline
-                      key="primary-inactive"
-                      positions={mapboxTrip.plannedPath}
-                      pathOptions={{
-                        color: '#059669',
-                        weight: 4,
-                        dashArray: '6, 8',
-                        opacity: 0.5,
-                      }}
-                    />
-                  )}
+
+                  {/* Render ghost polyline for unselected primary path when an alternative is active */}
+                  {activeRouteIndex > 0 && mapboxTrip && (() => {
+                    const activeAlt = alternativeTrips[activeRouteIndex - 1];
+                    const activeAltCoords = activeAlt?.plannedPath || [];
+                    const branches = hideOverlapping
+                      ? getDivergentSegments(mapboxTrip.plannedPath, activeAltCoords, 12)
+                      : [mapboxTrip.plannedPath];
+
+                    return branches.map((branchCoords, branchIdx) => (
+                      <Polyline
+                        key={`primary-inactive-branch-${branchIdx}`}
+                        positions={branchCoords}
+                        pathOptions={{
+                          color: '#059669',
+                          weight: 4,
+                          dashArray: '6, 8',
+                          opacity: 0.6,
+                        }}
+                      />
+                    ));
+                  })()}
+
                   {(activeRouteIndex === 0
                     ? mapboxTrip
                     : alternativeTrips[activeRouteIndex - 1] || mapboxTrip) && (
@@ -822,7 +853,9 @@ export const RouteCompareLab: React.FC<RouteCompareLabProps> = ({ onBack }) => {
                   </div>
                   {alternativeTrips.length > 0 && (
                     <div className="text-amber-700 dark:text-amber-300 font-semibold">
-                      มีเส้นทางสำรองสีส้มประแสดงบนแผนที่
+                      {hideOverlapping
+                        ? '⚡ ซ่อนช่วงที่ทับกัน: แสดงเฉพาะทางแยกสีส้มประ'
+                        : 'มีเส้นทางสำรองสีส้มประแสดงบนแผนที่'}
                     </div>
                   )}
                 </div>

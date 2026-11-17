@@ -3,6 +3,8 @@ import {
   calculateMapboxTripRoute,
   calculateMapboxTripRouteDetailed,
   parseMapboxRouteCoordinates,
+  distanceToSegmentMeters,
+  getDivergentSegments,
   MAPBOX_DIRECTIONS_API_BASE,
 } from '../mapboxRouteService';
 import { TripLocation } from '../../types/trip';
@@ -133,5 +135,65 @@ describe('mapboxRouteService', () => {
     expect(result.alternativeTrips[0].distanceMeters).toBe(1400);
     expect(result.alternativeTrips[0].durationSeconds).toBe(220);
     expect(result.alternativeTrips[0].plannedPath).toHaveLength(3);
+  });
+
+  describe('getDivergentSegments (hiding overlapping route sections)', () => {
+    it('accurately calculates distance from a point to a segment in meters', () => {
+      // Point (18.7883, 98.9853) on segment between (18.7880, 98.9853) and (18.7890, 98.9853)
+      const distOnLine = distanceToSegmentMeters(18.7883, 98.9853, 18.7880, 98.9853, 18.7890, 98.9853);
+      expect(distOnLine).toBeCloseTo(0, 1);
+
+      // Point slightly offset by ~0.001 deg (~110 meters)
+      const distOffset = distanceToSegmentMeters(18.7883, 98.9863, 18.7880, 98.9853, 18.7890, 98.9853);
+      expect(distOffset).toBeGreaterThan(50);
+    });
+
+    it('extracts only the divergent branch and eliminates overlapping start and end segments', () => {
+      // Primary: goes straight south to north along lng = 98.9850
+      const primary: Array<[number, number]> = [
+        [18.7800, 98.9850],
+        [18.7820, 98.9850],
+        [18.7850, 98.9850],
+        [18.7880, 98.9850],
+        [18.7900, 98.9850],
+      ];
+
+      // Alternative: starts on same road, takes a detour east at 18.7820, rejoins at 18.7880, ends on same road
+      const alternative: Array<[number, number]> = [
+        [18.7800, 98.9850], // Shared start
+        [18.7820, 98.9850], // Branch point
+        [18.7840, 98.9900], // Detour point 1
+        [18.7860, 98.9900], // Detour point 2
+        [18.7880, 98.9850], // Rejoin point
+        [18.7900, 98.9850], // Shared end
+      ];
+
+      const branches = getDivergentSegments(alternative, primary, 15);
+
+      // Should only contain 1 continuous divergent polyline starting at branch point and ending at rejoin point
+      expect(branches).toHaveLength(1);
+      const branch = branches[0];
+      expect(branch).toHaveLength(4);
+      expect(branch[0]).toEqual([18.7820, 98.9850]); // Branch point
+      expect(branch[1]).toEqual([18.7840, 98.9900]);
+      expect(branch[2]).toEqual([18.7860, 98.9900]);
+      expect(branch[3]).toEqual([18.7880, 98.9850]); // Rejoin point
+    });
+
+    it('returns empty array if alternative route is completely identical / overlapping with primary', () => {
+      const primary: Array<[number, number]> = [
+        [18.7800, 98.9850],
+        [18.7850, 98.9850],
+        [18.7900, 98.9850],
+      ];
+      const alternative: Array<[number, number]> = [
+        [18.7800, 98.9850],
+        [18.7850, 98.9850],
+        [18.7900, 98.9850],
+      ];
+
+      const branches = getDivergentSegments(alternative, primary, 15);
+      expect(branches).toHaveLength(0);
+    });
   });
 });

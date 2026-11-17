@@ -123,5 +123,11 @@ describe('RouteCompareLab', () => {
     expect(altCheckbox.checked).toBe(true);
     fireEvent.click(altCheckbox);
     expect(altCheckbox.checked).toBe(false);
+
+    // Toggle hide overlapping route segments
+    const hideOverlapCheckbox = screen.getByLabelText(/ซ่อนทางสำรองที่ทับกับทางหลัก/i) as HTMLInputElement;
+    expect(hideOverlapCheckbox.checked).toBe(true);
+    fireEvent.click(hideOverlapCheckbox);
+    expect(hideOverlapCheckbox.checked).toBe(false);
   });
 });

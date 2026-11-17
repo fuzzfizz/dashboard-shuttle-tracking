@@ -51,6 +51,111 @@ export function parseMapboxRouteCoordinates(json: any): Array<[number, number]> 
 }
 
 /**
+ * Calculates perpendicular distance in meters from point (pLat, pLng)
+ * to line segment between (aLat, aLng) and (bLat, bLng).
+ */
+export function distanceToSegmentMeters(
+  pLat: number,
+  pLng: number,
+  aLat: number,
+  aLng: number,
+  bLat: number,
+  bLng: number
+): number {
+  const midLatRad = ((aLat + bLat) / 2) * (Math.PI / 180);
+  const cosLat = Math.cos(midLatRad);
+  const M_PER_DEG = 111320;
+
+  const ax = aLng * cosLat * M_PER_DEG;
+  const ay = aLat * M_PER_DEG;
+  const bx = bLng * cosLat * M_PER_DEG;
+  const by = bLat * M_PER_DEG;
+  const px = pLng * cosLat * M_PER_DEG;
+  const py = pLat * M_PER_DEG;
+
+  const dx = bx - ax;
+  const dy = by - ay;
+  const lenSq = dx * dx + dy * dy;
+
+  if (lenSq === 0) {
+    const diffX = px - ax;
+    const diffY = py - ay;
+    return Math.sqrt(diffX * diffX + diffY * diffY);
+  }
+
+  let t = ((px - ax) * dx + (py - ay) * dy) / lenSq;
+  t = Math.max(0, Math.min(1, t));
+
+  const projX = ax + t * dx;
+  const projY = ay + t * dy;
+
+  const diffX = px - projX;
+  const diffY = py - projY;
+  return Math.sqrt(diffX * diffX + diffY * diffY);
+}
+
+/**
+ * Filters an alternative route's polyline to only keep segments that diverge
+ * from the primary route (i.e. hides segments where the alternative overlaps with the primary).
+ * Returns an array of polyline coordinate arrays.
+ */
+export function getDivergentSegments(
+  alternativePath: Array<[number, number]>,
+  primaryPath: Array<[number, number]>,
+  thresholdMeters: number = 12
+): Array<Array<[number, number]>> {
+  if (!alternativePath || alternativePath.length < 2) return [];
+  if (!primaryPath || primaryPath.length < 2) return [alternativePath];
+
+  const numSegments = alternativePath.length - 1;
+  const isDivergent: boolean[] = new Array(numSegments);
+
+  for (let i = 0; i < numSegments; i++) {
+    const p1 = alternativePath[i];
+    const p2 = alternativePath[i + 1];
+    const midLat = (p1[0] + p2[0]) / 2;
+    const midLng = (p1[1] + p2[1]) / 2;
+
+    let minDistance = Infinity;
+    for (let j = 0; j < primaryPath.length - 1; j++) {
+      const a = primaryPath[j];
+      const b = primaryPath[j + 1];
+      const d = distanceToSegmentMeters(midLat, midLng, a[0], a[1], b[0], b[1]);
+      if (d < minDistance) {
+        minDistance = d;
+        if (minDistance < thresholdMeters) break;
+      }
+    }
+
+    isDivergent[i] = minDistance >= thresholdMeters;
+  }
+
+  const divergentPolylines: Array<Array<[number, number]>> = [];
+  let currentPolyline: Array<[number, number]> | null = null;
+
+  for (let i = 0; i < numSegments; i++) {
+    if (isDivergent[i]) {
+      if (!currentPolyline) {
+        currentPolyline = [alternativePath[i], alternativePath[i + 1]];
+      } else {
+        currentPolyline.push(alternativePath[i + 1]);
+      }
+    } else {
+      if (currentPolyline) {
+        divergentPolylines.push(currentPolyline);
+        currentPolyline = null;
+      }
+    }
+  }
+
+  if (currentPolyline) {
+    divergentPolylines.push(currentPolyline);
+  }
+
+  return divergentPolylines;
+}
+
+/**
  * Calculates road-following route with customization options (traffic, alternatives, exclusions).
  * Requires a valid Mapbox Public Access Token (pk.eyJ...).
  */
