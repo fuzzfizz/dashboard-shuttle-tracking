@@ -96,6 +96,29 @@ export const TripRouteOverlay: React.FC<TripRouteOverlayProps> = ({
         />
       )}
 
+      {/* Alternative Route Branches (Divergent sections with overlapping hidden) */}
+      {trip?.alternativePaths &&
+        trip.alternativePaths.map((branch, idx) => (
+          <Polyline
+            key={`alt-branch-${idx}`}
+            eventHandlers={{
+              add: (e) => {
+                e.target.getElement()?.setAttribute('data-testid', `alt-route-polyline-${idx}`);
+              },
+            }}
+            data-testid={`alt-route-polyline-${idx}`}
+            positions={branch}
+            pathOptions={{
+              color: '#f59e0b', // Amber / Orange tone for alternative route
+              weight: 4,
+              opacity: 0.85,
+              dashArray: '6, 8',
+              lineCap: 'round',
+              lineJoin: 'round',
+            }}
+          />
+        ))}
+
       {/* Actual Path (Casing / Glow): Deep emerald halo */}
       {hasActualPath && (
         <Polyline

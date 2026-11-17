@@ -128,4 +128,51 @@ describe('tripRouteService', () => {
     expect(trip.plannedPath[0]).toEqual([18.7883, 98.9853]);
     expect(trip.plannedPath[1]).toEqual([18.7900, 98.9900]);
   });
+
+  it('uses Mapbox Directions with alternatives and extracts divergent branches when token is configured', async () => {
+    localStorage.setItem('mapbox_access_token', 'pk.testToken');
+
+    const mockMapboxResponse = {
+      code: 'Ok',
+      routes: [
+        {
+          geometry: {
+            coordinates: [
+              [98.9850, 18.7800],
+              [98.7850, 18.7850],
+              [98.9850, 18.7900],
+            ],
+          },
+          distance: 1100,
+          duration: 140,
+        },
+        {
+          geometry: {
+            coordinates: [
+              [98.9850, 18.7800],
+              [98.9950, 18.7850], // Divergent detour
+              [98.9850, 18.7900],
+            ],
+          },
+          distance: 1300,
+          duration: 170,
+        },
+      ],
+    };
+
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({
+      ok: true,
+      json: async () => mockMapboxResponse,
+    } as Response);
+
+    const trip = await calculateTripRoute('EV-01', pickup, dropoff);
+
+    expect(fetchSpy).toHaveBeenCalledWith(expect.stringContaining('api.mapbox.com/directions/v5/mapbox/driving-traffic'));
+    expect(fetchSpy).toHaveBeenCalledWith(expect.stringContaining('alternatives=true'));
+    expect(trip.plannedPath).toHaveLength(3);
+    expect(trip.alternativePaths).toBeDefined();
+    expect(trip.alternativePaths!.length).toBeGreaterThan(0);
+
+    localStorage.removeItem('mapbox_access_token');
+  });
 });

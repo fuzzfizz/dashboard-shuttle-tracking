@@ -58,6 +58,26 @@ describe('TripRouteOverlay', () => {
     expect(screen.getByTestId('dropoff-marker')).toBeInTheDocument();
   });
 
+  it('renders alternative route branches with overlapping sections hidden', () => {
+    const tripWithAlt: VehicleTrip = {
+      ...mockTrip,
+      alternativePaths: [
+        [
+          [18.7840, 98.9860],
+          [18.7860, 98.9870],
+        ],
+      ],
+    };
+
+    render(
+      <MapContainer center={[18.7883, 98.9853]} zoom={15}>
+        <TripRouteOverlay trip={tripWithAlt} />
+      </MapContainer>
+    );
+
+    expect(screen.getByTestId('alt-route-polyline-0')).toBeInTheDocument();
+  });
+
   it('renders nothing when no trip or actual path is provided and pinMode is idle', () => {
     render(
       <MapContainer center={[18.7883, 98.9853]} zoom={15}>

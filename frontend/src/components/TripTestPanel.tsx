@@ -543,6 +543,11 @@ export const TripTestPanel: React.FC<TripTestPanelProps> = ({
                 </span>
                 <span>จุดพิกัดถนน: {activeTrip.plannedPath.length} จุด</span>
               </div>
+              {activeTrip.alternativePaths && activeTrip.alternativePaths.length > 0 && (
+                <div className="text-[10px] text-amber-700 dark:text-amber-300 font-semibold pt-0.5 flex items-center gap-1">
+                  <span>🔀 มีเส้นทางสำรองสีส้มประ (ซ่อนส่วนทับซ้อนแล้ว)</span>
+                </div>
+              )}
             </div>
           )}
 

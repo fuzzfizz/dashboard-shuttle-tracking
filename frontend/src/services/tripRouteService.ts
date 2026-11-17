@@ -1,8 +1,26 @@
 import { TripLocation, VehicleTrip } from '../types/trip';
+import {
+  calculateMapboxTripRouteDetailed,
+  getDivergentSegments,
+} from './mapboxRouteService';
 
 export const OSRM_ROUTE_API_BASE = 'https://router.project-osrm.org/route/v1/driving';
 export const DEFAULT_LONGDO_KEY = '72ba939d7a7166c36d59b88d0b125307';
 export const LONGDO_ROUTE_API_BASE = 'https://api.longdo.com/RouteService/json/route/guide';
+
+/**
+ * Retrieves configured Mapbox Access Token from localStorage or environment variable.
+ */
+export function getMapboxToken(): string {
+  if (typeof window !== 'undefined') {
+    return (
+      localStorage.getItem('mapbox_access_token') ||
+      (import.meta as any).env?.VITE_MAPBOX_TOKEN ||
+      ''
+    );
+  }
+  return (import.meta as any).env?.VITE_MAPBOX_TOKEN || '';
+}
 
 const inMemoryRouteCache = new Map<string, VehicleTrip>();
 
@@ -114,8 +132,8 @@ export function clearTripRouteCache(vehicleId?: string): void {
 }
 
 /**
- * Calculates a road-following trip route using the high-accuracy Open Source Routing Machine (OSRM).
- * Follows actual street turns, road curves, and driving directions.
+ * Calculates a road-following trip route using the Hybrid engine (Mapbox Directions API with alternatives
+ * and hidden overlapping segments when token is configured), or falls back to OSRM.
  * Includes strict caching (Zero Request Policy on repeated calls) and resilient fallback.
  */
 export async function calculateTripRoute(
@@ -133,8 +151,48 @@ export async function calculateTripRoute(
   const cacheKey = getTripCacheKey(vehicleId, pickup, dropoff);
   const now = Date.now();
 
+  // 2. Hybrid Router: If Mapbox Token is present, use Mapbox Directions with traffic & alternatives
+  const mapboxToken = getMapboxToken();
+  if (mapboxToken && mapboxToken.trim()) {
+    try {
+      const detailed = await calculateMapboxTripRouteDetailed(
+        vehicleId,
+        pickup,
+        dropoff,
+        mapboxToken.trim(),
+        {
+          profile: 'driving-traffic',
+          alternatives: true,
+        }
+      );
+
+      const primaryTrip = detailed.primaryTrip;
+
+      // Extract divergent branches for all alternative routes, hiding segments that overlap with primary
+      const alternativeBranches: Array<Array<[number, number]>> = [];
+      for (const alt of detailed.alternativeTrips) {
+        const branches = getDivergentSegments(alt.plannedPath, primaryTrip.plannedPath, 12);
+        alternativeBranches.push(...branches);
+      }
+
+      const trip: VehicleTrip = {
+        ...primaryTrip,
+        alternativePaths: alternativeBranches.length > 0 ? alternativeBranches : undefined,
+      };
+
+      inMemoryRouteCache.set(cacheKey, trip);
+      try {
+        localStorage.setItem(cacheKey, JSON.stringify(trip));
+      } catch {}
+
+      return trip;
+    } catch {
+      // Fallback to OSRM below if Mapbox call fails
+    }
+  }
+
+  // 3. Fallback Router: OSRM driving engine with GeoJSON full road geometry
   try {
-    // Primary router: OSRM driving engine with GeoJSON full road geometry
     const osrmUrl = `${OSRM_ROUTE_API_BASE}/${pickup.lng},${pickup.lat};${dropoff.lng},${dropoff.lat}?overview=full&geometries=geojson`;
     const response = await fetch(osrmUrl);
 

@@ -9,6 +9,7 @@ export interface VehicleTrip {
   pickup: TripLocation;
   dropoff: TripLocation;
   plannedPath: Array<[number, number]>; // [lat, lng]
+  alternativePaths?: Array<Array<[number, number]>>; // divergent alternative branches [lat, lng][] with overlapping hidden
   distanceMeters?: number;
   durationSeconds?: number;
   createdAt: number;

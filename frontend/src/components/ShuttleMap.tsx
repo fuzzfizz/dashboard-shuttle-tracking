@@ -71,10 +71,16 @@ export const FleetCameraController: React.FC<{
   const prevTripRef = useRef<VehicleTrip | undefined>(undefined);
 
   useEffect(() => {
-    // If a new active trip was assigned or calculated, auto-frame the planned road route
+    // If a new active trip was assigned or calculated, auto-frame the planned road route (including alternative paths)
     if (activeTrip && activeTrip !== prevTripRef.current && activeTrip.plannedPath && activeTrip.plannedPath.length >= 2) {
       try {
-        const routeBounds = L.latLngBounds(activeTrip.plannedPath);
+        const allCoords = [...activeTrip.plannedPath];
+        if (activeTrip.alternativePaths) {
+          for (const branch of activeTrip.alternativePaths) {
+            allCoords.push(...branch);
+          }
+        }
+        const routeBounds = L.latLngBounds(allCoords);
         map.fitBounds(routeBounds, { padding: [70, 70], maxZoom: 16, animate: true });
       } catch {}
     }
