@@ -165,4 +165,43 @@ describe('useVehicleTripRoute', () => {
 
     vi.useRealTimers();
   });
+
+  it('restores actualPaths, active trips, and roundStages from localStorage across simulated page refreshes', () => {
+    localStorage.setItem(
+      'shuttle_active_trips',
+      JSON.stringify({
+        'shuttle-test-01': {
+          vehicleId: 'shuttle-test-01',
+          pickup: { lat: 18.79, lng: 98.96 },
+          dropoff: { lat: 18.72, lng: 98.98 },
+          plannedPath: [[18.79, 98.96], [18.72, 98.98]],
+          createdAt: Date.now(),
+        },
+      })
+    );
+
+    localStorage.setItem(
+      'shuttle_round_actual_paths',
+      JSON.stringify({
+        'shuttle-test-01': [
+          [18.789, 98.965],
+          [18.780, 98.970],
+        ],
+      })
+    );
+
+    localStorage.setItem(
+      'shuttle_round_stages',
+      JSON.stringify({
+        'shuttle-test-01': { stage: 'in-transit' },
+      })
+    );
+
+    // Render hook simulating newly mounted component on page reload
+    const { result } = renderHook(() => useVehicleTripRoute());
+
+    expect(result.current.trips['shuttle-test-01']).toBeDefined();
+    expect(result.current.actualPaths['shuttle-test-01']).toHaveLength(2);
+    expect(result.current.roundStages['shuttle-test-01']).toBe('in-transit');
+  });
 });
