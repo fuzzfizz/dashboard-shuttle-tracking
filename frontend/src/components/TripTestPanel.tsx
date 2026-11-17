@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Route, MapPin, Flag, Play, Trash2, X, Loader2, AlertCircle, ClipboardPaste } from 'lucide-react';
-import { TripLocation, VehicleTrip, MapPinMode } from '../types/trip';
+import { TripLocation, VehicleTrip, MapPinMode, TripRoundStage } from '../types/trip';
 
 export const POPULAR_LOCATIONS: Array<{ name: string; lat: number; lng: number }> = [
   { name: 'คณะเภสัชฯ', lat: 18.7883, lng: 98.9853 },
@@ -31,6 +31,7 @@ export interface TripTestPanelProps {
   selectedVehicleId: string | null;
   onSelectVehicle: (id: string) => void;
   activeTrip?: VehicleTrip;
+  roundStage?: TripRoundStage;
   pinMode?: MapPinMode;
   onSetPinMode?: (mode: MapPinMode) => void;
   onStartTrip: (vehicleId: string, pickup: TripLocation, dropoff: TripLocation) => void;
@@ -46,6 +47,7 @@ export const TripTestPanel: React.FC<TripTestPanelProps> = ({
   selectedVehicleId,
   onSelectVehicle,
   activeTrip,
+  roundStage,
   pinMode = 'idle',
   onSetPinMode,
   onStartTrip,
@@ -335,6 +337,21 @@ export const TripTestPanel: React.FC<TripTestPanelProps> = ({
                 </span>
                 <span>จุดพิกัดถนน: {activeTrip.plannedPath.length} จุด</span>
               </div>
+              {roundStage === 'arrived-dropoff' && (
+                <div className="text-[10px] text-emerald-700 dark:text-emerald-300 font-semibold pt-0.5 flex items-center gap-1 bg-emerald-100/60 dark:bg-emerald-900/40 px-1.5 py-0.5 rounded">
+                  <span>🏁 ถึงจุดส่งแล้ว (แสดงรอยทาง 3 นาทีก่อนเริ่มรอบถัดไป)</span>
+                </div>
+              )}
+              {roundStage === 'waiting-pickup' && (
+                <div className="text-[10px] text-amber-700 dark:text-amber-300 font-semibold pt-0.5 flex items-center gap-1 bg-amber-100/60 dark:bg-amber-900/40 px-1.5 py-0.5 rounded">
+                  <span>⏳ กำลังเดินทางไปยังจุดรับ เพื่อเริ่มจับรอยทางรอบใหม่</span>
+                </div>
+              )}
+              {roundStage === 'in-transit' && (
+                <div className="text-[10px] text-emerald-700 dark:text-emerald-300 font-semibold pt-0.5 flex items-center gap-1 bg-emerald-100/60 dark:bg-emerald-900/40 px-1.5 py-0.5 rounded">
+                  <span>🟢 กำลังบันทึกรอยทางจริงของรอบนี้ (สีเขียว)</span>
+                </div>
+              )}
               {activeTrip.alternativePaths && activeTrip.alternativePaths.length > 0 && (
                 <div className="text-[10px] text-amber-700 dark:text-amber-300 font-semibold pt-0.5 flex items-center gap-1">
                   <span>🔀 มีเส้นทางสำรองสีส้มประ (ซ่อนส่วนทับซ้อนแล้ว)</span>

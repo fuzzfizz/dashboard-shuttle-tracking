@@ -16,3 +16,6 @@ export interface VehicleTrip {
 }
 
 export type MapPinMode = 'idle' | 'pick-pickup' | 'pick-dropoff';
+
+export type TripRoundStage = 'waiting-pickup' | 'in-transit' | 'arrived-dropoff';
+

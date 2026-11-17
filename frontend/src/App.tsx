@@ -33,6 +33,7 @@ function OperationalDashboard() {
   const {
     trips,
     actualPaths,
+    roundStages,
     pinMode,
     isCalculating: isCalculatingRoute,
     error: routeError,
@@ -275,6 +276,7 @@ function OperationalDashboard() {
                   isFullscreen={isMapFullscreen}
                   activeTrip={selectedVehicleId ? trips[selectedVehicleId] : undefined}
                   actualPath={selectedVehicleId ? actualPaths[selectedVehicleId] : undefined}
+                  roundStage={selectedVehicleId ? roundStages[selectedVehicleId] : undefined}
                   pinMode={pinMode}
                   onSetPinMode={setPinMode}
                   onStartTrip={startTrip}

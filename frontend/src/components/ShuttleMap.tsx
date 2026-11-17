@@ -7,7 +7,7 @@ import { computeVehicleStatus, OFFLINE_THRESHOLD_MS } from '../services/fleetSta
 import { isJumpTooLarge } from '../services/markerInterpolation';
 import { AnimatedVehicleMarker } from './AnimatedVehicleMarker';
 import { MAP_PROVIDERS } from '../services/mapProviders';
-import { VehicleTrip, TripLocation, MapPinMode } from '../types/trip';
+import { VehicleTrip, TripLocation, MapPinMode, TripRoundStage } from '../types/trip';
 import { TripRouteOverlay } from './TripRouteOverlay';
 import { TripTestPanel } from './TripTestPanel';
 
@@ -44,6 +44,7 @@ export interface ShuttleMapProps {
   isFullscreen?: boolean;
   activeTrip?: VehicleTrip;
   actualPath?: Array<[number, number]>;
+  roundStage?: TripRoundStage;
   pinMode?: MapPinMode;
   onSetPinMode?: (mode: MapPinMode) => void;
   onStartTrip?: (vehicleId: string, pickup: TripLocation, dropoff: TripLocation) => void;
@@ -427,6 +428,7 @@ export const ShuttleMap: React.FC<ShuttleMapProps> = ({
   isFullscreen = false,
   activeTrip,
   actualPath,
+  roundStage,
   pinMode = 'idle',
   onSetPinMode,
   onStartTrip,
@@ -479,6 +481,7 @@ export const ShuttleMap: React.FC<ShuttleMapProps> = ({
             selectedVehicleId={selectedVehicleId}
             onSelectVehicle={onSelectVehicle || (() => {})}
             activeTrip={activeTrip}
+            roundStage={roundStage}
             pinMode={pinMode || 'idle'}
             onSetPinMode={onSetPinMode || (() => {})}
             onStartTrip={onStartTrip || (() => {})}
