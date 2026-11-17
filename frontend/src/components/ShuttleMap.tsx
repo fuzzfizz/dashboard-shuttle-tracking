@@ -60,13 +60,26 @@ export const FleetCameraController: React.FC<{
   vehicles: FleetMap;
   selectedVehicleId: string | null;
   defaultCenter: [number, number];
-}> = ({ vehicles, selectedVehicleId, defaultCenter }) => {
+  activeTrip?: VehicleTrip;
+}> = ({ vehicles, selectedVehicleId, defaultCenter, activeTrip }) => {
   const map = useMap();
   const prevSelectedRef = useRef<string | null>(null);
   const prevVehicleCountRef = useRef<number>(0);
   const isMountedRef = useRef<boolean>(false);
   const prevTargetCoordsRef = useRef<{ lat: number; lng: number } | null>(null);
   const prevTimestampRef = useRef<number>(0);
+  const prevTripRef = useRef<VehicleTrip | undefined>(undefined);
+
+  useEffect(() => {
+    // If a new active trip was assigned or calculated, auto-frame the planned road route
+    if (activeTrip && activeTrip !== prevTripRef.current && activeTrip.plannedPath && activeTrip.plannedPath.length >= 2) {
+      try {
+        const routeBounds = L.latLngBounds(activeTrip.plannedPath);
+        map.fitBounds(routeBounds, { padding: [70, 70], maxZoom: 16, animate: true });
+      } catch {}
+    }
+    prevTripRef.current = activeTrip;
+  }, [activeTrip, map]);
 
   useEffect(() => {
     const vehicleList = Object.values(vehicles);
@@ -489,6 +502,7 @@ export const ShuttleMap: React.FC<ShuttleMapProps> = ({
           vehicles={effectiveVehicles}
           selectedVehicleId={selectedVehicleId}
           defaultCenter={defaultCenter}
+          activeTrip={activeTrip}
         />
 
         {/* Leaflet resize invalidation handler */}

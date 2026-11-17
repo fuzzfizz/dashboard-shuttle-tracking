@@ -13,18 +13,20 @@ export interface TripRouteOverlayProps {
 export const createPinIcon = (type: 'pickup' | 'dropoff', label: string): L.DivIcon => {
   const isPickup = type === 'pickup';
   const bgColor = isPickup ? '#4a7c0b' : '#dc2626';
-  const pinEmoji = isPickup ? '🟢' : '🔴';
+  const iconSvg = isPickup
+    ? `<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3" fill="currentColor"/></svg>`
+    : `<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" x2="4" y1="22" y2="15" stroke="currentColor" stroke-width="2"/></svg>`;
 
   return L.divIcon({
     className: 'custom-trip-pin',
     html: `
-      <div style="display: flex; flex-direction: column; align-items: center; transform: translate(-50%, -100%); pointer-events: auto;">
-        <div style="background: ${bgColor}; color: white; padding: 2px 8px; border-radius: 6px; font-size: 11px; font-weight: bold; font-family: monospace; box-shadow: 0 2px 4px rgba(0,0,0,0.25); white-space: nowrap; border: 1.5px solid white;">
-          ${label}
+      <div style="display: flex; flex-direction: column; align-items: center; transform: translate(-50%, -100%); pointer-events: auto; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.3));">
+        <div style="display: flex; align-items: center; gap: 5px; background: ${bgColor}; color: white; padding: 4px 10px; border-radius: 9999px; font-size: 11px; font-weight: 700; font-family: ui-sans-serif, system-ui, sans-serif; white-space: nowrap; border: 2px solid white; box-shadow: 0 2px 8px rgba(0,0,0,0.25);">
+          ${iconSvg}
+          <span>${label}</span>
         </div>
-        <div style="font-size: 16px; margin-top: -2px; filter: drop-shadow(0 2px 3px rgba(0,0,0,0.3));">
-          ${pinEmoji}
-        </div>
+        <div style="width: 0; height: 0; border-left: 6px solid transparent; border-right: 6px solid transparent; border-top: 7px solid ${bgColor}; margin-top: -1px;"></div>
+        <div style="width: 6px; height: 6px; border-radius: 50%; background: ${bgColor}; border: 1.5px solid white; margin-top: -2px; box-shadow: 0 0 0 3px rgba(74, 124, 11, 0.3);"></div>
       </div>
     `,
     iconSize: [0, 0],
@@ -59,7 +61,21 @@ export const TripRouteOverlay: React.FC<TripRouteOverlayProps> = ({
     <>
       <MapClickHandler pinMode={pinMode} onMapClick={onMapClick} />
 
-      {/* Planned Route (แนวเส้นทางตามใบจอง): Semi-transparent Dashed line */}
+      {/* Planned Route (Casing / Glow): Soft underlying halo for visual depth on roads */}
+      {hasPlannedPath && (
+        <Polyline
+          positions={trip.plannedPath}
+          pathOptions={{
+            color: '#6366f1', // Indigo glow
+            weight: 8,
+            opacity: 0.35,
+            lineCap: 'round',
+            lineJoin: 'round',
+          }}
+        />
+      )}
+
+      {/* Planned Route (Main Core Line): Vibrant dashed road polyline */}
       {hasPlannedPath && (
         <Polyline
           eventHandlers={{
@@ -70,9 +86,9 @@ export const TripRouteOverlay: React.FC<TripRouteOverlayProps> = ({
           data-testid="planned-route-polyline"
           positions={trip.plannedPath}
           pathOptions={{
-            color: '#9e76b4', // CMU Dok Rak Purple
+            color: '#4f46e5', // Rich Indigo / CMU Dok Rak tone
             weight: 5,
-            opacity: 0.75,
+            opacity: 0.95,
             dashArray: '8, 8',
             lineCap: 'round',
             lineJoin: 'round',
@@ -80,7 +96,21 @@ export const TripRouteOverlay: React.FC<TripRouteOverlayProps> = ({
         />
       )}
 
-      {/* Actual Path (เส้นทางที่รถวิ่งจริง): High-contrast Solid line */}
+      {/* Actual Path (Casing / Glow): Deep emerald halo */}
+      {hasActualPath && (
+        <Polyline
+          positions={actualPath}
+          pathOptions={{
+            color: '#064e3b',
+            weight: 7,
+            opacity: 0.35,
+            lineCap: 'round',
+            lineJoin: 'round',
+          }}
+        />
+      )}
+
+      {/* Actual Path (Main Core Line): High-contrast Solid line for breadcrumbs */}
       {hasActualPath && (
         <Polyline
           eventHandlers={{
@@ -91,9 +121,9 @@ export const TripRouteOverlay: React.FC<TripRouteOverlayProps> = ({
           data-testid="actual-path-polyline"
           positions={actualPath}
           pathOptions={{
-            color: '#4a7c0b', // Pharmacy CMU Olive Green
+            color: '#10b981', // Vibrant Emerald green
             weight: 4,
-            opacity: 0.95,
+            opacity: 0.98,
             lineCap: 'round',
             lineJoin: 'round',
           }}

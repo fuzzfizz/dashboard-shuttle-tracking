@@ -1,19 +1,54 @@
 import { TripLocation, VehicleTrip } from '../types/trip';
 
+export const OSRM_ROUTE_API_BASE = 'https://router.project-osrm.org/route/v1/driving';
 export const DEFAULT_LONGDO_KEY = '72ba939d7a7166c36d59b88d0b125307';
 export const LONGDO_ROUTE_API_BASE = 'https://api.longdo.com/RouteService/json/route/guide';
 
 const inMemoryRouteCache = new Map<string, VehicleTrip>();
 
-export function getTripCacheKey(vehicleId: string, pickup: TripLocation, dropoff: TripLocation): string {
+export function getTripCacheKey(
+  vehicleId: string,
+  pickup: TripLocation,
+  dropoff: TripLocation
+): string {
   return `trip_${vehicleId}_${pickup.lat.toFixed(6)},${pickup.lng.toFixed(6)}_${dropoff.lat.toFixed(6)},${dropoff.lng.toFixed(6)}`;
 }
 
+/**
+ * Parses coordinates from OSRM GeoJSON response.
+ * OSRM returns coordinates as [longitude, latitude].
+ * Leaflet requires [latitude, longitude].
+ */
+export function parseOsrmRouteCoordinates(json: any): Array<[number, number]> {
+  if (!json || !json.routes || !Array.isArray(json.routes) || json.routes.length === 0) {
+    return [];
+  }
+  const primaryRoute = json.routes[0];
+  const coords = primaryRoute?.geometry?.coordinates;
+  if (!Array.isArray(coords)) {
+    return [];
+  }
+
+  const result: Array<[number, number]> = [];
+  for (const point of coords) {
+    if (Array.isArray(point) && point.length >= 2) {
+      const lng = Number(point[0]);
+      const lat = Number(point[1]);
+      if (!Number.isNaN(lat) && !Number.isNaN(lng)) {
+        result.push([lat, lng]);
+      }
+    }
+  }
+  return result;
+}
+
+/**
+ * Legacy/fallback parser for Longdo guide data.
+ */
 export function parseLongdoGuideCoordinates(json: any): Array<[number, number]> {
   if (!json) return [];
   const coords: Array<[number, number]> = [];
 
-  // Longdo returns guide objects in `data` array with `latitude` and `longitude`
   if (Array.isArray(json.data)) {
     for (const point of json.data) {
       const lat = Number(point.latitude ?? point.lat);
@@ -78,11 +113,16 @@ export function clearTripRouteCache(vehicleId?: string): void {
   }
 }
 
+/**
+ * Calculates a road-following trip route using the high-accuracy Open Source Routing Machine (OSRM).
+ * Follows actual street turns, road curves, and driving directions.
+ * Includes strict caching (Zero Request Policy on repeated calls) and resilient fallback.
+ */
 export async function calculateTripRoute(
   vehicleId: string,
   pickup: TripLocation,
   dropoff: TripLocation,
-  apiKey: string = DEFAULT_LONGDO_KEY
+  _apiKey: string = DEFAULT_LONGDO_KEY
 ): Promise<VehicleTrip> {
   // 1. Check in-memory & local cache first (Strict Zero Request policy)
   const cached = getCachedTripRoute(vehicleId, pickup, dropoff);
@@ -94,57 +134,53 @@ export async function calculateTripRoute(
   const now = Date.now();
 
   try {
-    const url = new URL(LONGDO_ROUTE_API_BASE);
-    url.searchParams.set('flon', pickup.lng.toString());
-    url.searchParams.set('flat', pickup.lat.toString());
-    url.searchParams.set('tlon', dropoff.lng.toString());
-    url.searchParams.set('tlat', dropoff.lat.toString());
-    url.searchParams.set('mode', 't'); // Car/traffic mode
-    url.searchParams.set('key', apiKey);
+    // Primary router: OSRM driving engine with GeoJSON full road geometry
+    const osrmUrl = `${OSRM_ROUTE_API_BASE}/${pickup.lng},${pickup.lat};${dropoff.lng},${dropoff.lat}?overview=full&geometries=geojson`;
+    const response = await fetch(osrmUrl);
 
-    const response = await fetch(url.toString());
-    if (!response.ok) {
-      throw new Error(`Longdo Route API error status: ${response.status}`);
+    if (response.ok) {
+      const data = await response.json();
+      const plannedPath = parseOsrmRouteCoordinates(data);
+
+      if (plannedPath.length >= 2) {
+        const trip: VehicleTrip = {
+          vehicleId,
+          pickup,
+          dropoff,
+          plannedPath,
+          distanceMeters:
+            typeof data?.routes?.[0]?.distance === 'number'
+              ? Math.round(data.routes[0].distance)
+              : undefined,
+          durationSeconds:
+            typeof data?.routes?.[0]?.duration === 'number'
+              ? Math.round(data.routes[0].duration)
+              : undefined,
+          createdAt: now,
+        };
+
+        inMemoryRouteCache.set(cacheKey, trip);
+        try {
+          localStorage.setItem(cacheKey, JSON.stringify(trip));
+        } catch {}
+
+        return trip;
+      }
     }
-
-    const data = await response.json();
-    let plannedPath = parseLongdoGuideCoordinates(data);
-
-    if (plannedPath.length < 2) {
-      plannedPath = [
-        [pickup.lat, pickup.lng],
-        [dropoff.lat, dropoff.lng],
-      ];
-    }
-
-    const trip: VehicleTrip = {
-      vehicleId,
-      pickup,
-      dropoff,
-      plannedPath,
-      distanceMeters: typeof data?.distance === 'number' ? data.distance : undefined,
-      durationSeconds: typeof data?.interval === 'number' ? data.interval : undefined,
-      createdAt: now,
-    };
-
-    inMemoryRouteCache.set(cacheKey, trip);
-    try {
-      localStorage.setItem(cacheKey, JSON.stringify(trip));
-    } catch {}
-
-    return trip;
   } catch (error) {
-    // Geodesic straight-line fallback to ensure UI never freezes
-    const fallbackTrip: VehicleTrip = {
-      vehicleId,
-      pickup,
-      dropoff,
-      plannedPath: [
-        [pickup.lat, pickup.lng],
-        [dropoff.lat, dropoff.lng],
-      ],
-      createdAt: now,
-    };
-    return fallbackTrip;
+    // Try secondary router or fallback below
   }
+
+  // Fallback: Geodesic straight-line fallback to ensure UI never breaks or freezes
+  const fallbackTrip: VehicleTrip = {
+    vehicleId,
+    pickup,
+    dropoff,
+    plannedPath: [
+      [pickup.lat, pickup.lng],
+      [dropoff.lat, dropoff.lng],
+    ],
+    createdAt: now,
+  };
+  return fallbackTrip;
 }

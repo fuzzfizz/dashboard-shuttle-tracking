@@ -3,7 +3,7 @@ import {
   calculateTripRoute,
   getCachedTripRoute,
   clearTripRouteCache,
-  parseLongdoGuideCoordinates,
+  parseOsrmRouteCoordinates,
 } from '../tripRouteService';
 import { TripLocation } from '../../types/trip';
 
@@ -20,71 +20,97 @@ describe('tripRouteService', () => {
     clearTripRouteCache();
   });
 
-  it('parses coordinate pairs from Longdo Route guide data correctly', () => {
-    const mockGuideData = {
-      data: [
-        { latitude: 18.7883, longitude: 98.9853 },
-        { latitude: 18.7890, longitude: 98.9870 },
-        { latitude: 18.7900, longitude: 98.9900 },
+  it('parses OSRM GeoJSON coordinates [lng, lat] into Leaflet [lat, lng] format correctly', () => {
+    const mockOsrmData = {
+      code: 'Ok',
+      routes: [
+        {
+          geometry: {
+            coordinates: [
+              [98.9853, 18.7883],
+              [98.9860, 18.7885],
+              [98.9875, 18.7892],
+              [98.9900, 18.7900],
+            ],
+          },
+          distance: 1450.5,
+          duration: 180.2,
+        },
       ],
-      distance: 1250,
-      interval: 180,
     };
 
-    const coords = parseLongdoGuideCoordinates(mockGuideData);
-    expect(coords).toHaveLength(3);
+    const coords = parseOsrmRouteCoordinates(mockOsrmData);
+    expect(coords).toHaveLength(4);
     expect(coords[0]).toEqual([18.7883, 98.9853]);
-    expect(coords[2]).toEqual([18.7900, 98.9900]);
+    expect(coords[1]).toEqual([18.7885, 98.9860]);
+    expect(coords[3]).toEqual([18.7900, 98.9900]);
   });
 
-  it('fetches route from Longdo Route REST API and formats VehicleTrip on success', async () => {
-    const mockResponse = {
-      data: [
-        { latitude: 18.7883, longitude: 98.9853 },
-        { latitude: 18.7900, longitude: 98.9900 },
+  it('fetches road-following route from OSRM and formats VehicleTrip on success', async () => {
+    const mockOsrmResponse = {
+      code: 'Ok',
+      routes: [
+        {
+          geometry: {
+            coordinates: [
+              [98.9853, 18.7883],
+              [98.9865, 18.7888],
+              [98.9900, 18.7900],
+            ],
+          },
+          distance: 1200,
+          duration: 150,
+        },
       ],
-      distance: 850,
-      interval: 120,
     };
 
     const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({
       ok: true,
-      json: async () => mockResponse,
+      json: async () => mockOsrmResponse,
     } as Response);
 
-    const trip = await calculateTripRoute('EV-01', pickup, dropoff, 'mock-key');
+    const trip = await calculateTripRoute('EV-01', pickup, dropoff);
 
     expect(fetchSpy).toHaveBeenCalledTimes(1);
     expect(fetchSpy).toHaveBeenCalledWith(
-      expect.stringContaining('https://api.longdo.com/RouteService/json/route/guide?')
+      expect.stringContaining('https://router.project-osrm.org/route/v1/driving/98.9853,18.7883;98.99,18.79')
     );
     expect(trip.vehicleId).toBe('EV-01');
-    expect(trip.plannedPath).toHaveLength(2);
-    expect(trip.distanceMeters).toBe(850);
-    expect(trip.durationSeconds).toBe(120);
+    expect(trip.plannedPath).toHaveLength(3);
+    expect(trip.plannedPath[0]).toEqual([18.7883, 98.9853]);
+    expect(trip.plannedPath[2]).toEqual([18.7900, 98.9900]);
+    expect(trip.distanceMeters).toBe(1200);
+    expect(trip.durationSeconds).toBe(150);
   });
 
   it('serves cached route without making a network request when called with identical coordinates', async () => {
-    const mockResponse = {
-      data: [
-        { latitude: 18.7883, longitude: 98.9853 },
-        { latitude: 18.7900, longitude: 98.9900 },
+    const mockOsrmResponse = {
+      code: 'Ok',
+      routes: [
+        {
+          geometry: {
+            coordinates: [
+              [98.9853, 18.7883],
+              [98.9900, 18.7900],
+            ],
+          },
+          distance: 850,
+          duration: 120,
+        },
       ],
-      distance: 850,
-      interval: 120,
     };
 
     const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({
       ok: true,
-      json: async () => mockResponse,
+      json: async () => mockOsrmResponse,
     } as Response);
 
     // Call 1 -> Network fetch
-    const trip1 = await calculateTripRoute('EV-01', pickup, dropoff, 'mock-key');
+    const trip1 = await calculateTripRoute('EV-01', pickup, dropoff);
     expect(fetchSpy).toHaveBeenCalledTimes(1);
 
     // Call 2 -> Cache hit (0 requests)
-    const trip2 = await calculateTripRoute('EV-01', pickup, dropoff, 'mock-key');
+    const trip2 = await calculateTripRoute('EV-01', pickup, dropoff);
     expect(fetchSpy).toHaveBeenCalledTimes(1);
     expect(trip2.plannedPath).toEqual(trip1.plannedPath);
 
@@ -93,14 +119,13 @@ describe('tripRouteService', () => {
     expect(cached).not.toBeNull();
   });
 
-  it('provides straight geodesic fallback path when network or API fails', async () => {
+  it('provides straight geodesic fallback path when network or routing API fails', async () => {
     vi.spyOn(globalThis, 'fetch').mockRejectedValueOnce(new Error('Network error'));
 
-    const trip = await calculateTripRoute('EV-01', pickup, dropoff, 'mock-key');
+    const trip = await calculateTripRoute('EV-01', pickup, dropoff);
     expect(trip.vehicleId).toBe('EV-01');
-    expect(trip.plannedPath).toEqual([
-      [pickup.lat, pickup.lng],
-      [dropoff.lat, dropoff.lng],
-    ]);
+    expect(trip.plannedPath).toHaveLength(2);
+    expect(trip.plannedPath[0]).toEqual([18.7883, 98.9853]);
+    expect(trip.plannedPath[1]).toEqual([18.7900, 98.9900]);
   });
 });

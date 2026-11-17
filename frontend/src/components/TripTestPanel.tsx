@@ -395,11 +395,24 @@ export const TripTestPanel: React.FC<TripTestPanelProps> = ({
 
           {/* Trip Summary Details if Active */}
           {activeTrip && (
-            <div className="text-[10px] text-slate-600 dark:text-slate-400 bg-[#5c990e]/10 p-2 rounded-lg border border-[#5c990e]/20 flex justify-between">
-              <span>
-                ระยะทางใบจอง: {((activeTrip.distanceMeters || 0) / 1000).toFixed(2)} km
-              </span>
-              <span>จุดพิกัดถนน: {activeTrip.plannedPath.length} จุด</span>
+            <div className="text-[10px] text-slate-700 dark:text-slate-300 bg-emerald-50/80 dark:bg-emerald-950/40 p-2.5 rounded-xl border border-emerald-200 dark:border-emerald-800/60 space-y-1">
+              <div className="flex items-center justify-between font-semibold">
+                <span className="flex items-center gap-1 text-emerald-800 dark:text-emerald-300">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                  เส้นทางจริงตามถนน (Road-Snapped)
+                </span>
+                {activeTrip.durationSeconds && (
+                  <span className="text-slate-500 dark:text-slate-400 font-mono">
+                    ~{Math.ceil(activeTrip.durationSeconds / 60)} นาที
+                  </span>
+                )}
+              </div>
+              <div className="flex justify-between text-slate-500 dark:text-slate-400 pt-0.5">
+                <span>
+                  ระยะทางใบจอง: {((activeTrip.distanceMeters || 0) / 1000).toFixed(2)} km
+                </span>
+                <span>จุดพิกัดถนน: {activeTrip.plannedPath.length} จุด</span>
+              </div>
             </div>
           )}
 
