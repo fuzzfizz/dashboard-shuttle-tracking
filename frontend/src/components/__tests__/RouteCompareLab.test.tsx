@@ -93,4 +93,35 @@ describe('RouteCompareLab', () => {
     const pickupLatInput = screen.getByLabelText(/ละติจูดจุดรับ/i) as HTMLInputElement;
     expect(Number(pickupLatInput.value)).toBeCloseTo(18.7900, 3);
   });
+
+  it('allows customizing Hybrid shuttle van routing options (traffic, alternatives, exclusions)', () => {
+    render(<RouteCompareLab />);
+
+    const trafficBtn = screen.getByRole('button', { name: /โปรไฟล์การจราจรสด driving-traffic/i });
+    const drivingBtn = screen.getByRole('button', { name: /โปรไฟล์ปกติ driving/i });
+
+    expect(trafficBtn).toBeInTheDocument();
+    expect(drivingBtn).toBeInTheDocument();
+
+    // Toggle driving profile
+    fireEvent.click(drivingBtn);
+    expect(screen.getByText(/Profile:/i)).toHaveTextContent('driving');
+
+    // Toggle exclusions checkboxes
+    const tollCheckbox = screen.getByLabelText(/เลี่ยงด่านค่าผ่านทาง/i) as HTMLInputElement;
+    const motorwayCheckbox = screen.getByLabelText(/เลี่ยงมอเตอร์เวย์/i) as HTMLInputElement;
+    const altCheckbox = screen.getByLabelText(/เปิดเส้นทางสำรอง/i) as HTMLInputElement;
+
+    expect(tollCheckbox.checked).toBe(false);
+    fireEvent.click(tollCheckbox);
+    expect(tollCheckbox.checked).toBe(true);
+
+    expect(motorwayCheckbox.checked).toBe(false);
+    fireEvent.click(motorwayCheckbox);
+    expect(motorwayCheckbox.checked).toBe(true);
+
+    expect(altCheckbox.checked).toBe(true);
+    fireEvent.click(altCheckbox);
+    expect(altCheckbox.checked).toBe(false);
+  });
 });

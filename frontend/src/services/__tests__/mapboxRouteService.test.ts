@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import {
   calculateMapboxTripRoute,
+  calculateMapboxTripRouteDetailed,
   parseMapboxRouteCoordinates,
   MAPBOX_DIRECTIONS_API_BASE,
 } from '../mapboxRouteService';
@@ -71,12 +72,66 @@ describe('mapboxRouteService', () => {
 
     expect(fetchSpy).toHaveBeenCalledTimes(1);
     expect(fetchSpy).toHaveBeenCalledWith(
-      expect.stringContaining(`${MAPBOX_DIRECTIONS_API_BASE}/98.9853,18.7883;98.99,18.79`)
+      expect.stringContaining(`${MAPBOX_DIRECTIONS_API_BASE}/driving/98.9853,18.7883;98.99,18.79`)
     );
     expect(fetchSpy).toHaveBeenCalledWith(expect.stringContaining('access_token=pk.mockToken123'));
     expect(trip.vehicleId).toBe('EV-01');
     expect(trip.distanceMeters).toBe(1200);
     expect(trip.durationSeconds).toBe(160);
     expect(trip.plannedPath).toHaveLength(2);
+  });
+
+  it('supports custom options including driving-traffic, alternatives, and exclusions', async () => {
+    const mockDetailedResponse = {
+      code: 'Ok',
+      routes: [
+        {
+          geometry: {
+            coordinates: [
+              [98.9853, 18.7883],
+              [98.9900, 18.7900],
+            ],
+          },
+          distance: 1250,
+          duration: 190,
+        },
+        {
+          geometry: {
+            coordinates: [
+              [98.9853, 18.7883],
+              [98.9880, 18.7895],
+              [98.9900, 18.7900],
+            ],
+          },
+          distance: 1400,
+          duration: 220,
+        },
+      ],
+    };
+
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({
+      ok: true,
+      json: async () => mockDetailedResponse,
+    } as Response);
+
+    const result = await calculateMapboxTripRouteDetailed('EV-HYBRID', pickup, dropoff, 'pk.validKey', {
+      profile: 'driving-traffic',
+      alternatives: true,
+      excludeToll: true,
+      excludeMotorway: true,
+    });
+
+    expect(fetchSpy).toHaveBeenCalledWith(
+      expect.stringContaining('/mapbox/driving-traffic/98.9853,18.7883;98.99,18.79')
+    );
+    expect(fetchSpy).toHaveBeenCalledWith(expect.stringContaining('alternatives=true'));
+    expect(fetchSpy).toHaveBeenCalledWith(expect.stringContaining('exclude=toll,motorway'));
+
+    expect(result.primaryTrip.distanceMeters).toBe(1250);
+    expect(result.primaryTrip.durationSeconds).toBe(190);
+    expect(result.alternativeTrips).toHaveLength(1);
+    expect(result.alternativeTrips[0].distanceMeters).toBe(1400);
+    expect(result.alternativeTrips[0].durationSeconds).toBe(220);
+    expect(result.alternativeTrips[0].plannedPath).toHaveLength(3);
   });
 });

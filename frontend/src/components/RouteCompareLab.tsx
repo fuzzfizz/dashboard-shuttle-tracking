@@ -12,11 +12,16 @@ import {
   ExternalLink,
   Sparkles,
   Layers,
+  SlidersHorizontal,
+  Navigation,
 } from 'lucide-react';
-import { MapContainer, TileLayer } from 'react-leaflet';
+import { MapContainer, TileLayer, Polyline } from 'react-leaflet';
 import { TripLocation, VehicleTrip } from '../types/trip';
 import { calculateTripRoute } from '../services/tripRouteService';
-import { calculateMapboxTripRoute } from '../services/mapboxRouteService';
+import {
+  calculateMapboxTripRouteDetailed,
+  MapboxRoutingProfile,
+} from '../services/mapboxRouteService';
 import { TripRouteOverlay } from './TripRouteOverlay';
 import { POPULAR_LOCATIONS, parseCoordinateString } from './TripTestPanel';
 
@@ -73,6 +78,14 @@ export const RouteCompareLab: React.FC<RouteCompareLabProps> = ({ onBack }) => {
   const [isCalculating, setIsCalculating] = useState<boolean>(false);
   const [mapboxError, setMapboxError] = useState<string | null>(null);
   const [longdoStatus, setLongdoStatus] = useState<string>('พร้อมโหลดแผนที่ Longdo SDK');
+
+  // Hybrid Customization Options for Shuttle Vans
+  const [hybridProfile, setHybridProfile] = useState<MapboxRoutingProfile>('driving-traffic');
+  const [hybridAlternatives, setHybridAlternatives] = useState<boolean>(true);
+  const [hybridExcludeToll, setHybridExcludeToll] = useState<boolean>(false);
+  const [hybridExcludeMotorway, setHybridExcludeMotorway] = useState<boolean>(false);
+  const [alternativeTrips, setAlternativeTrips] = useState<VehicleTrip[]>([]);
+  const [activeRouteIndex, setActiveRouteIndex] = useState<number>(0);
 
   // Longdo Map Native SDK references
   const longdoContainerRef = useRef<HTMLDivElement>(null);
@@ -147,19 +160,29 @@ export const RouteCompareLab: React.FC<RouteCompareLabProps> = ({ onBack }) => {
     // 1. Calculate Mapbox route if token available
     if (mapboxToken?.trim()) {
       try {
-        const mbTrip = await calculateMapboxTripRoute(
+        const result = await calculateMapboxTripRouteDetailed(
           'EV-MAPBOX',
           currentPickup,
           currentDropoff,
-          mapboxToken.trim()
+          mapboxToken.trim(),
+          {
+            profile: hybridProfile,
+            alternatives: hybridAlternatives,
+            excludeToll: hybridExcludeToll,
+            excludeMotorway: hybridExcludeMotorway,
+          }
         );
-        setMapboxTrip(mbTrip);
+        setMapboxTrip(result.primaryTrip);
+        setAlternativeTrips(result.alternativeTrips);
+        setActiveRouteIndex(0);
       } catch (err: any) {
         setMapboxError(err?.message || 'Mapbox API request failed');
         // Fallback to OSRM so user still sees the path
         try {
           const fb = await calculateTripRoute('EV-FALLBACK', currentPickup, currentDropoff);
           setMapboxTrip(fb);
+          setAlternativeTrips([]);
+          setActiveRouteIndex(0);
         } catch {}
       }
     } else {
@@ -167,6 +190,8 @@ export const RouteCompareLab: React.FC<RouteCompareLabProps> = ({ onBack }) => {
       try {
         const trip = await calculateTripRoute('EV-OSRM', currentPickup, currentDropoff);
         setMapboxTrip(trip);
+        setAlternativeTrips([]);
+        setActiveRouteIndex(0);
       } catch {}
     }
 
@@ -619,9 +644,123 @@ export const RouteCompareLab: React.FC<RouteCompareLabProps> = ({ onBack }) => {
                 </div>
                 <div className="text-[11px] font-mono text-emerald-700 dark:text-emerald-300 font-semibold">
                   {mapboxTrip?.distanceMeters
-                    ? `${(mapboxTrip.distanceMeters / 1000).toFixed(2)} km (~${Math.ceil((mapboxTrip.durationSeconds || 0) / 60)} นาที)`
+                    ? `${((activeRouteIndex === 0 ? mapboxTrip : alternativeTrips[activeRouteIndex - 1] || mapboxTrip).distanceMeters || 0) / 1000} km (~${Math.ceil(((activeRouteIndex === 0 ? mapboxTrip : alternativeTrips[activeRouteIndex - 1] || mapboxTrip).durationSeconds || 0) / 60)} นาที)`
                     : 'พร้อมคำนวณ'}
                 </div>
+              </div>
+
+              {/* Hybrid Custom Controls for Shuttle Vans */}
+              <div className="p-2.5 bg-slate-50 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-700/80 space-y-2 text-xs">
+                <div className="flex flex-wrap items-center justify-between gap-1.5">
+                  <div className="flex items-center gap-1 font-bold text-slate-800 dark:text-slate-200 text-[11px]">
+                    <SlidersHorizontal className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                    <span>กำหนดค่าเฉพาะสำหรับรถตู้ (Shuttle Van Customization):</span>
+                  </div>
+                  <span className="text-[10px] text-slate-500 dark:text-slate-400">
+                    Profile: <span className="font-mono font-semibold text-emerald-600 dark:text-emerald-400">{hybridProfile}</span>
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {/* Profile Selection */}
+                  <div className="flex items-center gap-1 bg-white dark:bg-slate-900 p-1 rounded-lg border border-slate-200 dark:border-slate-700">
+                    <button
+                      type="button"
+                      aria-label="โปรไฟล์ปกติ driving"
+                      onClick={() => setHybridProfile('driving')}
+                      className={`flex-1 py-1 px-2 rounded-md font-semibold text-[11px] transition-all flex items-center justify-center gap-1 ${
+                        hybridProfile === 'driving'
+                          ? 'bg-emerald-600 text-white shadow-xs'
+                          : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                      }`}
+                    >
+                      <span>🚗 รถตู้ทั่วไป (driving)</span>
+                    </button>
+                    <button
+                      type="button"
+                      aria-label="โปรไฟล์การจราจรสด driving-traffic"
+                      onClick={() => setHybridProfile('driving-traffic')}
+                      className={`flex-1 py-1 px-2 rounded-md font-semibold text-[11px] transition-all flex items-center justify-center gap-1 ${
+                        hybridProfile === 'driving-traffic'
+                          ? 'bg-emerald-600 text-white shadow-xs'
+                          : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                      }`}
+                    >
+                      <Navigation className="w-3 h-3" />
+                      <span>🚦 จราจรสด (traffic)</span>
+                    </button>
+                  </div>
+
+                  {/* Exclusions & Alternatives Toggles */}
+                  <div className="flex flex-wrap items-center gap-2 bg-white dark:bg-slate-900 px-2 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 text-[11px]">
+                    <label className="flex items-center gap-1 cursor-pointer text-slate-700 dark:text-slate-300">
+                      <input
+                        type="checkbox"
+                        aria-label="เปิดเส้นทางสำรอง"
+                        checked={hybridAlternatives}
+                        onChange={(e) => setHybridAlternatives(e.target.checked)}
+                        className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 w-3.5 h-3.5"
+                      />
+                      <span>ทางสำรอง</span>
+                    </label>
+                    <label className="flex items-center gap-1 cursor-pointer text-slate-700 dark:text-slate-300">
+                      <input
+                        type="checkbox"
+                        aria-label="เลี่ยงด่านค่าผ่านทาง"
+                        checked={hybridExcludeToll}
+                        onChange={(e) => setHybridExcludeToll(e.target.checked)}
+                        className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 w-3.5 h-3.5"
+                      />
+                      <span>เลี่ยงด่าน</span>
+                    </label>
+                    <label className="flex items-center gap-1 cursor-pointer text-slate-700 dark:text-slate-300">
+                      <input
+                        type="checkbox"
+                        aria-label="เลี่ยงมอเตอร์เวย์"
+                        checked={hybridExcludeMotorway}
+                        onChange={(e) => setHybridExcludeMotorway(e.target.checked)}
+                        className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 w-3.5 h-3.5"
+                      />
+                      <span>เลี่ยงทางหลวง</span>
+                    </label>
+                  </div>
+                </div>
+
+                {/* Route Selection Tabs (if alternatives exist) */}
+                {alternativeTrips.length > 0 && (
+                  <div className="flex flex-wrap items-center gap-1.5 pt-1 border-t border-slate-200/60 dark:border-slate-700/60">
+                    <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400">
+                      เลือกดูเส้นทาง:
+                    </span>
+                    <button
+                      type="button"
+                      aria-label="เลือกเส้นทางหลัก"
+                      onClick={() => setActiveRouteIndex(0)}
+                      className={`px-2 py-0.5 rounded-md text-[11px] font-semibold transition-all ${
+                        activeRouteIndex === 0
+                          ? 'bg-emerald-600 text-white shadow-xs'
+                          : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-100'
+                      }`}
+                    >
+                      ⭐ เส้นทางหลัก {mapboxTrip?.distanceMeters ? `(${(mapboxTrip.distanceMeters / 1000).toFixed(2)} km)` : ''}
+                    </button>
+                    {alternativeTrips.map((alt, idx) => (
+                      <button
+                        key={alt.vehicleId}
+                        type="button"
+                        aria-label={`เลือกเส้นทางสำรอง ${idx + 1}`}
+                        onClick={() => setActiveRouteIndex(idx + 1)}
+                        className={`px-2 py-0.5 rounded-md text-[11px] font-semibold transition-all ${
+                          activeRouteIndex === idx + 1
+                            ? 'bg-amber-600 text-white shadow-xs'
+                            : 'bg-white dark:bg-slate-900 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800/60 hover:bg-amber-50'
+                        }`}
+                      >
+                        🔀 ทางสำรอง {idx + 1} {alt.distanceMeters ? `(${(alt.distanceMeters / 1000).toFixed(2)} km)` : ''}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* Hybrid Map Container */}
@@ -637,18 +776,88 @@ export const RouteCompareLab: React.FC<RouteCompareLabProps> = ({ onBack }) => {
                     url={LONGDO_TILE_URL}
                     attribution='&copy; <a href="https://map.longdo.com/">Longdo Map</a>'
                   />
-                  {mapboxTrip && <TripRouteOverlay trip={mapboxTrip} />}
+                  {/* Render ghost polylines for unselected alternative paths */}
+                  {alternativeTrips.map((alt, idx) => {
+                    if (activeRouteIndex === idx + 1) return null;
+                    return (
+                      <Polyline
+                        key={alt.vehicleId}
+                        positions={alt.plannedPath}
+                        pathOptions={{
+                          color: '#f59e0b',
+                          weight: 4,
+                          dashArray: '6, 8',
+                          opacity: 0.7,
+                        }}
+                      />
+                    );
+                  })}
+                  {activeRouteIndex > 0 && mapboxTrip && (
+                    <Polyline
+                      key="primary-inactive"
+                      positions={mapboxTrip.plannedPath}
+                      pathOptions={{
+                        color: '#059669',
+                        weight: 4,
+                        dashArray: '6, 8',
+                        opacity: 0.5,
+                      }}
+                    />
+                  )}
+                  {(activeRouteIndex === 0
+                    ? mapboxTrip
+                    : alternativeTrips[activeRouteIndex - 1] || mapboxTrip) && (
+                    <TripRouteOverlay
+                      trip={
+                        activeRouteIndex === 0
+                          ? mapboxTrip || undefined
+                          : alternativeTrips[activeRouteIndex - 1] || mapboxTrip || undefined
+                      }
+                    />
+                  )}
                 </MapContainer>
-                <div className="absolute bottom-2 left-2 right-2 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md p-2.5 rounded-xl text-[10px] text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 pointer-events-none z-[1000]">
-                  ✨ <b>จุดเด่นแบบผสม:</b> ฉากหลังเป็นแผนที่ Longdo ภาษาไทยละเอียดชัดเจน + เส้นทางประเรืองแสงมาจาก Mapbox Directions API (เสถียร ไม่โดนแบน โควตาฟรี 100,000 ครั้ง/เดือน)
+                <div className="absolute bottom-2 left-2 right-2 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md p-2 rounded-xl text-[10px] text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 pointer-events-none z-[1000] flex flex-wrap items-center justify-between gap-1">
+                  <div>
+                    ✨ <b>แบบผสม (Hybrid):</b> แผนที่ Longdo ภาษาไทย + Mapbox Directions ({hybridProfile === 'driving-traffic' ? '🚦 วิเคราะห์จราจรสด' : '🚗 รถตู้มาตรฐาน'})
+                  </div>
+                  {alternativeTrips.length > 0 && (
+                    <div className="text-amber-700 dark:text-amber-300 font-semibold">
+                      มีเส้นทางสำรองสีส้มประแสดงบนแผนที่
+                    </div>
+                  )}
                 </div>
               </div>
 
               {mapboxTrip && (
-                <div className="p-3 bg-slate-50 dark:bg-slate-850 border-t border-slate-200 dark:border-slate-800 flex justify-between text-xs text-slate-600 dark:text-slate-300 font-medium">
-                  <span>ระยะทางใบจอง: {((mapboxTrip.distanceMeters || 0) / 1000).toFixed(2)} km</span>
-                  <span>เวลาประเมิน: ~{Math.ceil((mapboxTrip.durationSeconds || 0) / 60)} นาที</span>
-                  <span>จุดพิกัดโค้งถนน: {mapboxTrip.plannedPath.length} จุด</span>
+                <div className="p-3 bg-slate-50 dark:bg-slate-850 border-t border-slate-200 dark:border-slate-800 flex flex-wrap justify-between gap-2 text-xs text-slate-600 dark:text-slate-300 font-medium">
+                  <span>
+                    {activeRouteIndex === 0 ? '⭐ เส้นทางหลัก' : `🔀 เส้นทางสำรองที่ ${activeRouteIndex}`}:{' '}
+                    {(((activeRouteIndex === 0
+                      ? mapboxTrip
+                      : alternativeTrips[activeRouteIndex - 1] || mapboxTrip
+                    ).distanceMeters || 0) / 1000).toFixed(2)}{' '}
+                    km
+                  </span>
+                  <span>
+                    เวลาประเมิน: ~
+                    {Math.ceil(
+                      ((activeRouteIndex === 0
+                        ? mapboxTrip
+                        : alternativeTrips[activeRouteIndex - 1] || mapboxTrip
+                      ).durationSeconds || 0) / 60
+                    )}{' '}
+                    นาที
+                  </span>
+                  <span>
+                    จุดพิกัดโค้งถนน:{' '}
+                    {
+                      (activeRouteIndex === 0
+                        ? mapboxTrip
+                        : alternativeTrips[activeRouteIndex - 1] || mapboxTrip
+                      ).plannedPath.length
+                    }{' '}
+                    จุด
+                  </span>
                 </div>
               )}
             </div>
