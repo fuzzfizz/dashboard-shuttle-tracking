@@ -10,9 +10,9 @@
  *   --vehicle=<id>         Vehicle ID (default: shuttle-test-01)
  *   --pickup=<lat,lng>     Pickup coordinate (default: 18.790033, 98.965539)
  *   --dropoff=<lat,lng>    Dropoff coordinate (default: 18.723997, 98.983808)
- *   --speed=<kmh>          Base speed in km/h (default: 48)
- *   --speed-mult=<mult>    Speed multiplier for faster demonstration (default: 1.5)
- *   --interval=<seconds>   Telemetry interval in seconds (default: 2.0)
+ *   --speed=<kmh>          Base speed in km/h (default: 45)
+ *   --speed-mult=<mult>    Speed multiplier for faster demonstration (default: 1.0)
+ *   --interval=<seconds>   Telemetry interval in seconds (default: 5.0)
  *   --broker=<url>         MQTT Broker URL (default: mqtt://broker.emqx.io:1883)
  *   --loop                 Loop back after reaching destination (default: true)
  */
@@ -46,7 +46,7 @@ function parseArgs() {
     dropoff: { lat: 18.7239969760301, lng: 98.98380842699336 },
     speedKmh: 45,
     speedMult: 1.0,
-    intervalSec: 2.0,
+    intervalSec: 5.0,
     broker: process.env.MQTT_BROKER || 'mqtt://broker.emqx.io:1883',
     topicBase: process.env.MQTT_TOPIC_BASE || 'shuttle/fleet/v1',
     loop: true,
