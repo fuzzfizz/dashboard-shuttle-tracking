@@ -8,23 +8,42 @@ import {
   Play,
   Info,
   ClipboardPaste,
+  Key,
+  ExternalLink,
+  Sparkles,
+  Layers,
 } from 'lucide-react';
 import { MapContainer, TileLayer } from 'react-leaflet';
 import { TripLocation, VehicleTrip } from '../types/trip';
 import { calculateTripRoute } from '../services/tripRouteService';
+import { calculateMapboxTripRoute } from '../services/mapboxRouteService';
 import { TripRouteOverlay } from './TripRouteOverlay';
 import { POPULAR_LOCATIONS, parseCoordinateString } from './TripTestPanel';
 
 export const DEFAULT_LONGDO_KEY = '72ba939d7a7166c36d59b88d0b125307';
+export const LONGDO_TILE_URL = `https://ms.longdo.com/mmmap/img.php?zoom={z}&x={x}&y={y}&mode=icons&key=${DEFAULT_LONGDO_KEY}&proj=epsg3857&HD=1`;
+export const OSM_TILE_URL = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
 
 export interface RouteCompareLabProps {
   onBack?: () => void;
 }
 
-type CompareViewMode = 'split' | 'longdo' | 'osrm';
+export type CompareViewMode = 'split' | 'hybrid' | 'pure-mapbox' | 'pure-longdo' | 'pure-osrm';
 
 export const RouteCompareLab: React.FC<RouteCompareLabProps> = ({ onBack }) => {
   const [viewMode, setViewMode] = useState<CompareViewMode>('split');
+
+  // Mapbox Token state (supports localStorage & .env fallback)
+  const [mapboxToken, setMapboxToken] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      return (
+        localStorage.getItem('mapbox_access_token') ||
+        (import.meta as any).env?.VITE_MAPBOX_TOKEN ||
+        ''
+      );
+    }
+    return '';
+  });
 
   // Input states
   const [pickup, setPickup] = useState<TripLocation>({
@@ -49,14 +68,24 @@ export const RouteCompareLab: React.FC<RouteCompareLabProps> = ({ onBack }) => {
   const [dropoffPasteStr, setDropoffPasteStr] = useState<string>('');
 
   // Results state
+  const [mapboxTrip, setMapboxTrip] = useState<VehicleTrip | null>(null);
   const [osrmTrip, setOsrmTrip] = useState<VehicleTrip | null>(null);
   const [isCalculating, setIsCalculating] = useState<boolean>(false);
+  const [mapboxError, setMapboxError] = useState<string | null>(null);
   const [longdoStatus, setLongdoStatus] = useState<string>('พร้อมโหลดแผนที่ Longdo SDK');
 
-  // Longdo Map SDK references
+  // Longdo Map Native SDK references
   const longdoContainerRef = useRef<HTMLDivElement>(null);
   const longdoMapInstanceRef = useRef<any>(null);
   const longdoRouteGuideRef = useRef<HTMLDivElement>(null);
+
+  // Save Token
+  const handleSaveToken = (val: string) => {
+    setMapboxToken(val);
+    try {
+      localStorage.setItem('mapbox_access_token', val.trim());
+    } catch {}
+  };
 
   // Smart paste handlers
   const handlePickupPaste = (text: string) => {
@@ -79,7 +108,10 @@ export const RouteCompareLab: React.FC<RouteCompareLabProps> = ({ onBack }) => {
     }
   };
 
-  const handleApplyPreset = (type: 'pickup' | 'dropoff', loc: { name: string; lat: number; lng: number }) => {
+  const handleApplyPreset = (
+    type: 'pickup' | 'dropoff',
+    loc: { name: string; lat: number; lng: number }
+  ) => {
     if (type === 'pickup') {
       setPickupName(loc.name);
       setPickupLatStr(String(loc.lat));
@@ -95,7 +127,7 @@ export const RouteCompareLab: React.FC<RouteCompareLabProps> = ({ onBack }) => {
     }
   };
 
-  // Run calculation on both engines
+  // Run calculation across routing engines
   const handleRunComparison = async () => {
     const pLat = parseFloat(pickupLatStr);
     const pLng = parseFloat(pickupLngStr);
@@ -110,27 +142,64 @@ export const RouteCompareLab: React.FC<RouteCompareLabProps> = ({ onBack }) => {
     setPickup(currentPickup);
     setDropoff(currentDropoff);
     setIsCalculating(true);
+    setMapboxError(null);
 
-    // 1. Calculate Pure OSRM
+    // 1. Calculate Mapbox route if token available
+    if (mapboxToken?.trim()) {
+      try {
+        const mbTrip = await calculateMapboxTripRoute(
+          'EV-MAPBOX',
+          currentPickup,
+          currentDropoff,
+          mapboxToken.trim()
+        );
+        setMapboxTrip(mbTrip);
+      } catch (err: any) {
+        setMapboxError(err?.message || 'Mapbox API request failed');
+        // Fallback to OSRM so user still sees the path
+        try {
+          const fb = await calculateTripRoute('EV-FALLBACK', currentPickup, currentDropoff);
+          setMapboxTrip(fb);
+        } catch {}
+      }
+    } else {
+      // No token provided: simulate via OSRM with warning
+      try {
+        const trip = await calculateTripRoute('EV-OSRM', currentPickup, currentDropoff);
+        setMapboxTrip(trip);
+      } catch {}
+    }
+
+    // 2. Calculate OSRM route
     try {
-      const trip = await calculateTripRoute('EV-COMPARE', currentPickup, currentDropoff);
+      const trip = await calculateTripRoute('EV-OSRM', currentPickup, currentDropoff);
       setOsrmTrip(trip);
     } catch (e) {
       console.error('OSRM route calculation failed', e);
     }
 
-    // 2. Trigger Longdo Native Map Route if SDK is loaded
+    // 3. Trigger Longdo Native Map Route if SDK loaded
     if (longdoMapInstanceRef.current && (window as any).longdo) {
       try {
         const longdo = (window as any).longdo;
         const map = longdoMapInstanceRef.current;
         map.Route.clear();
-        map.Route.add(new longdo.Marker({ lon: currentPickup.lng, lat: currentPickup.lat }, { title: currentPickup.name || 'จุดรับ' }));
-        map.Route.add(new longdo.Marker({ lon: currentDropoff.lng, lat: currentDropoff.lat }, { title: currentDropoff.name || 'จุดส่ง' }));
+        map.Route.add(
+          new longdo.Marker(
+            { lon: currentPickup.lng, lat: currentPickup.lat },
+            { title: currentPickup.name || 'จุดรับ' }
+          )
+        );
+        map.Route.add(
+          new longdo.Marker(
+            { lon: currentDropoff.lng, lat: currentDropoff.lat },
+            { title: currentDropoff.name || 'จุดส่ง' }
+          )
+        );
         map.Route.search();
         setLongdoStatus('คำนวณและวาดเส้นทางบน Longdo Map สำเร็จ');
       } catch (err: any) {
-        setLongdoStatus(`เกิดข้อผิดพลาดใน Longdo SDK: ${err?.message || 'Unknown'}`);
+        setLongdoStatus(`Longdo SDK Route: ${err?.message || 'Unknown'}`);
       }
     }
 
@@ -161,8 +230,18 @@ export const RouteCompareLab: React.FC<RouteCompareLabProps> = ({ onBack }) => {
 
         // Initial search
         map.Route.clear();
-        map.Route.add(new longdo.Marker({ lon: pickup.lng, lat: pickup.lat }, { title: pickup.name || 'จุดรับ' }));
-        map.Route.add(new longdo.Marker({ lon: dropoff.lng, lat: dropoff.lat }, { title: dropoff.name || 'จุดส่ง' }));
+        map.Route.add(
+          new longdo.Marker(
+            { lon: pickup.lng, lat: pickup.lat },
+            { title: pickup.name || 'จุดรับ' }
+          )
+        );
+        map.Route.add(
+          new longdo.Marker(
+            { lon: dropoff.lng, lat: dropoff.lat },
+            { title: dropoff.name || 'จุดส่ง' }
+          )
+        );
         map.Route.search();
       } catch (e: any) {
         if (isMounted) setLongdoStatus(`ไม่สามารถสร้าง Longdo Map: ${e?.message}`);
@@ -188,15 +267,22 @@ export const RouteCompareLab: React.FC<RouteCompareLabProps> = ({ onBack }) => {
       }
     }
 
-    // Initial OSRM calculation
-    calculateTripRoute('EV-COMPARE', pickup, dropoff).then((t) => {
-      if (isMounted) setOsrmTrip(t);
+    // Initial default calculations
+    calculateTripRoute('EV-DEFAULT', pickup, dropoff).then((t) => {
+      if (isMounted) {
+        setOsrmTrip(t);
+        setMapboxTrip(t);
+      }
     });
 
     return () => {
       isMounted = false;
     };
   }, []);
+
+  const mapboxTileUrl = mapboxToken?.trim()
+    ? `https://api.mapbox.com/styles/v1/mapbox/streets-v12/tiles/{z}/{x}/{y}?access_token=${mapboxToken.trim()}`
+    : OSM_TILE_URL;
 
   return (
     <div className="min-h-screen bg-slate-100 dark:bg-slate-950 text-slate-800 dark:text-slate-100 flex flex-col">
@@ -222,35 +308,58 @@ export const RouteCompareLab: React.FC<RouteCompareLabProps> = ({ onBack }) => {
                   Route Engine Comparison Lab
                 </h1>
                 <span className="text-[10px] px-2 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 font-mono font-semibold border border-indigo-200 dark:border-indigo-800">
-                  Dual-Engine Lab
+                  Mapbox vs Longdo vs OSRM
                 </span>
               </div>
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                เปรียบเทียบ Longdo Map Native 100% vs OpenStreetMap + OSRM 100%
+                เปรียบเทียบ Longdo Map Native 100% vs OpenStreetMap + OSRM 100% vs แบบผสม (Hybrid) vs Pure Mapbox
               </p>
             </div>
           </div>
 
           {/* View Mode Switcher */}
-          <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800/80 p-1 rounded-xl border border-slate-200 dark:border-slate-700 text-xs">
+          <div className="flex flex-wrap items-center gap-1 bg-slate-100 dark:bg-slate-800/80 p-1 rounded-xl border border-slate-200 dark:border-slate-700 text-xs">
             <button
               type="button"
               onClick={() => setViewMode('split')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-semibold transition-all ${
+              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg font-semibold transition-all ${
                 viewMode === 'split'
-                  ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm'
+                  ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-sm'
                   : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
               }`}
             >
-              <Columns className="w-3.5 h-3.5 text-indigo-500" />
-              <span>Split View (50/50)</span>
+              <Columns className="w-3.5 h-3.5" />
+              <span>Split View (เปรียบเทียบ)</span>
             </button>
             <button
               type="button"
-              onClick={() => setViewMode('longdo')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-semibold transition-all ${
-                viewMode === 'longdo'
-                  ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm'
+              onClick={() => setViewMode('hybrid')}
+              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg font-semibold transition-all ${
+                viewMode === 'hybrid'
+                  ? 'bg-white dark:bg-slate-900 text-emerald-600 dark:text-emerald-400 shadow-sm'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              }`}
+            >
+              <Sparkles className="w-3.5 h-3.5 text-emerald-500" />
+              <span>แบบผสม (Longdo + Mapbox)</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode('pure-mapbox')}
+              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg font-semibold transition-all ${
+                viewMode === 'pure-mapbox'
+                  ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-sm'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              }`}
+            >
+              <span>🌐 Pure Mapbox (100%)</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode('pure-longdo')}
+              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg font-semibold transition-all ${
+                viewMode === 'pure-longdo'
+                  ? 'bg-white dark:bg-slate-900 text-amber-600 dark:text-amber-400 shadow-sm'
                   : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
               }`}
             >
@@ -258,9 +367,9 @@ export const RouteCompareLab: React.FC<RouteCompareLabProps> = ({ onBack }) => {
             </button>
             <button
               type="button"
-              onClick={() => setViewMode('osrm')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-semibold transition-all ${
-                viewMode === 'osrm'
+              onClick={() => setViewMode('pure-osrm')}
+              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg font-semibold transition-all ${
+                viewMode === 'pure-osrm'
                   ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm'
                   : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
               }`}
@@ -273,6 +382,58 @@ export const RouteCompareLab: React.FC<RouteCompareLabProps> = ({ onBack }) => {
 
       {/* Main Container */}
       <main className="flex-1 max-w-7xl w-full mx-auto p-4 flex flex-col gap-4">
+        {/* Mapbox Token Configuration Bar */}
+        <section className="bg-gradient-to-r from-blue-500/10 via-indigo-500/10 to-emerald-500/10 p-3.5 rounded-2xl border border-blue-500/20 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+          <div className="flex items-center gap-2">
+            <Key className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" />
+            <div>
+              <span className="font-bold text-slate-900 dark:text-white">Mapbox Access Token:</span>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                ใช้สำหรับเรียก Mapbox Directions API (ฟรี 100,000 requests/เดือน) และ Mapbox Streets Tiles
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <input
+              type="password"
+              aria-label="Mapbox Access Token"
+              placeholder="pk.eyJ1Ijo... (ใส่ Token ที่นี่)"
+              value={mapboxToken}
+              onChange={(e) => handleSaveToken(e.target.value)}
+              className="px-3 py-1.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 font-mono text-xs w-full sm:w-72 outline-none focus:ring-1 focus:ring-blue-500"
+            />
+            <a
+              href="https://account.mapbox.com/access-tokens/"
+              target="_blank"
+              rel="noreferrer"
+              className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-blue-600 dark:text-blue-400 font-semibold hover:bg-blue-50 dark:hover:bg-slate-800 transition-colors shrink-0"
+              title="รับฟรี Token ที่ mapbox.com"
+            >
+              <span>ขอรับ Token ฟรี</span>
+              <ExternalLink className="w-3 h-3" />
+            </a>
+          </div>
+        </section>
+
+        {mapboxError && (
+          <div className="flex items-center gap-2 p-3 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 text-xs text-rose-800 dark:text-rose-300">
+            <Info className="w-4 h-4 shrink-0 text-rose-600" />
+            <span>
+              ⚠️ <b>Mapbox Error:</b> {mapboxError} (กำลังใช้แนวเส้นทางจำลองแทนชั่วคราว)
+            </span>
+          </div>
+        )}
+
+        {!mapboxToken?.trim() && (
+          <div className="flex items-center gap-2 p-3 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900 text-xs text-amber-800 dark:text-amber-300">
+            <Info className="w-4 h-4 shrink-0 text-amber-600" />
+            <span>
+              💡 <b>ยังไม่ได้ใส่ Mapbox Access Token:</b> สามารถทดสอบระบบเบื้องต้นได้ (ระบบจะใช้ OSRM จำลองแนวเส้นทางให้ชั่วคราว) หรือสมัครรับ Token ฟรีที่ mapbox.com เพื่อทดสอบ Mapbox ของจริงแบบ 100% ครับ
+            </span>
+          </div>
+        )}
+
         {/* Interactive Coordinate Controller Box */}
         <section className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col gap-3.5">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -432,7 +593,7 @@ export const RouteCompareLab: React.FC<RouteCompareLabProps> = ({ onBack }) => {
               className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-md transition-all disabled:opacity-50"
             >
               <Play className="w-4 h-4 fill-current" />
-              <span>{isCalculating ? 'กำลังคำนวณทั้ง 2 ระบบ...' : 'คำนวณและเปรียบเทียบทั้ง 2 ระบบ (Run Comparison)'}</span>
+              <span>{isCalculating ? 'กำลังคำนวณเส้นทาง...' : 'คำนวณเส้นทาง (Run Comparison)'}</span>
             </button>
           </div>
         </section>
@@ -443,8 +604,111 @@ export const RouteCompareLab: React.FC<RouteCompareLabProps> = ({ onBack }) => {
             viewMode === 'split' ? 'grid-cols-1 lg:grid-cols-2' : 'grid-cols-1'
           }`}
         >
-          {/* Map 1: Pure Longdo Map 100% */}
-          {(viewMode === 'split' || viewMode === 'longdo') && (
+          {/* View Option 1: 🌟 แบบผสม (Hybrid: Longdo Map Base + Mapbox Directions) */}
+          {(viewMode === 'split' || viewMode === 'hybrid') && (
+            <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-md flex flex-col min-h-[480px]">
+              <div className="p-3 bg-emerald-500/10 dark:bg-emerald-950/30 border-b border-emerald-500/20 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-bold text-emerald-900 dark:text-emerald-200 flex items-center gap-1.5">
+                    <Sparkles className="w-4 h-4 text-emerald-600" />
+                    🇹🇭 แบบผสม (Hybrid: Longdo Map + Mapbox Directions)
+                  </span>
+                  <span className="text-[10px] px-2 py-0.5 rounded bg-emerald-200 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300 font-semibold">
+                    แนวทางที่แนะนำ
+                  </span>
+                </div>
+                <div className="text-[11px] font-mono text-emerald-700 dark:text-emerald-300 font-semibold">
+                  {mapboxTrip?.distanceMeters
+                    ? `${(mapboxTrip.distanceMeters / 1000).toFixed(2)} km (~${Math.ceil((mapboxTrip.durationSeconds || 0) / 60)} นาที)`
+                    : 'พร้อมคำนวณ'}
+                </div>
+              </div>
+
+              {/* Hybrid Map Container */}
+              <div className="relative flex-1 w-full min-h-[380px] bg-slate-200 dark:bg-slate-800">
+                <MapContainer
+                  center={[pickup.lat, pickup.lng]}
+                  zoom={14}
+                  zoomControl={false}
+                  attributionControl={false}
+                  className="w-full h-full min-h-[380px]"
+                >
+                  <TileLayer
+                    url={LONGDO_TILE_URL}
+                    attribution='&copy; <a href="https://map.longdo.com/">Longdo Map</a>'
+                  />
+                  {mapboxTrip && <TripRouteOverlay trip={mapboxTrip} />}
+                </MapContainer>
+                <div className="absolute bottom-2 left-2 right-2 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md p-2.5 rounded-xl text-[10px] text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 pointer-events-none z-[1000]">
+                  ✨ <b>จุดเด่นแบบผสม:</b> ฉากหลังเป็นแผนที่ Longdo ภาษาไทยละเอียดชัดเจน + เส้นทางประเรืองแสงมาจาก Mapbox Directions API (เสถียร ไม่โดนแบน โควตาฟรี 100,000 ครั้ง/เดือน)
+                </div>
+              </div>
+
+              {mapboxTrip && (
+                <div className="p-3 bg-slate-50 dark:bg-slate-850 border-t border-slate-200 dark:border-slate-800 flex justify-between text-xs text-slate-600 dark:text-slate-300 font-medium">
+                  <span>ระยะทางใบจอง: {((mapboxTrip.distanceMeters || 0) / 1000).toFixed(2)} km</span>
+                  <span>เวลาประเมิน: ~{Math.ceil((mapboxTrip.durationSeconds || 0) / 60)} นาที</span>
+                  <span>จุดพิกัดโค้งถนน: {mapboxTrip.plannedPath.length} จุด</span>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* View Option 2: 🌐 100% Pure Mapbox (Mapbox Streets + Mapbox Directions) */}
+          {(viewMode === 'split' || viewMode === 'pure-mapbox') && (
+            <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-md flex flex-col min-h-[480px]">
+              <div className="p-3 bg-blue-500/10 dark:bg-blue-950/30 border-b border-blue-500/20 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-bold text-blue-900 dark:text-blue-200 flex items-center gap-1.5">
+                    <Layers className="w-4 h-4 text-blue-600" />
+                    🌐 100% Pure Mapbox
+                  </span>
+                  <span className="text-[10px] px-2 py-0.5 rounded bg-blue-200 dark:bg-blue-900/60 text-blue-800 dark:text-blue-300 font-semibold">
+                    Mapbox Streets + Directions
+                  </span>
+                </div>
+                <div className="text-[11px] font-mono text-blue-700 dark:text-blue-300 font-semibold">
+                  {mapboxTrip?.distanceMeters
+                    ? `${(mapboxTrip.distanceMeters / 1000).toFixed(2)} km`
+                    : 'พร้อมคำนวณ'}
+                </div>
+              </div>
+
+              {/* Pure Mapbox Container */}
+              <div
+                data-testid="mapbox-map-container"
+                className="relative flex-1 w-full min-h-[380px] bg-slate-200 dark:bg-slate-800"
+              >
+                <MapContainer
+                  center={[pickup.lat, pickup.lng]}
+                  zoom={14}
+                  zoomControl={false}
+                  attributionControl={false}
+                  className="w-full h-full min-h-[380px]"
+                >
+                  <TileLayer
+                    url={mapboxTileUrl}
+                    attribution='&copy; <a href="https://www.mapbox.com/">Mapbox</a>'
+                  />
+                  {mapboxTrip && <TripRouteOverlay trip={mapboxTrip} />}
+                </MapContainer>
+                <div className="absolute bottom-2 left-2 right-2 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md p-2.5 rounded-xl text-[10px] text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 pointer-events-none z-[1000]">
+                  🌐 <b>จุดเด่น Pure Mapbox:</b> ทั้งภาพแผนที่ถนนและเส้นทางเป็นระบบของ Mapbox ทั้งหมด เส้นทางจึงแนบสนิทกับถนนของ Mapbox แบบ Pixel-Perfect
+                </div>
+              </div>
+
+              {mapboxTrip && (
+                <div className="p-3 bg-slate-50 dark:bg-slate-850 border-t border-slate-200 dark:border-slate-800 flex justify-between text-xs text-slate-600 dark:text-slate-300 font-medium">
+                  <span>ระยะทาง: {((mapboxTrip.distanceMeters || 0) / 1000).toFixed(2)} km</span>
+                  <span>เวลาประเมิน: ~{Math.ceil((mapboxTrip.durationSeconds || 0) / 60)} นาที</span>
+                  <span>สถานะ Token: {mapboxToken ? '✓ เชื่อมต่อแล้ว' : '⚠️ ใช้ OSRM จำลอง'}</span>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* View Option 3: 🇹🇭 100% Pure Longdo Map Native SDK */}
+          {viewMode === 'pure-longdo' && (
             <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-md flex flex-col min-h-[480px]">
               <div className="p-3 bg-amber-500/10 dark:bg-amber-950/30 border-b border-amber-500/20 flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -460,19 +724,14 @@ export const RouteCompareLab: React.FC<RouteCompareLabProps> = ({ onBack }) => {
                 </div>
               </div>
 
-              {/* Longdo Container */}
               <div className="relative flex-1 w-full min-h-[380px] bg-slate-200 dark:bg-slate-800">
                 <div
                   ref={longdoContainerRef}
                   data-testid="longdo-native-container"
                   className="w-full h-full min-h-[380px]"
                 />
-                <div className="absolute bottom-2 left-2 right-2 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md p-2 rounded-xl text-[10px] text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 pointer-events-none">
-                  💡 <b>ลักษณะของ Longdo Native:</b> วาดเส้นตรงลงบน Canvas แผนที่ของ Longdo โดยตรงผ่าน Longdo JS SDK
-                </div>
               </div>
 
-              {/* Longdo Turn Guide Output Container */}
               <div
                 ref={longdoRouteGuideRef}
                 className="max-h-36 overflow-y-auto p-2 bg-slate-50 dark:bg-slate-850 border-t border-slate-200 dark:border-slate-800 text-[11px] font-mono text-slate-600 dark:text-slate-300"
@@ -480,26 +739,25 @@ export const RouteCompareLab: React.FC<RouteCompareLabProps> = ({ onBack }) => {
             </div>
           )}
 
-          {/* Map 2: Pure OSRM 100% */}
-          {(viewMode === 'split' || viewMode === 'osrm') && (
+          {/* View Option 4: 🌍 100% Pure OSRM */}
+          {viewMode === 'pure-osrm' && (
             <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-md flex flex-col min-h-[480px]">
-              <div className="p-3 bg-emerald-500/10 dark:bg-emerald-950/30 border-b border-emerald-500/20 flex items-center justify-between">
+              <div className="p-3 bg-slate-500/10 dark:bg-slate-800/40 border-b border-slate-500/20 flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <span className="text-sm font-bold text-emerald-900 dark:text-emerald-200">
+                  <span className="text-sm font-bold text-slate-900 dark:text-white">
                     🌍 100% Pure OpenStreetMap + OSRM
                   </span>
-                  <span className="text-[10px] px-2 py-0.5 rounded bg-emerald-200 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300 font-semibold">
-                    OSM Tiles + OSRM GeoJSON
+                  <span className="text-[10px] px-2 py-0.5 rounded bg-slate-200 dark:bg-slate-800 text-slate-800 dark:text-slate-200 font-semibold">
+                    OSM Tiles + OSRM Demo Server
                   </span>
                 </div>
-                <div className="text-[11px] font-mono text-emerald-700 dark:text-emerald-300 font-semibold">
+                <div className="text-[11px] font-mono text-slate-700 dark:text-slate-300 font-semibold">
                   {osrmTrip?.distanceMeters
-                    ? `${(osrmTrip.distanceMeters / 1000).toFixed(2)} km (~${Math.ceil((osrmTrip.durationSeconds || 0) / 60)} นาที)`
-                    : 'กำลังคำนวณ...'}
+                    ? `${(osrmTrip.distanceMeters / 1000).toFixed(2)} km`
+                    : 'พร้อมคำนวณ'}
                 </div>
               </div>
 
-              {/* OSRM Container */}
               <div className="relative flex-1 w-full min-h-[380px] bg-slate-200 dark:bg-slate-800">
                 <MapContainer
                   center={[pickup.lat, pickup.lng]}
@@ -508,21 +766,14 @@ export const RouteCompareLab: React.FC<RouteCompareLabProps> = ({ onBack }) => {
                   attributionControl={false}
                   className="w-full h-full min-h-[380px]"
                 >
-                  <TileLayer
-                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                    attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-                  />
+                  <TileLayer url={OSM_TILE_URL} attribution='&copy; OpenStreetMap' />
                   {osrmTrip && <TripRouteOverlay trip={osrmTrip} />}
                 </MapContainer>
-                <div className="absolute bottom-2 left-2 right-2 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md p-2 rounded-xl text-[10px] text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 pointer-events-none z-[1000]">
-                  💡 <b>ลักษณะของ OSRM:</b> ข้อมูลพิกัดแนวถนน (GeoJSON) ลากและเลี้ยวตามแนวถนนจริงของ OpenStreetMap อย่างสมบูรณ์ 100%
-                </div>
               </div>
 
-              {/* OSRM Summary */}
               {osrmTrip && (
                 <div className="p-3 bg-slate-50 dark:bg-slate-850 border-t border-slate-200 dark:border-slate-800 flex justify-between text-xs text-slate-600 dark:text-slate-300 font-medium">
-                  <span>ระยะทางตามถนน: {((osrmTrip.distanceMeters || 0) / 1000).toFixed(2)} km</span>
+                  <span>ระยะทาง: {((osrmTrip.distanceMeters || 0) / 1000).toFixed(2)} km</span>
                   <span>เวลาประเมิน: ~{Math.ceil((osrmTrip.durationSeconds || 0) / 60)} นาที</span>
                   <span>จุดพิกัดโค้งถนน: {osrmTrip.plannedPath.length} จุด</span>
                 </div>
@@ -535,27 +786,27 @@ export const RouteCompareLab: React.FC<RouteCompareLabProps> = ({ onBack }) => {
         <section className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm text-xs space-y-2">
           <div className="flex items-center gap-2 font-bold text-slate-900 dark:text-white">
             <Info className="w-4 h-4 text-indigo-500" />
-            <span>สรุปข้อแตกต่างสำคัญระหว่าง Longdo Native vs OSRM</span>
+            <span>ข้อเปรียบเทียบระหว่างแบบผสม (Longdo + Mapbox) กับ Pure Mapbox</span>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-slate-600 dark:text-slate-300">
-            <div className="p-3 rounded-xl bg-amber-500/5 border border-amber-500/10">
-              <div className="font-bold text-amber-800 dark:text-amber-300 mb-1">
-                🇹🇭 ข้อดีและข้อจำกัดของ Longdo Map Native:
+            <div className="p-3 rounded-xl bg-emerald-500/5 border border-emerald-500/10">
+              <div className="font-bold text-emerald-800 dark:text-emerald-300 mb-1 flex items-center gap-1">
+                <Sparkles className="w-3.5 h-3.5" /> 🇹🇭 แบบผสม (Longdo Map + Mapbox Directions):
               </div>
               <ul className="list-disc pl-4 space-y-1 text-[11px]">
-                <li>ข้อมูลชื่อถนน ซอย และสถานที่ในไทยเป็นภาษาไทยชัดเจนมาก</li>
-                <li>ฟังก์ชัน Route ถูกจำกัดอยู่ภายใน Longdo Map SDK เท่านั้น ไม่ปล่อยพิกัดเรขาคณิต (LineString) ออกมาให้ Leaflet วาด</li>
-                <li>หากนำเส้นทางของระบบภายนอกมาวาง จะมีความคลาดเคลื่อนของแนวถนน 5-15 เมตร</li>
+                <li><b>แผนที่ฉากหลัง:</b> เป็น Longdo Map ภาษาไทย ชัดเจน มีชื่อตึก อาคาร ซอยในเชียงใหม่ครบถ้วน</li>
+                <li><b>การคำนวณเส้นทาง:</b> ใช้ Mapbox Directions API ซึ่งมีความเสถียรระดับ Enterprise และมีโควตาฟรี 100,000 requests/เดือน</li>
+                <li><b>ความเข้ากันได้:</b> เส้นทางลอยตัววาดลงบน Leaflet ได้อย่างลื่นไหล ไม่ต้องกังวลเรื่องการโดนบล็อก IP เหมือน OSRM Demo Server</li>
               </ul>
             </div>
-            <div className="p-3 rounded-xl bg-emerald-500/5 border border-emerald-500/10">
-              <div className="font-bold text-emerald-800 dark:text-emerald-300 mb-1">
-                🌍 ข้อดีและข้อจำกัดของ OpenStreetMap + OSRM:
+            <div className="p-3 rounded-xl bg-blue-500/5 border border-blue-500/10">
+              <div className="font-bold text-blue-800 dark:text-blue-300 mb-1 flex items-center gap-1">
+                <Layers className="w-3.5 h-3.5" /> 🌐 100% Pure Mapbox (Mapbox Streets + Directions):
               </div>
               <ul className="list-disc pl-4 space-y-1 text-[11px]">
-                <li>ให้พิกัดโค้งตามถนนแบบเปิด (Open GeoJSON) เหมาะกับการนำมาวาดแต่งเส้นทางและคำนวณบน Leaflet ได้ 100%</li>
-                <li>เมื่อแสดงผลคู่กับ OpenStreetMap แผนที่จะแนบสนิทกับแนวถนนแบบ Pixel-Perfect ไม่มีตกขอบทาง</li>
-                <li>ฟรี ไม่ติดข้อจำกัด API Key และตอบสนองรวดเร็ว</li>
+                <li><b>ความแนบสนิทของถนน:</b> ทั้งภาพกระเบื้องถนนและเส้นเวกเตอร์ทางเลี้ยวมาจาก Mapbox จึงตรงตามแนวถนนแบบ Pixel-Perfect 100%</li>
+                <li><b>สไตล์แผนที่:</b> โมเดิร์นระดับโลก โทนสีมาตรฐาน</li>
+                <li><b>ข้อสังเกต:</b> รายละเอียดชื่ออาคารย่อยและซอยเล็กๆ ในไทย อาจไม่ละเอียดเท่าฐานข้อมูลเฉพาะของ Longdo Map</li>
               </ul>
             </div>
           </div>

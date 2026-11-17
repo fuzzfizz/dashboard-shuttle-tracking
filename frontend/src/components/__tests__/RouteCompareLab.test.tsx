@@ -33,30 +33,40 @@ describe('RouteCompareLab', () => {
     expect(handleBack).toHaveBeenCalledTimes(1);
   });
 
-  it('switches between Split View, Pure Longdo, and Pure OSRM view modes', () => {
+  it('switches between Split View, Hybrid, Pure Mapbox, Pure Longdo, and Pure OSRM view modes', () => {
     render(<RouteCompareLab />);
 
     const splitBtn = screen.getByRole('button', { name: /Split View/i });
+    const hybridBtn = screen.getByRole('button', { name: /แบบผสม/i });
+    const mapboxBtn = screen.getByRole('button', { name: /Pure Mapbox/i });
     const longdoBtn = screen.getByRole('button', { name: /Pure Longdo/i });
     const osrmBtn = screen.getByRole('button', { name: /Pure OSRM/i });
 
     expect(splitBtn).toBeInTheDocument();
+    expect(hybridBtn).toBeInTheDocument();
+    expect(mapboxBtn).toBeInTheDocument();
     expect(longdoBtn).toBeInTheDocument();
     expect(osrmBtn).toBeInTheDocument();
 
-    // Default is Split View: both maps present
-    expect(screen.getByTestId('longdo-native-container')).toBeInTheDocument();
-    expect(screen.getByTestId('mock-osrm-map')).toBeInTheDocument();
+    // Default is Split View: Mapbox map container present
+    expect(screen.getByTestId('mapbox-map-container')).toBeInTheDocument();
+    expect(screen.queryByTestId('longdo-native-container')).toBeNull();
 
     // Switch to Pure Longdo
     fireEvent.click(longdoBtn);
     expect(screen.getByTestId('longdo-native-container')).toBeInTheDocument();
-    expect(screen.queryByTestId('mock-osrm-map')).toBeNull();
+    expect(screen.queryByTestId('mapbox-map-container')).toBeNull();
 
     // Switch to Pure OSRM
     fireEvent.click(osrmBtn);
     expect(screen.queryByTestId('longdo-native-container')).toBeNull();
-    expect(screen.getByTestId('mock-osrm-map')).toBeInTheDocument();
+    expect(screen.queryByTestId('mapbox-map-container')).toBeNull();
+    expect(screen.getByText(/100% Pure OpenStreetMap \+ OSRM/i)).toBeInTheDocument();
+
+    // Switch to Pure Mapbox
+    fireEvent.click(mapboxBtn);
+    expect(screen.getByTestId('mapbox-map-container')).toBeInTheDocument();
+    expect(screen.queryByTestId('longdo-native-container')).toBeNull();
   });
 
   it('allows pasting full coordinate string in quick paste inputs', () => {
