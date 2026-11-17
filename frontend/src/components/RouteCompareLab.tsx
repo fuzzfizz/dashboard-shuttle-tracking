@@ -89,6 +89,16 @@ export const RouteCompareLab: React.FC<RouteCompareLabProps> = ({ onBack }) => {
   const [alternativeTrips, setAlternativeTrips] = useState<VehicleTrip[]>([]);
   const [activeRouteIndex, setActiveRouteIndex] = useState<number>(0);
 
+  // Pure Mapbox Customization Options
+  const [pureMapboxProfile, setPureMapboxProfile] = useState<MapboxRoutingProfile>('driving-traffic');
+  const [pureMapboxAlternatives, setPureMapboxAlternatives] = useState<boolean>(true);
+  const [pureMapboxExcludeToll, setPureMapboxExcludeToll] = useState<boolean>(false);
+  const [pureMapboxExcludeMotorway, setPureMapboxExcludeMotorway] = useState<boolean>(false);
+  const [pureMapboxHideOverlapping, setPureMapboxHideOverlapping] = useState<boolean>(true);
+  const [pureMapboxTrip, setPureMapboxTrip] = useState<VehicleTrip | null>(null);
+  const [pureMapboxAlternativeTrips, setPureMapboxAlternativeTrips] = useState<VehicleTrip[]>([]);
+  const [pureMapboxActiveRouteIndex, setPureMapboxActiveRouteIndex] = useState<number>(0);
+
   // Longdo Map Native SDK references
   const longdoContainerRef = useRef<HTMLDivElement>(null);
   const longdoMapInstanceRef = useRef<any>(null);
@@ -159,11 +169,13 @@ export const RouteCompareLab: React.FC<RouteCompareLabProps> = ({ onBack }) => {
     setIsCalculating(true);
     setMapboxError(null);
 
-    // 1. Calculate Mapbox route if token available
+    // 1. Calculate Mapbox routes if token available
     if (mapboxToken?.trim()) {
+      // 1a. Hybrid route
+      let hybridResult: any = null;
       try {
-        const result = await calculateMapboxTripRouteDetailed(
-          'EV-MAPBOX',
+        hybridResult = await calculateMapboxTripRouteDetailed(
+          'EV-HYBRID',
           currentPickup,
           currentDropoff,
           mapboxToken.trim(),
@@ -174,8 +186,8 @@ export const RouteCompareLab: React.FC<RouteCompareLabProps> = ({ onBack }) => {
             excludeMotorway: hybridExcludeMotorway,
           }
         );
-        setMapboxTrip(result.primaryTrip);
-        setAlternativeTrips(result.alternativeTrips);
+        setMapboxTrip(hybridResult.primaryTrip);
+        setAlternativeTrips(hybridResult.alternativeTrips);
         setActiveRouteIndex(0);
       } catch (err: any) {
         setMapboxError(err?.message || 'Mapbox API request failed');
@@ -187,6 +199,44 @@ export const RouteCompareLab: React.FC<RouteCompareLabProps> = ({ onBack }) => {
           setActiveRouteIndex(0);
         } catch {}
       }
+
+      // 1b. Pure Mapbox route (re-uses hybridResult if options are identical to save API quota)
+      const isOptionsEqual =
+        hybridProfile === pureMapboxProfile &&
+        hybridAlternatives === pureMapboxAlternatives &&
+        hybridExcludeToll === pureMapboxExcludeToll &&
+        hybridExcludeMotorway === pureMapboxExcludeMotorway;
+
+      if (isOptionsEqual && hybridResult) {
+        setPureMapboxTrip(hybridResult.primaryTrip);
+        setPureMapboxAlternativeTrips(hybridResult.alternativeTrips);
+        setPureMapboxActiveRouteIndex(0);
+      } else {
+        try {
+          const pmResult = await calculateMapboxTripRouteDetailed(
+            'EV-PURE-MAPBOX',
+            currentPickup,
+            currentDropoff,
+            mapboxToken.trim(),
+            {
+              profile: pureMapboxProfile,
+              alternatives: pureMapboxAlternatives,
+              excludeToll: pureMapboxExcludeToll,
+              excludeMotorway: pureMapboxExcludeMotorway,
+            }
+          );
+          setPureMapboxTrip(pmResult.primaryTrip);
+          setPureMapboxAlternativeTrips(pmResult.alternativeTrips);
+          setPureMapboxActiveRouteIndex(0);
+        } catch {
+          try {
+            const fb = await calculateTripRoute('EV-FALLBACK-PM', currentPickup, currentDropoff);
+            setPureMapboxTrip(fb);
+            setPureMapboxAlternativeTrips([]);
+            setPureMapboxActiveRouteIndex(0);
+          } catch {}
+        }
+      }
     } else {
       // No token provided: simulate via OSRM with warning
       try {
@@ -194,6 +244,10 @@ export const RouteCompareLab: React.FC<RouteCompareLabProps> = ({ onBack }) => {
         setMapboxTrip(trip);
         setAlternativeTrips([]);
         setActiveRouteIndex(0);
+
+        setPureMapboxTrip(trip);
+        setPureMapboxAlternativeTrips([]);
+        setPureMapboxActiveRouteIndex(0);
       } catch {}
     }
 
@@ -299,6 +353,7 @@ export const RouteCompareLab: React.FC<RouteCompareLabProps> = ({ onBack }) => {
       if (isMounted) {
         setOsrmTrip(t);
         setMapboxTrip(t);
+        setPureMapboxTrip(t);
       }
     });
 
@@ -372,6 +427,7 @@ export const RouteCompareLab: React.FC<RouteCompareLabProps> = ({ onBack }) => {
             </button>
             <button
               type="button"
+              aria-label="Pure Mapbox 100%"
               onClick={() => setViewMode('pure-mapbox')}
               className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg font-semibold transition-all ${
                 viewMode === 'pure-mapbox'
@@ -668,7 +724,7 @@ export const RouteCompareLab: React.FC<RouteCompareLabProps> = ({ onBack }) => {
                   <div className="flex items-center gap-1 bg-white dark:bg-slate-900 p-1 rounded-lg border border-slate-200 dark:border-slate-700">
                     <button
                       type="button"
-                      aria-label="โปรไฟล์ปกติ driving"
+                      aria-label="Hybrid โปรไฟล์ปกติ driving"
                       onClick={() => setHybridProfile('driving')}
                       className={`flex-1 py-1 px-2 rounded-md font-semibold text-[11px] transition-all flex items-center justify-center gap-1 ${
                         hybridProfile === 'driving'
@@ -680,7 +736,7 @@ export const RouteCompareLab: React.FC<RouteCompareLabProps> = ({ onBack }) => {
                     </button>
                     <button
                       type="button"
-                      aria-label="โปรไฟล์การจราจรสด driving-traffic"
+                      aria-label="Hybrid โปรไฟล์การจราจรสด driving-traffic"
                       onClick={() => setHybridProfile('driving-traffic')}
                       className={`flex-1 py-1 px-2 rounded-md font-semibold text-[11px] transition-all flex items-center justify-center gap-1 ${
                         hybridProfile === 'driving-traffic'
@@ -698,7 +754,7 @@ export const RouteCompareLab: React.FC<RouteCompareLabProps> = ({ onBack }) => {
                     <label className="flex items-center gap-1 cursor-pointer text-slate-700 dark:text-slate-300">
                       <input
                         type="checkbox"
-                        aria-label="เปิดเส้นทางสำรอง"
+                        aria-label="Hybrid เปิดเส้นทางสำรอง"
                         checked={hybridAlternatives}
                         onChange={(e) => setHybridAlternatives(e.target.checked)}
                         className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 w-3.5 h-3.5"
@@ -711,7 +767,7 @@ export const RouteCompareLab: React.FC<RouteCompareLabProps> = ({ onBack }) => {
                     >
                       <input
                         type="checkbox"
-                        aria-label="ซ่อนทางสำรองที่ทับกับทางหลัก"
+                        aria-label="Hybrid ซ่อนทางสำรองที่ทับกับทางหลัก"
                         checked={hideOverlapping}
                         onChange={(e) => setHideOverlapping(e.target.checked)}
                         className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 w-3.5 h-3.5"
@@ -721,7 +777,7 @@ export const RouteCompareLab: React.FC<RouteCompareLabProps> = ({ onBack }) => {
                     <label className="flex items-center gap-1 cursor-pointer text-slate-700 dark:text-slate-300">
                       <input
                         type="checkbox"
-                        aria-label="เลี่ยงด่านค่าผ่านทาง"
+                        aria-label="Hybrid เลี่ยงด่านค่าผ่านทาง"
                         checked={hybridExcludeToll}
                         onChange={(e) => setHybridExcludeToll(e.target.checked)}
                         className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 w-3.5 h-3.5"
@@ -731,7 +787,7 @@ export const RouteCompareLab: React.FC<RouteCompareLabProps> = ({ onBack }) => {
                     <label className="flex items-center gap-1 cursor-pointer text-slate-700 dark:text-slate-300">
                       <input
                         type="checkbox"
-                        aria-label="เลี่ยงมอเตอร์เวย์"
+                        aria-label="Hybrid เลี่ยงมอเตอร์เวย์"
                         checked={hybridExcludeMotorway}
                         onChange={(e) => setHybridExcludeMotorway(e.target.checked)}
                         className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 w-3.5 h-3.5"
@@ -910,10 +966,137 @@ export const RouteCompareLab: React.FC<RouteCompareLabProps> = ({ onBack }) => {
                   </span>
                 </div>
                 <div className="text-[11px] font-mono text-blue-700 dark:text-blue-300 font-semibold">
-                  {mapboxTrip?.distanceMeters
-                    ? `${(mapboxTrip.distanceMeters / 1000).toFixed(2)} km`
+                  {(pureMapboxActiveRouteIndex === 0 ? pureMapboxTrip : pureMapboxAlternativeTrips[pureMapboxActiveRouteIndex - 1] || pureMapboxTrip)?.distanceMeters
+                    ? `${(((pureMapboxActiveRouteIndex === 0 ? pureMapboxTrip : pureMapboxAlternativeTrips[pureMapboxActiveRouteIndex - 1] || pureMapboxTrip)?.distanceMeters || 0) / 1000).toFixed(2)} km (~${Math.ceil((((pureMapboxActiveRouteIndex === 0 ? pureMapboxTrip : pureMapboxAlternativeTrips[pureMapboxActiveRouteIndex - 1] || pureMapboxTrip)?.durationSeconds || 0)) / 60)} นาที)`
                     : 'พร้อมคำนวณ'}
                 </div>
+              </div>
+
+              {/* Pure Mapbox Custom Controls */}
+              <div className="p-2.5 bg-slate-50 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-700/80 space-y-2 text-xs">
+                <div className="flex flex-wrap items-center justify-between gap-1.5">
+                  <div className="flex items-center gap-1 font-bold text-slate-800 dark:text-slate-200 text-[11px]">
+                    <SlidersHorizontal className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                    <span>กำหนดค่าสำหรับ Pure Mapbox (Mapbox Customization):</span>
+                  </div>
+                  <span className="text-[10px] text-slate-500 dark:text-slate-400">
+                    Profile: <span className="font-mono font-semibold text-blue-600 dark:text-blue-400">{pureMapboxProfile}</span>
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {/* Profile Selection */}
+                  <div className="flex items-center gap-1 bg-white dark:bg-slate-900 p-1 rounded-lg border border-slate-200 dark:border-slate-700">
+                    <button
+                      type="button"
+                      aria-label="Pure Mapbox โปรไฟล์ปกติ driving"
+                      onClick={() => setPureMapboxProfile('driving')}
+                      className={`flex-1 py-1 px-2 rounded-md font-semibold text-[11px] transition-all flex items-center justify-center gap-1 ${
+                        pureMapboxProfile === 'driving'
+                          ? 'bg-blue-600 text-white shadow-xs'
+                          : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                      }`}
+                    >
+                      <span>🚗 รถตู้ทั่วไป (driving)</span>
+                    </button>
+                    <button
+                      type="button"
+                      aria-label="Pure Mapbox โปรไฟล์การจราจรสด driving-traffic"
+                      onClick={() => setPureMapboxProfile('driving-traffic')}
+                      className={`flex-1 py-1 px-2 rounded-md font-semibold text-[11px] transition-all flex items-center justify-center gap-1 ${
+                        pureMapboxProfile === 'driving-traffic'
+                          ? 'bg-blue-600 text-white shadow-xs'
+                          : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                      }`}
+                    >
+                      <Navigation className="w-3 h-3" />
+                      <span>🚦 จราจรสด (traffic)</span>
+                    </button>
+                  </div>
+
+                  {/* Exclusions & Alternatives Toggles */}
+                  <div className="flex flex-wrap items-center gap-2 bg-white dark:bg-slate-900 px-2 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 text-[11px]">
+                    <label className="flex items-center gap-1 cursor-pointer text-slate-700 dark:text-slate-300">
+                      <input
+                        type="checkbox"
+                        aria-label="Pure Mapbox เปิดเส้นทางสำรอง"
+                        checked={pureMapboxAlternatives}
+                        onChange={(e) => setPureMapboxAlternatives(e.target.checked)}
+                        className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 w-3.5 h-3.5"
+                      />
+                      <span>ทางสำรอง</span>
+                    </label>
+                    <label
+                      className="flex items-center gap-1 cursor-pointer text-slate-700 dark:text-slate-300"
+                      title="ซ่อนช่วงที่เส้นทางสำรองวิ่งทับกับเส้นทางหลัก เพื่อให้เห็นเฉพาะจุดที่แยกตัวออก"
+                    >
+                      <input
+                        type="checkbox"
+                        aria-label="Pure Mapbox ซ่อนทางสำรองที่ทับกับทางหลัก"
+                        checked={pureMapboxHideOverlapping}
+                        onChange={(e) => setPureMapboxHideOverlapping(e.target.checked)}
+                        className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 w-3.5 h-3.5"
+                      />
+                      <span className="font-semibold text-blue-700 dark:text-blue-300">ซ่อนส่วนทับซ้อน</span>
+                    </label>
+                    <label className="flex items-center gap-1 cursor-pointer text-slate-700 dark:text-slate-300">
+                      <input
+                        type="checkbox"
+                        aria-label="Pure Mapbox เลี่ยงด่านค่าผ่านทาง"
+                        checked={pureMapboxExcludeToll}
+                        onChange={(e) => setPureMapboxExcludeToll(e.target.checked)}
+                        className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 w-3.5 h-3.5"
+                      />
+                      <span>เลี่ยงด่าน</span>
+                    </label>
+                    <label className="flex items-center gap-1 cursor-pointer text-slate-700 dark:text-slate-300">
+                      <input
+                        type="checkbox"
+                        aria-label="Pure Mapbox เลี่ยงมอเตอร์เวย์"
+                        checked={pureMapboxExcludeMotorway}
+                        onChange={(e) => setPureMapboxExcludeMotorway(e.target.checked)}
+                        className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 w-3.5 h-3.5"
+                      />
+                      <span>เลี่ยงทางหลวง</span>
+                    </label>
+                  </div>
+                </div>
+
+                {/* Route Selection Tabs (if alternatives exist) */}
+                {pureMapboxAlternativeTrips.length > 0 && (
+                  <div className="flex flex-wrap items-center gap-1.5 pt-1 border-t border-slate-200/60 dark:border-slate-700/60">
+                    <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400">
+                      เลือกดูเส้นทาง:
+                    </span>
+                    <button
+                      type="button"
+                      aria-label="Pure Mapbox เลือกเส้นทางหลัก"
+                      onClick={() => setPureMapboxActiveRouteIndex(0)}
+                      className={`px-2 py-0.5 rounded-md text-[11px] font-semibold transition-all ${
+                        pureMapboxActiveRouteIndex === 0
+                          ? 'bg-blue-600 text-white shadow-xs'
+                          : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-100'
+                      }`}
+                    >
+                      ⭐ เส้นทางหลัก {pureMapboxTrip?.distanceMeters ? `(${(pureMapboxTrip.distanceMeters / 1000).toFixed(2)} km)` : ''}
+                    </button>
+                    {pureMapboxAlternativeTrips.map((alt, idx) => (
+                      <button
+                        key={alt.vehicleId}
+                        type="button"
+                        aria-label={`Pure Mapbox เลือกเส้นทางสำรอง ${idx + 1}`}
+                        onClick={() => setPureMapboxActiveRouteIndex(idx + 1)}
+                        className={`px-2 py-0.5 rounded-md text-[11px] font-semibold transition-all ${
+                          pureMapboxActiveRouteIndex === idx + 1
+                            ? 'bg-amber-600 text-white shadow-xs'
+                            : 'bg-white dark:bg-slate-900 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800/60 hover:bg-amber-50'
+                        }`}
+                      >
+                        🔀 ทางสำรอง {idx + 1} {alt.distanceMeters ? `(${(alt.distanceMeters / 1000).toFixed(2)} km)` : ''}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* Pure Mapbox Container */}
@@ -932,17 +1115,108 @@ export const RouteCompareLab: React.FC<RouteCompareLabProps> = ({ onBack }) => {
                     url={mapboxTileUrl}
                     attribution='&copy; <a href="https://www.mapbox.com/">Mapbox</a>'
                   />
-                  {mapboxTrip && <TripRouteOverlay trip={mapboxTrip} />}
+                  {/* Render ghost polylines for unselected alternative paths in Pure Mapbox */}
+                  {pureMapboxAlternativeTrips.map((alt, idx) => {
+                    if (pureMapboxActiveRouteIndex === idx + 1) return null;
+                    const primaryCoords = pureMapboxTrip?.plannedPath || [];
+                    const branches = pureMapboxHideOverlapping
+                      ? getDivergentSegments(alt.plannedPath, primaryCoords, 12)
+                      : [alt.plannedPath];
+
+                    return branches.map((branchCoords, branchIdx) => (
+                      <Polyline
+                        key={`${alt.vehicleId}-pm-branch-${branchIdx}`}
+                        positions={branchCoords}
+                        pathOptions={{
+                          color: '#f59e0b',
+                          weight: 4,
+                          dashArray: '6, 8',
+                          opacity: 0.85,
+                        }}
+                      />
+                    ));
+                  })}
+
+                  {/* Render ghost polyline for unselected primary path when an alternative is active in Pure Mapbox */}
+                  {pureMapboxActiveRouteIndex > 0 && pureMapboxTrip && (() => {
+                    const activeAlt = pureMapboxAlternativeTrips[pureMapboxActiveRouteIndex - 1];
+                    const activeAltCoords = activeAlt?.plannedPath || [];
+                    const branches = pureMapboxHideOverlapping
+                      ? getDivergentSegments(pureMapboxTrip.plannedPath, activeAltCoords, 12)
+                      : [pureMapboxTrip.plannedPath];
+
+                    return branches.map((branchCoords, branchIdx) => (
+                      <Polyline
+                        key={`pm-primary-inactive-branch-${branchIdx}`}
+                        positions={branchCoords}
+                        pathOptions={{
+                          color: '#2563eb',
+                          weight: 4,
+                          dashArray: '6, 8',
+                          opacity: 0.6,
+                        }}
+                      />
+                    ));
+                  })()}
+
+                  {(pureMapboxActiveRouteIndex === 0
+                    ? pureMapboxTrip
+                    : pureMapboxAlternativeTrips[pureMapboxActiveRouteIndex - 1] || pureMapboxTrip) && (
+                    <TripRouteOverlay
+                      trip={
+                        pureMapboxActiveRouteIndex === 0
+                          ? pureMapboxTrip || undefined
+                          : pureMapboxAlternativeTrips[pureMapboxActiveRouteIndex - 1] || pureMapboxTrip || undefined
+                      }
+                    />
+                  )}
                 </MapContainer>
-                <div className="absolute bottom-2 left-2 right-2 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md p-2.5 rounded-xl text-[10px] text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 pointer-events-none z-[1000]">
-                  🌐 <b>จุดเด่น Pure Mapbox:</b> ทั้งภาพแผนที่ถนนและเส้นทางเป็นระบบของ Mapbox ทั้งหมด เส้นทางจึงแนบสนิทกับถนนของ Mapbox แบบ Pixel-Perfect
+                <div className="absolute bottom-2 left-2 right-2 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md p-2 rounded-xl text-[10px] text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 pointer-events-none z-[1000] flex flex-wrap items-center justify-between gap-1">
+                  <div>
+                    🌐 <b>Pure Mapbox 100%:</b> Mapbox Streets + Directions ({pureMapboxProfile === 'driving-traffic' ? '🚦 วิเคราะห์จราจรสด' : '🚗 รถตู้มาตรฐาน'})
+                  </div>
+                  {pureMapboxAlternativeTrips.length > 0 && (
+                    <div className="text-amber-700 dark:text-amber-300 font-semibold">
+                      {pureMapboxHideOverlapping
+                        ? '⚡ ซ่อนช่วงที่ทับกัน: แสดงเฉพาะทางแยกสีส้มประ'
+                        : 'มีเส้นทางสำรองสีส้มประแสดงบนแผนที่'}
+                    </div>
+                  )}
                 </div>
               </div>
 
-              {mapboxTrip && (
-                <div className="p-3 bg-slate-50 dark:bg-slate-850 border-t border-slate-200 dark:border-slate-800 flex justify-between text-xs text-slate-600 dark:text-slate-300 font-medium">
-                  <span>ระยะทาง: {((mapboxTrip.distanceMeters || 0) / 1000).toFixed(2)} km</span>
-                  <span>เวลาประเมิน: ~{Math.ceil((mapboxTrip.durationSeconds || 0) / 60)} นาที</span>
+              {(pureMapboxActiveRouteIndex === 0
+                ? pureMapboxTrip
+                : pureMapboxAlternativeTrips[pureMapboxActiveRouteIndex - 1] || pureMapboxTrip) && (
+                <div className="p-3 bg-slate-50 dark:bg-slate-850 border-t border-slate-200 dark:border-slate-800 flex flex-wrap justify-between gap-2 text-xs text-slate-600 dark:text-slate-300 font-medium">
+                  <span>
+                    {pureMapboxActiveRouteIndex === 0 ? '⭐ เส้นทางหลัก' : `🔀 เส้นทางสำรองที่ ${pureMapboxActiveRouteIndex}`}:{' '}
+                    {(((pureMapboxActiveRouteIndex === 0
+                      ? pureMapboxTrip
+                      : pureMapboxAlternativeTrips[pureMapboxActiveRouteIndex - 1] || pureMapboxTrip
+                    )?.distanceMeters || 0) / 1000).toFixed(2)}{' '}
+                    km
+                  </span>
+                  <span>
+                    เวลาประเมิน: ~
+                    {Math.ceil(
+                      (((pureMapboxActiveRouteIndex === 0
+                        ? pureMapboxTrip
+                        : pureMapboxAlternativeTrips[pureMapboxActiveRouteIndex - 1] || pureMapboxTrip
+                      )?.durationSeconds || 0)) / 60
+                    )}{' '}
+                    นาที
+                  </span>
+                  <span>
+                    จุดพิกัดโค้งถนน:{' '}
+                    {
+                      (pureMapboxActiveRouteIndex === 0
+                        ? pureMapboxTrip
+                        : pureMapboxAlternativeTrips[pureMapboxActiveRouteIndex - 1] || pureMapboxTrip
+                      )?.plannedPath.length || 0
+                    }{' '}
+                    จุด
+                  </span>
                   <span>สถานะ Token: {mapboxToken ? '✓ เชื่อมต่อแล้ว' : '⚠️ ใช้ OSRM จำลอง'}</span>
                 </div>
               )}

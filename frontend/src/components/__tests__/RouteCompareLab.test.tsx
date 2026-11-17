@@ -38,7 +38,7 @@ describe('RouteCompareLab', () => {
 
     const splitBtn = screen.getByRole('button', { name: /Split View/i });
     const hybridBtn = screen.getByRole('button', { name: /แบบผสม/i });
-    const mapboxBtn = screen.getByRole('button', { name: /Pure Mapbox/i });
+    const mapboxBtn = screen.getByRole('button', { name: /^Pure Mapbox 100%/i });
     const longdoBtn = screen.getByRole('button', { name: /Pure Longdo/i });
     const osrmBtn = screen.getByRole('button', { name: /Pure OSRM/i });
 
@@ -97,20 +97,20 @@ describe('RouteCompareLab', () => {
   it('allows customizing Hybrid shuttle van routing options (traffic, alternatives, exclusions)', () => {
     render(<RouteCompareLab />);
 
-    const trafficBtn = screen.getByRole('button', { name: /โปรไฟล์การจราจรสด driving-traffic/i });
-    const drivingBtn = screen.getByRole('button', { name: /โปรไฟล์ปกติ driving/i });
+    const trafficBtn = screen.getByRole('button', { name: /Hybrid โปรไฟล์การจราจรสด driving-traffic/i });
+    const drivingBtn = screen.getByRole('button', { name: /Hybrid โปรไฟล์ปกติ driving/i });
 
     expect(trafficBtn).toBeInTheDocument();
     expect(drivingBtn).toBeInTheDocument();
 
     // Toggle driving profile
     fireEvent.click(drivingBtn);
-    expect(screen.getByText(/Profile:/i)).toHaveTextContent('driving');
+    expect(screen.getAllByText(/Profile:/i)[0]).toHaveTextContent('driving');
 
     // Toggle exclusions checkboxes
-    const tollCheckbox = screen.getByLabelText(/เลี่ยงด่านค่าผ่านทาง/i) as HTMLInputElement;
-    const motorwayCheckbox = screen.getByLabelText(/เลี่ยงมอเตอร์เวย์/i) as HTMLInputElement;
-    const altCheckbox = screen.getByLabelText(/เปิดเส้นทางสำรอง/i) as HTMLInputElement;
+    const tollCheckbox = screen.getByLabelText(/Hybrid เลี่ยงด่านค่าผ่านทาง/i) as HTMLInputElement;
+    const motorwayCheckbox = screen.getByLabelText(/Hybrid เลี่ยงมอเตอร์เวย์/i) as HTMLInputElement;
+    const altCheckbox = screen.getByLabelText(/Hybrid เปิดเส้นทางสำรอง/i) as HTMLInputElement;
 
     expect(tollCheckbox.checked).toBe(false);
     fireEvent.click(tollCheckbox);
@@ -125,9 +125,45 @@ describe('RouteCompareLab', () => {
     expect(altCheckbox.checked).toBe(false);
 
     // Toggle hide overlapping route segments
-    const hideOverlapCheckbox = screen.getByLabelText(/ซ่อนทางสำรองที่ทับกับทางหลัก/i) as HTMLInputElement;
+    const hideOverlapCheckbox = screen.getByLabelText(/Hybrid ซ่อนทางสำรองที่ทับกับทางหลัก/i) as HTMLInputElement;
     expect(hideOverlapCheckbox.checked).toBe(true);
     fireEvent.click(hideOverlapCheckbox);
     expect(hideOverlapCheckbox.checked).toBe(false);
+  });
+
+  it('allows customizing Pure Mapbox routing options (traffic, alternatives, exclusions)', () => {
+    render(<RouteCompareLab />);
+
+    const pmTrafficBtn = screen.getByRole('button', { name: /Pure Mapbox โปรไฟล์การจราจรสด driving-traffic/i });
+    const pmDrivingBtn = screen.getByRole('button', { name: /Pure Mapbox โปรไฟล์ปกติ driving/i });
+
+    expect(pmTrafficBtn).toBeInTheDocument();
+    expect(pmDrivingBtn).toBeInTheDocument();
+
+    // Toggle driving profile in Pure Mapbox
+    fireEvent.click(pmDrivingBtn);
+    expect(screen.getAllByText(/Profile:/i)[1]).toHaveTextContent('driving');
+
+    // Toggle exclusions checkboxes in Pure Mapbox
+    const pmTollCheckbox = screen.getByLabelText(/Pure Mapbox เลี่ยงด่านค่าผ่านทาง/i) as HTMLInputElement;
+    const pmMotorwayCheckbox = screen.getByLabelText(/Pure Mapbox เลี่ยงมอเตอร์เวย์/i) as HTMLInputElement;
+    const pmAltCheckbox = screen.getByLabelText(/Pure Mapbox เปิดเส้นทางสำรอง/i) as HTMLInputElement;
+    const pmHideOverlapCheckbox = screen.getByLabelText(/Pure Mapbox ซ่อนทางสำรองที่ทับกับทางหลัก/i) as HTMLInputElement;
+
+    expect(pmTollCheckbox.checked).toBe(false);
+    fireEvent.click(pmTollCheckbox);
+    expect(pmTollCheckbox.checked).toBe(true);
+
+    expect(pmMotorwayCheckbox.checked).toBe(false);
+    fireEvent.click(pmMotorwayCheckbox);
+    expect(pmMotorwayCheckbox.checked).toBe(true);
+
+    expect(pmAltCheckbox.checked).toBe(true);
+    fireEvent.click(pmAltCheckbox);
+    expect(pmAltCheckbox.checked).toBe(false);
+
+    expect(pmHideOverlapCheckbox.checked).toBe(true);
+    fireEvent.click(pmHideOverlapCheckbox);
+    expect(pmHideOverlapCheckbox.checked).toBe(false);
   });
 });
