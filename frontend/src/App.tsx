@@ -7,12 +7,15 @@ import { TelemetryHUD } from './components/TelemetryHUD';
 import { DailyDistanceTable, DistanceUnit } from './components/DailyDistanceTable';
 import { FleetDistanceAnalyticsCard } from './components/FleetDistanceAnalyticsCard';
 import { HistoricalTripReplay } from './components/HistoricalTripReplay';
-import { Bus, Maximize2, Minimize2, Sun, Moon } from 'lucide-react';
+import { Bus, Maximize2, Minimize2, Sun, Moon, Route } from 'lucide-react';
 import { calculateFleetStats, computeVehicleStatus } from './services/fleetStatus';
 import { fetchHistoricalVehicles } from './services/historicalTelemetryService';
 import { ThemeProvider, useTheme } from './context/ThemeContext';
 const MapProviderTestLab = lazy(() =>
   import('./components/MapProviderTestLab').then((m) => ({ default: m.MapProviderTestLab }))
+);
+const RouteCompareLab = lazy(() =>
+  import('./components/RouteCompareLab').then((m) => ({ default: m.RouteCompareLab }))
 );
 
 function OperationalDashboard() {
@@ -223,15 +226,31 @@ function OperationalDashboard() {
                     Longdo Map
                   </span>
                 </div>
-                <button
-                  onClick={() => setIsMapFullscreen(true)}
-                  aria-label="Expand map to full screen"
-                  title="ขยายแผนที่เต็มจอ"
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-slate-900 border border-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-300 dark:hover:text-white dark:border-slate-700/70 text-xs font-medium transition-colors min-h-[36px]"
-                >
-                  <Maximize2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                  <span className="hidden sm:inline">ขยายเต็มจอ</span>
-                </button>
+                <div className="flex items-center gap-2">
+                  <a
+                    href="#route-compare"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      window.history.pushState({}, '', '#route-compare');
+                      window.dispatchEvent(new Event('hashchange'));
+                    }}
+                    title="ทดสอบเปรียบเทียบ Longdo Native vs OSRM"
+                    className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 dark:bg-indigo-950/60 dark:hover:bg-indigo-900 dark:text-indigo-300 dark:border-indigo-800 text-xs font-medium transition-colors min-h-[36px]"
+                  >
+                    <Route className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+                    <span className="hidden sm:inline">ห้องทดสอบเปรียบเทียบเส้นทาง</span>
+                    <span className="sm:hidden">ทดสอบเส้นทาง</span>
+                  </a>
+                  <button
+                    onClick={() => setIsMapFullscreen(true)}
+                    aria-label="Expand map to full screen"
+                    title="ขยายแผนที่เต็มจอ"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-slate-900 border border-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-300 dark:hover:text-white dark:border-slate-700/70 text-xs font-medium transition-colors min-h-[36px]"
+                  >
+                    <Maximize2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                    <span className="hidden sm:inline">ขยายเต็มจอ</span>
+                  </button>
+                </div>
               </div>
             )}
 
@@ -400,6 +419,35 @@ export function App() {
     currentPath.startsWith('/map-test') ||
     currentPath === '#map-test' ||
     currentPath.endsWith('#map-test');
+
+  const isRouteCompareRoute =
+    currentPath.startsWith('/route-compare') ||
+    currentPath === '#route-compare' ||
+    currentPath.endsWith('#route-compare') ||
+    currentPath.startsWith('/route-test') ||
+    currentPath === '#route-test' ||
+    currentPath.endsWith('#route-test');
+
+  if (isRouteCompareRoute) {
+    return (
+      <ThemeProvider>
+        <Suspense
+          fallback={
+            <div className="min-h-screen bg-slate-100 dark:bg-slate-900 flex items-center justify-center text-slate-700 dark:text-slate-200">
+              Loading Route Compare Lab...
+            </div>
+          }
+        >
+          <RouteCompareLab
+            onBack={() => {
+              window.history.pushState({}, '', '/');
+              setCurrentPath('/');
+            }}
+          />
+        </Suspense>
+      </ThemeProvider>
+    );
+  }
 
   if (isMapTestRoute) {
     return (

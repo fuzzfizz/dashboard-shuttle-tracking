@@ -51,6 +51,22 @@ describe('App Integration', () => {
     expect(queryByText(/Map Provider Lab/i)).toBeNull();
   });
 
+  it('renders RouteCompareLab when URL is /route-compare or #route-compare', async () => {
+    window.history.pushState({}, '', '/route-compare');
+    const { findByText } = render(<App />);
+    expect(await findByText(/Route Engine Comparison Lab/i, {}, { timeout: 5000 })).toBeInTheDocument();
+    window.history.pushState({}, '', '/');
+  });
+
+  it('navigates back to dashboard when Back button is clicked in RouteCompareLab', async () => {
+    window.history.pushState({}, '', '/route-compare');
+    const { findByText, getByText, queryByText } = render(<App />);
+    const backBtn = await findByText(/กลับสู่แดชบอร์ด/i, {}, { timeout: 5000 });
+    fireEvent.click(backBtn);
+    expect(getByText('Shuttle Tracker')).toBeInTheDocument();
+    expect(queryByText(/Route Engine Comparison Lab/i)).toBeNull();
+  });
+
   it('renders top brand header, clean full-width map, and daily distance table without Fleet Status clutter', () => {
     const { container } = render(<App />);
     expect(screen.getByText('Shuttle Tracker')).toBeInTheDocument();
