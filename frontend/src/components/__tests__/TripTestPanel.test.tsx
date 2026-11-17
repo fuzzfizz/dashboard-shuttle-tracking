@@ -27,20 +27,70 @@ describe('TripTestPanel', () => {
     expect(screen.getByText('กำหนดจุดรับ-ส่ง สำหรับทดสอบ')).toBeInTheDocument();
   });
 
-  it('triggers pin mode callbacks for pickup and dropoff buttons', () => {
-    const handleSetPinMode = vi.fn();
-    render(<TripTestPanel {...defaultProps} onSetPinMode={handleSetPinMode} />);
+  it('allows manually typing pickup and dropoff coordinates and names', () => {
+    const handleStartTrip = vi.fn();
+    render(<TripTestPanel {...defaultProps} onStartTrip={handleStartTrip} />);
 
     // Expand panel
     fireEvent.click(screen.getByRole('button', { name: /ทดสอบเส้นทาง/i }));
 
-    const pickPickupBtn = screen.getByRole('button', { name: /จิ้มจุดรับบนแผนที่/i });
-    fireEvent.click(pickPickupBtn);
-    expect(handleSetPinMode).toHaveBeenCalledWith('pick-pickup');
+    const pickupLatInput = screen.getByLabelText(/ละติจูดจุดรับ/i);
+    const pickupLngInput = screen.getByLabelText(/ลองจิจูดจุดรับ/i);
+    const pickupNameInput = screen.getByLabelText(/ชื่อจุดรับ/i);
 
-    const pickDropoffBtn = screen.getByRole('button', { name: /จิ้มจุดส่งบนแผนที่/i });
-    fireEvent.click(pickDropoffBtn);
-    expect(handleSetPinMode).toHaveBeenCalledWith('pick-dropoff');
+    const dropoffLatInput = screen.getByLabelText(/ละติจูดจุดส่ง/i);
+    const dropoffLngInput = screen.getByLabelText(/ลองจิจูดจุดส่ง/i);
+    const dropoffNameInput = screen.getByLabelText(/ชื่อจุดส่ง/i);
+
+    // Enter custom coordinates
+    fireEvent.change(pickupNameInput, { target: { value: 'หน้าหอพักแพทย์' } });
+    fireEvent.change(pickupLatInput, { target: { value: '18.78950' } });
+    fireEvent.change(pickupLngInput, { target: { value: '98.98620' } });
+
+    fireEvent.change(dropoffNameInput, { target: { value: 'อาคารเรียนรวม' } });
+    fireEvent.change(dropoffLatInput, { target: { value: '18.79500' } });
+    fireEvent.change(dropoffLngInput, { target: { value: '98.99200' } });
+
+    const startBtn = screen.getByRole('button', { name: /คำนวณและเริ่มทริป/i });
+    fireEvent.click(startBtn);
+
+    expect(handleStartTrip).toHaveBeenCalledWith(
+      'EV-01',
+      { lat: 18.7895, lng: 98.9862, name: 'หน้าหอพักแพทย์' },
+      { lat: 18.795, lng: 98.992, name: 'อาคารเรียนรวม' }
+    );
+  });
+
+  it('allows selecting popular presets to populate pickup and dropoff coordinates', () => {
+    const handleStartTrip = vi.fn();
+    render(<TripTestPanel {...defaultProps} onStartTrip={handleStartTrip} />);
+
+    fireEvent.click(screen.getByRole('button', { name: /ทดสอบเส้นทาง/i }));
+
+    // Click a preset button for pickup
+    const presetBtn = screen.getByRole('button', { name: /รพ\.มหาราชฯ \(จุดรับ\)/i });
+    fireEvent.click(presetBtn);
+
+    const pickupLatInput = screen.getByLabelText(/ละติจูดจุดรับ/i) as HTMLInputElement;
+    expect(Number(pickupLatInput.value)).toBeCloseTo(18.7900, 3);
+  });
+
+  it('shows validation error and disables submit when latitude or longitude is invalid', () => {
+    const handleStartTrip = vi.fn();
+    render(<TripTestPanel {...defaultProps} onStartTrip={handleStartTrip} />);
+
+    fireEvent.click(screen.getByRole('button', { name: /ทดสอบเส้นทาง/i }));
+
+    const pickupLatInput = screen.getByLabelText(/ละติจูดจุดรับ/i);
+    fireEvent.change(pickupLatInput, { target: { value: 'invalid-coordinate' } });
+
+    expect(screen.getByText(/กรุณากรอกพิกัดละติจูดและลองจิจูดที่ถูกต้อง/i)).toBeInTheDocument();
+
+    const startBtn = screen.getByRole('button', { name: /คำนวณและเริ่มทริป/i });
+    expect(startBtn).toBeDisabled();
+    fireEvent.click(startBtn);
+
+    expect(handleStartTrip).not.toHaveBeenCalled();
   });
 
   it('calls onStartTrip when valid coordinates are entered and Start button is clicked', () => {
