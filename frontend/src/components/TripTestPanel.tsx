@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Route, MapPin, Flag, Play, Trash2, X, Loader2, AlertCircle } from 'lucide-react';
+import { Route, MapPin, Flag, Play, Trash2, X, Loader2, AlertCircle, ClipboardPaste } from 'lucide-react';
 import { TripLocation, VehicleTrip, MapPinMode } from '../types/trip';
 
 export const POPULAR_LOCATIONS: Array<{ name: string; lat: number; lng: number }> = [
@@ -9,6 +9,22 @@ export const POPULAR_LOCATIONS: Array<{ name: string; lat: number; lng: number }
   { name: 'ศาลาธรรม', lat: 18.8035, lng: 98.9515 },
   { name: 'ประตู มช.', lat: 18.8065, lng: 98.9560 },
 ];
+
+/**
+ * Parses full coordinate strings like "18.790094565006996, 98.96547138689851"
+ * Supports commas, spaces, semicolons, and tabs as separators.
+ */
+export function parseCoordinateString(text: string): { lat: number; lng: number } | null {
+  if (!text) return null;
+  const cleaned = text.trim();
+  const match = cleaned.match(/^(-?\d+(?:\.\d+)?)[,\s;\t]+(-?\d+(?:\.\d+)?)$/);
+  if (!match) return null;
+  const lat = parseFloat(match[1]);
+  const lng = parseFloat(match[2]);
+  if (isNaN(lat) || isNaN(lng)) return null;
+  if (lat < -90 || lat > 90 || lng < -180 || lng > 180) return null;
+  return { lat, lng };
+}
 
 export interface TripTestPanelProps {
   vehicleIds: string[];
@@ -60,10 +76,12 @@ export const TripTestPanel: React.FC<TripTestPanelProps> = ({
   const [pickupName, setPickupName] = useState<string>(initialPickup.name || 'คณะเภสัชฯ');
   const [pickupLatStr, setPickupLatStr] = useState<string>(String(initialPickup.lat));
   const [pickupLngStr, setPickupLngStr] = useState<string>(String(initialPickup.lng));
+  const [pickupPasteStr, setPickupPasteStr] = useState<string>('');
 
   const [dropoffName, setDropoffName] = useState<string>(initialDropoff.name || 'รพ.มหาราชฯ');
   const [dropoffLatStr, setDropoffLatStr] = useState<string>(String(initialDropoff.lat));
   const [dropoffLngStr, setDropoffLngStr] = useState<string>(String(initialDropoff.lng));
+  const [dropoffPasteStr, setDropoffPasteStr] = useState<string>('');
 
   useEffect(() => {
     if (selectedVehicleId) {
@@ -76,10 +94,12 @@ export const TripTestPanel: React.FC<TripTestPanelProps> = ({
       setPickupName(activeTrip.pickup.name || '');
       setPickupLatStr(String(activeTrip.pickup.lat));
       setPickupLngStr(String(activeTrip.pickup.lng));
+      setPickupPasteStr(`${activeTrip.pickup.lat}, ${activeTrip.pickup.lng}`);
 
       setDropoffName(activeTrip.dropoff.name || '');
       setDropoffLatStr(String(activeTrip.dropoff.lat));
       setDropoffLngStr(String(activeTrip.dropoff.lng));
+      setDropoffPasteStr(`${activeTrip.dropoff.lat}, ${activeTrip.dropoff.lng}`);
     }
   }, [activeTrip]);
 
@@ -90,15 +110,79 @@ export const TripTestPanel: React.FC<TripTestPanelProps> = ({
         setPickupLatStr(String(pendingPoint.lat));
         setPickupLngStr(String(pendingPoint.lng));
         setPickupName('จุดรับ (ระบุบนแผนที่)');
+        setPickupPasteStr(`${pendingPoint.lat}, ${pendingPoint.lng}`);
         onSetPinMode?.('idle');
       } else if (pinMode === 'pick-dropoff') {
         setDropoffLatStr(String(pendingPoint.lat));
         setDropoffLngStr(String(pendingPoint.lng));
         setDropoffName('จุดส่ง (ระบุบนแผนที่)');
+        setDropoffPasteStr(`${pendingPoint.lat}, ${pendingPoint.lng}`);
         onSetPinMode?.('idle');
       }
     }
   }, [pendingPoint, pinMode, onSetPinMode]);
+
+  const handlePickupLatChange = (value: string) => {
+    const parsed = parseCoordinateString(value);
+    if (parsed) {
+      setPickupLatStr(String(parsed.lat));
+      setPickupLngStr(String(parsed.lng));
+      setPickupPasteStr(value.trim());
+    } else {
+      setPickupLatStr(value);
+    }
+  };
+
+  const handlePickupLngChange = (value: string) => {
+    const parsed = parseCoordinateString(value);
+    if (parsed) {
+      setPickupLatStr(String(parsed.lat));
+      setPickupLngStr(String(parsed.lng));
+      setPickupPasteStr(value.trim());
+    } else {
+      setPickupLngStr(value);
+    }
+  };
+
+  const handlePickupPasteChange = (value: string) => {
+    setPickupPasteStr(value);
+    const parsed = parseCoordinateString(value);
+    if (parsed) {
+      setPickupLatStr(String(parsed.lat));
+      setPickupLngStr(String(parsed.lng));
+    }
+  };
+
+  const handleDropoffLatChange = (value: string) => {
+    const parsed = parseCoordinateString(value);
+    if (parsed) {
+      setDropoffLatStr(String(parsed.lat));
+      setDropoffLngStr(String(parsed.lng));
+      setDropoffPasteStr(value.trim());
+    } else {
+      setDropoffLatStr(value);
+    }
+  };
+
+  const handleDropoffLngChange = (value: string) => {
+    const parsed = parseCoordinateString(value);
+    if (parsed) {
+      setDropoffLatStr(String(parsed.lat));
+      setDropoffLngStr(String(parsed.lng));
+      setDropoffPasteStr(value.trim());
+    } else {
+      setDropoffLngStr(value);
+    }
+  };
+
+  const handleDropoffPasteChange = (value: string) => {
+    setDropoffPasteStr(value);
+    const parsed = parseCoordinateString(value);
+    if (parsed) {
+      setDropoffLatStr(String(parsed.lat));
+      setDropoffLngStr(String(parsed.lng));
+    }
+  };
 
   const parsedPickupLat = parseFloat(pickupLatStr);
   const parsedPickupLng = parseFloat(pickupLngStr);
@@ -120,10 +204,12 @@ export const TripTestPanel: React.FC<TripTestPanelProps> = ({
       setPickupName(loc.name);
       setPickupLatStr(String(loc.lat));
       setPickupLngStr(String(loc.lng));
+      setPickupPasteStr(`${loc.lat}, ${loc.lng}`);
     } else {
       setDropoffName(loc.name);
       setDropoffLatStr(String(loc.lat));
       setDropoffLngStr(String(loc.lng));
+      setDropoffPasteStr(`${loc.lat}, ${loc.lng}`);
     }
   };
 
@@ -220,6 +306,28 @@ export const TripTestPanel: React.FC<TripTestPanelProps> = ({
               </span>
             </div>
 
+            {/* Quick Unified Coordinate Paste Input */}
+            <div>
+              <label
+                htmlFor="pickup-paste-input"
+                className="block text-[10px] font-medium text-slate-500 dark:text-slate-400 mb-0.5"
+              >
+                วางพิกัดรวม (Lat, Lng):
+              </label>
+              <div className="relative flex items-center">
+                <input
+                  id="pickup-paste-input"
+                  aria-label="วางพิกัดจุดรับรวม"
+                  type="text"
+                  placeholder="วางพิกัดรวม เช่น 18.79009, 98.96547"
+                  value={pickupPasteStr}
+                  onChange={(e) => handlePickupPasteChange(e.target.value)}
+                  className="w-full pl-7 pr-2 py-1 text-xs font-mono rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 placeholder:text-slate-400 placeholder:font-sans focus:ring-1 focus:ring-emerald-500 outline-none"
+                />
+                <ClipboardPaste className="w-3.5 h-3.5 text-slate-400 absolute left-2 pointer-events-none" />
+              </div>
+            </div>
+
             {/* Location Name */}
             <div>
               <label htmlFor="pickup-name-input" className="sr-only">
@@ -251,7 +359,7 @@ export const TripTestPanel: React.FC<TripTestPanelProps> = ({
                   type="text"
                   placeholder="18.7883"
                   value={pickupLatStr}
-                  onChange={(e) => setPickupLatStr(e.target.value)}
+                  onChange={(e) => handlePickupLatChange(e.target.value)}
                   className="w-full px-2 py-1 text-xs font-mono rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 focus:ring-1 focus:ring-emerald-500 outline-none"
                 />
               </div>
@@ -268,7 +376,7 @@ export const TripTestPanel: React.FC<TripTestPanelProps> = ({
                   type="text"
                   placeholder="98.9853"
                   value={pickupLngStr}
-                  onChange={(e) => setPickupLngStr(e.target.value)}
+                  onChange={(e) => handlePickupLngChange(e.target.value)}
                   className="w-full px-2 py-1 text-xs font-mono rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 focus:ring-1 focus:ring-emerald-500 outline-none"
                 />
               </div>
@@ -303,6 +411,28 @@ export const TripTestPanel: React.FC<TripTestPanelProps> = ({
               </span>
             </div>
 
+            {/* Quick Unified Coordinate Paste Input */}
+            <div>
+              <label
+                htmlFor="dropoff-paste-input"
+                className="block text-[10px] font-medium text-slate-500 dark:text-slate-400 mb-0.5"
+              >
+                วางพิกัดรวม (Lat, Lng):
+              </label>
+              <div className="relative flex items-center">
+                <input
+                  id="dropoff-paste-input"
+                  aria-label="วางพิกัดจุดส่งรวม"
+                  type="text"
+                  placeholder="วางพิกัดรวม เช่น 18.79009, 98.96547"
+                  value={dropoffPasteStr}
+                  onChange={(e) => handleDropoffPasteChange(e.target.value)}
+                  className="w-full pl-7 pr-2 py-1 text-xs font-mono rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 placeholder:text-slate-400 placeholder:font-sans focus:ring-1 focus:ring-rose-500 outline-none"
+                />
+                <ClipboardPaste className="w-3.5 h-3.5 text-slate-400 absolute left-2 pointer-events-none" />
+              </div>
+            </div>
+
             {/* Location Name */}
             <div>
               <label htmlFor="dropoff-name-input" className="sr-only">
@@ -334,7 +464,7 @@ export const TripTestPanel: React.FC<TripTestPanelProps> = ({
                   type="text"
                   placeholder="18.7900"
                   value={dropoffLatStr}
-                  onChange={(e) => setDropoffLatStr(e.target.value)}
+                  onChange={(e) => handleDropoffLatChange(e.target.value)}
                   className="w-full px-2 py-1 text-xs font-mono rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 focus:ring-1 focus:ring-rose-500 outline-none"
                 />
               </div>
@@ -351,7 +481,7 @@ export const TripTestPanel: React.FC<TripTestPanelProps> = ({
                   type="text"
                   placeholder="98.9900"
                   value={dropoffLngStr}
-                  onChange={(e) => setDropoffLngStr(e.target.value)}
+                  onChange={(e) => handleDropoffLngChange(e.target.value)}
                   className="w-full px-2 py-1 text-xs font-mono rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 focus:ring-1 focus:ring-rose-500 outline-none"
                 />
               </div>

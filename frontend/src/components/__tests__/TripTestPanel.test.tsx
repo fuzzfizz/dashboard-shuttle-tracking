@@ -1,6 +1,6 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
-import { TripTestPanel } from '../TripTestPanel';
+import { TripTestPanel, parseCoordinateString } from '../TripTestPanel';
 
 describe('TripTestPanel', () => {
   const defaultProps = {
@@ -182,5 +182,81 @@ describe('TripTestPanel', () => {
     );
 
     expect(handleSetPinMode).toHaveBeenCalledWith('idle');
+  });
+
+  describe('parseCoordinateString helper', () => {
+    it('parses comma-separated coordinates with spaces', () => {
+      const res = parseCoordinateString('18.790094565006996, 98.96547138689851');
+      expect(res).not.toBeNull();
+      expect(res?.lat).toBeCloseTo(18.79009456, 6);
+      expect(res?.lng).toBeCloseTo(98.96547138, 6);
+    });
+
+    it('parses comma-separated coordinates without spaces', () => {
+      const res = parseCoordinateString('18.790094565006996,98.96547138689851');
+      expect(res).not.toBeNull();
+      expect(res?.lat).toBeCloseTo(18.79009456, 6);
+      expect(res?.lng).toBeCloseTo(98.96547138, 6);
+    });
+
+    it('parses space-separated coordinates', () => {
+      const res = parseCoordinateString('18.790094565006996 98.96547138689851');
+      expect(res).not.toBeNull();
+      expect(res?.lat).toBeCloseTo(18.79009456, 6);
+      expect(res?.lng).toBeCloseTo(98.96547138, 6);
+    });
+
+    it('returns null for invalid strings', () => {
+      expect(parseCoordinateString('invalid text')).toBeNull();
+      expect(parseCoordinateString('18.7900')).toBeNull();
+    });
+  });
+
+  it('automatically splits and populates lat and lng when full coordinate string is pasted into latitude input', () => {
+    const handleStartTrip = vi.fn();
+    render(<TripTestPanel {...defaultProps} onStartTrip={handleStartTrip} />);
+
+    fireEvent.click(screen.getByRole('button', { name: /ทดสอบเส้นทาง/i }));
+
+    const pickupLatInput = screen.getByLabelText(/ละติจูดจุดรับ/i) as HTMLInputElement;
+    const pickupLngInput = screen.getByLabelText(/ลองจิจูดจุดรับ/i) as HTMLInputElement;
+
+    // Paste full coordinate string into the latitude input
+    fireEvent.change(pickupLatInput, {
+      target: { value: '18.790094565006996, 98.96547138689851' },
+    });
+
+    expect(Number(pickupLatInput.value)).toBeCloseTo(18.790094565, 6);
+    expect(Number(pickupLngInput.value)).toBeCloseTo(98.965471386, 6);
+  });
+
+  it('supports pasting into dedicated quick paste input for pickup and dropoff', () => {
+    const handleStartTrip = vi.fn();
+    render(<TripTestPanel {...defaultProps} onStartTrip={handleStartTrip} />);
+
+    fireEvent.click(screen.getByRole('button', { name: /ทดสอบเส้นทาง/i }));
+
+    const pickupPasteInput = screen.getByLabelText(/วางพิกัดจุดรับรวม/i);
+    fireEvent.change(pickupPasteInput, {
+      target: { value: '18.790094565006996, 98.96547138689851' },
+    });
+
+    const pickupLatInput = screen.getByLabelText(/ละติจูดจุดรับ/i) as HTMLInputElement;
+    const pickupLngInput = screen.getByLabelText(/ลองจิจูดจุดรับ/i) as HTMLInputElement;
+
+    expect(Number(pickupLatInput.value)).toBeCloseTo(18.790094565, 6);
+    expect(Number(pickupLngInput.value)).toBeCloseTo(98.965471386, 6);
+
+    // Also test dropoff paste
+    const dropoffPasteInput = screen.getByLabelText(/วางพิกัดจุดส่งรวม/i);
+    fireEvent.change(dropoffPasteInput, {
+      target: { value: '18.795000000000000, 98.992000000000000' },
+    });
+
+    const dropoffLatInput = screen.getByLabelText(/ละติจูดจุดส่ง/i) as HTMLInputElement;
+    const dropoffLngInput = screen.getByLabelText(/ลองจิจูดจุดส่ง/i) as HTMLInputElement;
+
+    expect(Number(dropoffLatInput.value)).toBeCloseTo(18.795, 6);
+    expect(Number(dropoffLngInput.value)).toBeCloseTo(98.992, 6);
   });
 });
