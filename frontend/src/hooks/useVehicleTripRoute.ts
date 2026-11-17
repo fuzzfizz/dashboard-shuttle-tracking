@@ -101,12 +101,14 @@ export function useVehicleTripRoute(options: UseVehicleTripRouteOptions = {}): U
     const now = Date.now();
 
     for (const [vehicleId, info] of Object.entries(savedStages)) {
-      if (info.stage === 'arrived-dropoff' && info.arrivedDropoffTime) {
-        const remaining = dropoffResetDelayMs - (now - info.arrivedDropoffTime);
+      const countdownStart =
+        info.departedDropoffTime || (info.stage === 'arrived-dropoff' ? info.arrivedDropoffTime : undefined);
+      if (info.stage === 'arrived-dropoff' && countdownStart) {
+        const remaining = dropoffResetDelayMs - (now - countdownStart);
         if (remaining > 0) {
           dropoffTimersRef.current[vehicleId] = setTimeout(() => {
             setActualPaths((prev) => {
-              const next = { ...prev, [vehicleId]: [] };
+              const next: Record<string, [number, number][]> = { ...prev, [vehicleId]: [] };
               saveActualPathsToStorage(next);
               return next;
             });
@@ -123,6 +125,19 @@ export function useVehicleTripRoute(options: UseVehicleTripRouteOptions = {}): U
             });
             delete dropoffTimersRef.current[vehicleId];
           }, remaining);
+        } else {
+          // Timer already expired while offline/closed
+          setActualPaths((prev) => {
+            const next: Record<string, [number, number][]> = { ...prev, [vehicleId]: [] };
+            saveActualPathsToStorage(next);
+            return next;
+          });
+          roundStagesRef.current[vehicleId] = 'waiting-pickup';
+          setRoundStages((prev) => ({ ...prev, [vehicleId]: 'waiting-pickup' as TripRoundStage }));
+          saveRoundStagesToStorage({
+            ...loadRoundStagesFromStorage(),
+            [vehicleId]: { stage: 'waiting-pickup' },
+          });
         }
       }
     }
@@ -290,53 +305,28 @@ export function useVehicleTripRoute(options: UseVehicleTripRouteOptions = {}): U
           return; // Do not record deadhead / return journey
         }
 
-        // Stage 2: Vehicle has arrived at dropoff and is in the 3-minute grace period
-        if (currentStage === 'arrived-dropoff') {
-          return; // Stop drawing: keep existing round breadcrumb frozen
-        }
-
-        // Stage 3: In transit from pickup to dropoff
-        if (currentStage === 'in-transit') {
-          if (distToDropoff <= arrivalRadiusMeters) {
-            // Arrived at dropoff!
+        // Stage 2: Vehicle is dwelling at dropoff (unloading passengers)
+        if (currentStage === 'dwelling-dropoff') {
+          if (distToDropoff > arrivalRadiusMeters) {
+            // Passenger drop-off complete! Vehicle has departed dropoff station
             const now = Date.now();
             roundStagesRef.current[vehicleId] = 'arrived-dropoff';
             setRoundStages((prev) => {
               const next = { ...prev, [vehicleId]: 'arrived-dropoff' as TripRoundStage };
               saveRoundStagesToStorage({
                 ...loadRoundStagesFromStorage(),
-                [vehicleId]: { stage: 'arrived-dropoff', arrivedDropoffTime: now },
+                [vehicleId]: { stage: 'arrived-dropoff', departedDropoffTime: now },
               });
               return next;
             });
 
-            // Append final dropoff coordinate to complete the path
-            const prevCoordAtDropoff = lastCoordsRef.current[vehicleId];
-            const dist = prevCoordAtDropoff
-              ? haversineDistanceMeters(prevCoordAtDropoff.lat, prevCoordAtDropoff.lng, lat, lng)
-              : 999;
-
-            if (dist >= MIN_BREADCRUMB_DISTANCE_METERS) {
-              lastCoordsRef.current[vehicleId] = { lat, lng };
-              setActualPaths((prev) => {
-                const currentList = prev[vehicleId] || [];
-                const next: Record<string, [number, number][]> = {
-                  ...prev,
-                  [vehicleId]: [...currentList, point],
-                };
-                saveActualPathsToStorage(next);
-                return next;
-              });
-            }
-
-            // Clear previous timer if any
+            // Start 3-minute countdown now that passenger drop-off is complete
             if (dropoffTimersRef.current[vehicleId]) {
               clearTimeout(dropoffTimersRef.current[vehicleId]);
             }
 
-            // Schedule reset in 3 minutes (or dropoffResetDelayMs)
             dropoffTimersRef.current[vehicleId] = setTimeout(() => {
-              // 3 minutes elapsed: reset round breadcrumbs
+              // 3 minutes elapsed since departure: reset round breadcrumbs
               setActualPaths((prev) => {
                 const next: Record<string, [number, number][]> = { ...prev, [vehicleId]: [] };
                 saveActualPathsToStorage(next);
@@ -356,7 +346,50 @@ export function useVehicleTripRoute(options: UseVehicleTripRouteOptions = {}): U
               });
               delete dropoffTimersRef.current[vehicleId];
             }, dropoffResetDelayMs);
+          }
+          return; // Stop drawing: keep existing round breadcrumb frozen while dwelling/departing
+        }
 
+        // Stage 3: Vehicle has completed dropoff and is in the 3-minute grace period
+        if (currentStage === 'arrived-dropoff') {
+          return; // Stop drawing: keep existing round breadcrumb frozen
+        }
+
+        // Stage 4: In transit from pickup to dropoff
+        if (currentStage === 'in-transit') {
+          if (distToDropoff <= arrivalRadiusMeters) {
+            // Arrived at dropoff! Enters dwelling stage to unload passengers
+            const now = Date.now();
+            roundStagesRef.current[vehicleId] = 'dwelling-dropoff';
+            setRoundStages((prev) => {
+              const next = { ...prev, [vehicleId]: 'dwelling-dropoff' as TripRoundStage };
+              saveRoundStagesToStorage({
+                ...loadRoundStagesFromStorage(),
+                [vehicleId]: { stage: 'dwelling-dropoff', arrivedDropoffTime: now },
+              });
+              return next;
+            });
+
+            // Append final dropoff coordinate to complete the path to the dropoff pin
+            const prevCoordAtDropoff = lastCoordsRef.current[vehicleId];
+            const dist = prevCoordAtDropoff
+              ? haversineDistanceMeters(prevCoordAtDropoff.lat, prevCoordAtDropoff.lng, lat, lng)
+              : 999;
+
+            if (dist >= MIN_BREADCRUMB_DISTANCE_METERS) {
+              lastCoordsRef.current[vehicleId] = { lat, lng };
+              setActualPaths((prev) => {
+                const currentList = prev[vehicleId] || [];
+                const next: Record<string, [number, number][]> = {
+                  ...prev,
+                  [vehicleId]: [...currentList, point],
+                };
+                saveActualPathsToStorage(next);
+                return next;
+              });
+            }
+
+            // Note: 3-minute line removal timer will start ONLY after passenger drop-off is complete (when vehicle departs dropoff)
             return;
           }
 

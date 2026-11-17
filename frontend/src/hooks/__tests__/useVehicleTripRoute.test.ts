@@ -120,32 +120,49 @@ describe('useVehicleTripRoute', () => {
     expect(result.current.actualPaths['shuttle-test-01']).toHaveLength(2);
     expect(result.current.roundStages['shuttle-test-01']).toBe('in-transit');
 
-    // 3. Vehicle reaches dropoff point (within 80m of 18.7240, 98.9838)
+    // 3. Vehicle reaches dropoff point (within 80m of 18.7240, 98.9838) -> transitions to dwelling-dropoff
     act(() => {
       result.current.recordVehicleBreadcrumb('shuttle-test-01', 18.72401, 98.98381);
     });
 
-    expect(result.current.roundStages['shuttle-test-01']).toBe('arrived-dropoff');
-    expect(result.current.actualPaths['shuttle-test-01']).toHaveLength(3); // Completed path intact
+    expect(result.current.roundStages['shuttle-test-01']).toBe('dwelling-dropoff');
+    expect(result.current.actualPaths['shuttle-test-01']).toHaveLength(3); // Completed path intact to dropoff
 
-    // 4. While within 3 minutes, vehicle moves around / turns back -> breadcrumbs remain frozen, not cleared yet
+    // 4. Vehicle dwells at dropoff for 1 minute (within 80m) -> stays in dwelling-dropoff, timer not started
     act(() => {
-      vi.advanceTimersByTime(2 * 60 * 1000); // 2 minutes elapsed
+      vi.advanceTimersByTime(60 * 1000); // 1 minute dwelling
+      result.current.recordVehicleBreadcrumb('shuttle-test-01', 18.72402, 98.98382);
+    });
+
+    expect(result.current.roundStages['shuttle-test-01']).toBe('dwelling-dropoff');
+    expect(result.current.actualPaths['shuttle-test-01']).toHaveLength(3);
+
+    // 5. Vehicle finishes dropoff and departs (> 80m away from dropoff) -> transitions to arrived-dropoff, 3-min timer starts!
+    act(() => {
       result.current.recordVehicleBreadcrumb('shuttle-test-01', 18.7300, 98.9800);
     });
 
     expect(result.current.roundStages['shuttle-test-01']).toBe('arrived-dropoff');
-    expect(result.current.actualPaths['shuttle-test-01']).toHaveLength(3); // Still 3 points
+    expect(result.current.actualPaths['shuttle-test-01']).toHaveLength(3); // Path still intact
 
-    // 5. 3 minutes elapsed! Breadcrumbs reset, enters waiting-pickup
+    // 6. 2 minutes elapsed after departure -> still in arrived-dropoff, line still visible
     act(() => {
-      vi.advanceTimersByTime(1 * 60 * 1000 + 100); // Exceeds 3 minutes total
+      vi.advanceTimersByTime(2 * 60 * 1000);
+      result.current.recordVehicleBreadcrumb('shuttle-test-01', 18.7400, 98.9780);
+    });
+
+    expect(result.current.roundStages['shuttle-test-01']).toBe('arrived-dropoff');
+    expect(result.current.actualPaths['shuttle-test-01']).toHaveLength(3);
+
+    // 7. Full 3 minutes elapsed since departure -> breadcrumbs reset to empty, enters waiting-pickup
+    act(() => {
+      vi.advanceTimersByTime(1 * 60 * 1000 + 100); // 3 minutes total since departure
     });
 
     expect(result.current.roundStages['shuttle-test-01']).toBe('waiting-pickup');
     expect(result.current.actualPaths['shuttle-test-01']).toEqual([]); // Reset to empty!
 
-    // 6. Driving back on deadhead journey -> no breadcrumbs recorded while waiting for pickup
+    // 8. Driving back on deadhead journey -> no breadcrumbs recorded while waiting for pickup
     act(() => {
       result.current.recordVehicleBreadcrumb('shuttle-test-01', 18.7500, 98.9750);
       result.current.recordVehicleBreadcrumb('shuttle-test-01', 18.7700, 98.9700);
@@ -154,7 +171,7 @@ describe('useVehicleTripRoute', () => {
     expect(result.current.roundStages['shuttle-test-01']).toBe('waiting-pickup');
     expect(result.current.actualPaths['shuttle-test-01']).toEqual([]);
 
-    // 7. Arrives at pickup point (within 80m of 18.7900, 98.9655) -> Starts new round!
+    // 9. Arrives at pickup point (within 80m of 18.7900, 98.9655) -> Starts new round!
     act(() => {
       result.current.recordVehicleBreadcrumb('shuttle-test-01', 18.79002, 98.96552);
     });

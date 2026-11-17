@@ -337,9 +337,15 @@ export const TripTestPanel: React.FC<TripTestPanelProps> = ({
                 </span>
                 <span>จุดพิกัดถนน: {activeTrip.plannedPath.length} จุด</span>
               </div>
+              {roundStage === 'dwelling-dropoff' && (
+                <div className="text-[10px] text-amber-700 dark:text-amber-300 font-semibold pt-0.5 flex items-center gap-1 bg-amber-100/60 dark:bg-amber-900/40 px-1.5 py-0.5 rounded">
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping inline-block mr-0.5" />
+                  <span>🟡 ถึงจุดส่งแล้ว — กำลังจอดส่งผู้โดยสารลงรถ (1 นาที)</span>
+                </div>
+              )}
               {roundStage === 'arrived-dropoff' && (
                 <div className="text-[10px] text-emerald-700 dark:text-emerald-300 font-semibold pt-0.5 flex items-center gap-1 bg-emerald-100/60 dark:bg-emerald-900/40 px-1.5 py-0.5 rounded">
-                  <span>🏁 ถึงจุดส่งแล้ว (แสดงรอยทาง 3 นาทีก่อนเริ่มรอบถัดไป)</span>
+                  <span>🏁 ส่งผู้โดยสารเสร็จสิ้น — หยุดวาดเส้น (แสดงรอยทาง 3 นาที)</span>
                 </div>
               )}
               {roundStage === 'waiting-pickup' && (

@@ -7,6 +7,7 @@ export const ROUND_STAGES_STORAGE_KEY = 'shuttle_round_stages';
 export interface SavedRoundStageInfo {
   stage: TripRoundStage;
   arrivedDropoffTime?: number;
+  departedDropoffTime?: number;
 }
 
 /**

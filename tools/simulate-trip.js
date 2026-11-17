@@ -47,6 +47,8 @@ function parseArgs() {
     speedKmh: 45,
     speedMult: 1.0,
     intervalSec: 5.0,
+    dropoffDwellSec: 60.0, // Dwell 1 minute (60s) at dropoff for passenger drop-off
+    pickupDwellSec: 15.0,
     broker: process.env.MQTT_BROKER || 'mqtt://broker.emqx.io:1883',
     topicBase: process.env.MQTT_TOPIC_BASE || 'shuttle/fleet/v1',
     loop: true,
@@ -72,6 +74,10 @@ function parseArgs() {
       config.speedMult = parseFloat(arg.split('=')[1]) || config.speedMult;
     } else if (arg.startsWith('--interval=')) {
       config.intervalSec = parseFloat(arg.split('=')[1]) || config.intervalSec;
+    } else if (arg.startsWith('--dropoff-dwell=')) {
+      config.dropoffDwellSec = parseFloat(arg.split('=')[1]) || config.dropoffDwellSec;
+    } else if (arg.startsWith('--pickup-dwell=')) {
+      config.pickupDwellSec = parseFloat(arg.split('=')[1]) || config.pickupDwellSec;
     } else if (arg.startsWith('--broker=')) {
       config.broker = arg.split('=')[1].trim();
     } else if (arg === '--no-loop') {
@@ -256,9 +262,11 @@ async function runSimulation() {
         const topic = `${config.topicBase}/${config.vehicleId}/telemetry`;
         client.publish(topic, JSON.stringify(payload), { qos: 0 });
 
-        const locationLabel = isReversing ? '🏁 DROPOFF (Destination)' : '🏁 PICKUP (Origin)';
+        const locationLabel = isReversing
+          ? '🏁 DROPOFF (Passenger Drop-off / จอดส่งคน)'
+          : '🏁 PICKUP (Origin / จอดรอรับคน)';
         console.log(
-          `[Step ${step}] 🛑 STOPPED at ${locationLabel} | Speed: 0.0 km/h | Resuming in ${pauseTicksRemaining * config.intervalSec}s`
+          `[Step ${step}] 🛑 DWELLING at ${locationLabel} | Speed: 0.0 km/h | Resuming in ${pauseTicksRemaining * config.intervalSec}s`
         );
         return;
       }
@@ -275,7 +283,7 @@ async function runSimulation() {
         if (currentDistance >= totalRouteMeters) {
           currentDistance = totalRouteMeters;
           if (config.loop) {
-            pauseTicksRemaining = Math.round(15 / config.intervalSec); // Pause 15s at dropoff
+            pauseTicksRemaining = Math.round(config.dropoffDwellSec / config.intervalSec); // Dwell at dropoff
             isReversing = true;
           } else {
             console.log(`\n🎉 [Step ${step}] ARRIVED AT DROPOFF! Simulation complete.\n`);
@@ -288,7 +296,7 @@ async function runSimulation() {
         currentDistance -= stepMeters;
         if (currentDistance <= 0) {
           currentDistance = 0;
-          pauseTicksRemaining = Math.round(15 / config.intervalSec); // Pause 15s at pickup
+          pauseTicksRemaining = Math.round(config.pickupDwellSec / config.intervalSec); // Dwell at pickup
           isReversing = false;
         }
       }
