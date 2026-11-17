@@ -16,7 +16,7 @@ export const POPULAR_LOCATIONS: Array<{ name: string; lat: number; lng: number }
  */
 export function parseCoordinateString(text: string): { lat: number; lng: number } | null {
   if (!text) return null;
-  const cleaned = text.trim();
+  const cleaned = text.trim().replace(/^\(/, '').replace(/\)$/, '').trim();
   const match = cleaned.match(/^(-?\d+(?:\.\d+)?)[,\s;\t]+(-?\d+(?:\.\d+)?)$/);
   if (!match) return null;
   const lat = parseFloat(match[1]);
@@ -74,14 +74,14 @@ export const TripTestPanel: React.FC<TripTestPanelProps> = ({
   };
 
   const [pickupName, setPickupName] = useState<string>(initialPickup.name || 'คณะเภสัชฯ');
-  const [pickupLatStr, setPickupLatStr] = useState<string>(String(initialPickup.lat));
-  const [pickupLngStr, setPickupLngStr] = useState<string>(String(initialPickup.lng));
-  const [pickupPasteStr, setPickupPasteStr] = useState<string>('');
+  const [pickupCoordStr, setPickupCoordStr] = useState<string>(
+    `${initialPickup.lat}, ${initialPickup.lng}`
+  );
 
   const [dropoffName, setDropoffName] = useState<string>(initialDropoff.name || 'รพ.มหาราชฯ');
-  const [dropoffLatStr, setDropoffLatStr] = useState<string>(String(initialDropoff.lat));
-  const [dropoffLngStr, setDropoffLngStr] = useState<string>(String(initialDropoff.lng));
-  const [dropoffPasteStr, setDropoffPasteStr] = useState<string>('');
+  const [dropoffCoordStr, setDropoffCoordStr] = useState<string>(
+    `${initialDropoff.lat}, ${initialDropoff.lng}`
+  );
 
   useEffect(() => {
     if (selectedVehicleId) {
@@ -92,14 +92,10 @@ export const TripTestPanel: React.FC<TripTestPanelProps> = ({
   useEffect(() => {
     if (activeTrip) {
       setPickupName(activeTrip.pickup.name || '');
-      setPickupLatStr(String(activeTrip.pickup.lat));
-      setPickupLngStr(String(activeTrip.pickup.lng));
-      setPickupPasteStr(`${activeTrip.pickup.lat}, ${activeTrip.pickup.lng}`);
+      setPickupCoordStr(`${activeTrip.pickup.lat}, ${activeTrip.pickup.lng}`);
 
       setDropoffName(activeTrip.dropoff.name || '');
-      setDropoffLatStr(String(activeTrip.dropoff.lat));
-      setDropoffLngStr(String(activeTrip.dropoff.lng));
-      setDropoffPasteStr(`${activeTrip.dropoff.lat}, ${activeTrip.dropoff.lng}`);
+      setDropoffCoordStr(`${activeTrip.dropoff.lat}, ${activeTrip.dropoff.lng}`);
     }
   }, [activeTrip]);
 
@@ -107,124 +103,36 @@ export const TripTestPanel: React.FC<TripTestPanelProps> = ({
   useEffect(() => {
     if (pendingPoint) {
       if (pinMode === 'pick-pickup') {
-        setPickupLatStr(String(pendingPoint.lat));
-        setPickupLngStr(String(pendingPoint.lng));
+        setPickupCoordStr(`${pendingPoint.lat}, ${pendingPoint.lng}`);
         setPickupName('จุดรับ (ระบุบนแผนที่)');
-        setPickupPasteStr(`${pendingPoint.lat}, ${pendingPoint.lng}`);
         onSetPinMode?.('idle');
       } else if (pinMode === 'pick-dropoff') {
-        setDropoffLatStr(String(pendingPoint.lat));
-        setDropoffLngStr(String(pendingPoint.lng));
+        setDropoffCoordStr(`${pendingPoint.lat}, ${pendingPoint.lng}`);
         setDropoffName('จุดส่ง (ระบุบนแผนที่)');
-        setDropoffPasteStr(`${pendingPoint.lat}, ${pendingPoint.lng}`);
         onSetPinMode?.('idle');
       }
     }
   }, [pendingPoint, pinMode, onSetPinMode]);
 
-  const handlePickupLatChange = (value: string) => {
-    const parsed = parseCoordinateString(value);
-    if (parsed) {
-      setPickupLatStr(String(parsed.lat));
-      setPickupLngStr(String(parsed.lng));
-      setPickupPasteStr(value.trim());
-    } else {
-      setPickupLatStr(value);
-    }
-  };
+  const parsedPickup = parseCoordinateString(pickupCoordStr);
+  const parsedDropoff = parseCoordinateString(dropoffCoordStr);
 
-  const handlePickupLngChange = (value: string) => {
-    const parsed = parseCoordinateString(value);
-    if (parsed) {
-      setPickupLatStr(String(parsed.lat));
-      setPickupLngStr(String(parsed.lng));
-      setPickupPasteStr(value.trim());
-    } else {
-      setPickupLngStr(value);
-    }
-  };
-
-  const handlePickupPasteChange = (value: string) => {
-    setPickupPasteStr(value);
-    const parsed = parseCoordinateString(value);
-    if (parsed) {
-      setPickupLatStr(String(parsed.lat));
-      setPickupLngStr(String(parsed.lng));
-    }
-  };
-
-  const handleDropoffLatChange = (value: string) => {
-    const parsed = parseCoordinateString(value);
-    if (parsed) {
-      setDropoffLatStr(String(parsed.lat));
-      setDropoffLngStr(String(parsed.lng));
-      setDropoffPasteStr(value.trim());
-    } else {
-      setDropoffLatStr(value);
-    }
-  };
-
-  const handleDropoffLngChange = (value: string) => {
-    const parsed = parseCoordinateString(value);
-    if (parsed) {
-      setDropoffLatStr(String(parsed.lat));
-      setDropoffLngStr(String(parsed.lng));
-      setDropoffPasteStr(value.trim());
-    } else {
-      setDropoffLngStr(value);
-    }
-  };
-
-  const handleDropoffPasteChange = (value: string) => {
-    setDropoffPasteStr(value);
-    const parsed = parseCoordinateString(value);
-    if (parsed) {
-      setDropoffLatStr(String(parsed.lat));
-      setDropoffLngStr(String(parsed.lng));
-    }
-  };
-
-  const parsedPickupLat = parseFloat(pickupLatStr);
-  const parsedPickupLng = parseFloat(pickupLngStr);
-  const parsedDropoffLat = parseFloat(dropoffLatStr);
-  const parsedDropoffLng = parseFloat(dropoffLngStr);
-
-  const isValidCoord = (lat: number, lng: number) =>
-    !isNaN(lat) && !isNaN(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180;
-
-  const isPickupValid = isValidCoord(parsedPickupLat, parsedPickupLng);
-  const isDropoffValid = isValidCoord(parsedDropoffLat, parsedDropoffLng);
+  const isPickupValid = parsedPickup !== null;
+  const isDropoffValid = parsedDropoff !== null;
   const areCoordsValid = isPickupValid && isDropoffValid;
 
-  const handleApplyPreset = (
-    type: 'pickup' | 'dropoff',
-    loc: { name: string; lat: number; lng: number }
-  ) => {
-    if (type === 'pickup') {
-      setPickupName(loc.name);
-      setPickupLatStr(String(loc.lat));
-      setPickupLngStr(String(loc.lng));
-      setPickupPasteStr(`${loc.lat}, ${loc.lng}`);
-    } else {
-      setDropoffName(loc.name);
-      setDropoffLatStr(String(loc.lat));
-      setDropoffLngStr(String(loc.lng));
-      setDropoffPasteStr(`${loc.lat}, ${loc.lng}`);
-    }
-  };
-
   const handleStart = () => {
-    if (!areCoordsValid) return;
+    if (!areCoordsValid || !parsedPickup || !parsedDropoff) return;
     onStartTrip(
       targetVehicleId,
       {
-        lat: parsedPickupLat,
-        lng: parsedPickupLng,
+        lat: parsedPickup.lat,
+        lng: parsedPickup.lng,
         name: pickupName.trim() || undefined,
       },
       {
-        lat: parsedDropoffLat,
-        lng: parsedDropoffLng,
+        lat: parsedDropoff.lat,
+        lng: parsedDropoff.lng,
         name: dropoffName.trim() || undefined,
       }
     );
@@ -306,22 +214,22 @@ export const TripTestPanel: React.FC<TripTestPanelProps> = ({
               </span>
             </div>
 
-            {/* Quick Unified Coordinate Paste Input */}
+            {/* Unified Coordinates (Lat, Lng) */}
             <div>
               <label
-                htmlFor="pickup-paste-input"
+                htmlFor="pickup-coord-input"
                 className="block text-[10px] font-medium text-slate-500 dark:text-slate-400 mb-0.5"
               >
-                วางพิกัดรวม (Lat, Lng):
+                พิกัดจุดรับ (Lat, Lng)
               </label>
               <div className="relative flex items-center">
                 <input
-                  id="pickup-paste-input"
-                  aria-label="วางพิกัดจุดรับรวม"
+                  id="pickup-coord-input"
+                  aria-label="พิกัดจุดรับ"
                   type="text"
-                  placeholder="วางพิกัดรวม เช่น 18.79009, 98.96547"
-                  value={pickupPasteStr}
-                  onChange={(e) => handlePickupPasteChange(e.target.value)}
+                  placeholder="เช่น 18.7883, 98.9853 หรือวางพิกัดรวม"
+                  value={pickupCoordStr}
+                  onChange={(e) => setPickupCoordStr(e.target.value)}
                   className="w-full pl-7 pr-2 py-1 text-xs font-mono rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 placeholder:text-slate-400 placeholder:font-sans focus:ring-1 focus:ring-emerald-500 outline-none"
                 />
                 <ClipboardPaste className="w-3.5 h-3.5 text-slate-400 absolute left-2 pointer-events-none" />
@@ -343,64 +251,6 @@ export const TripTestPanel: React.FC<TripTestPanelProps> = ({
                 className="w-full px-2 py-1 text-xs rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 placeholder:text-slate-400 focus:ring-1 focus:ring-emerald-500 outline-none"
               />
             </div>
-
-            {/* Coordinates Lat / Lng */}
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <label
-                  htmlFor="pickup-lat-input"
-                  className="block text-[10px] font-medium text-slate-500 dark:text-slate-400 mb-0.5"
-                >
-                  ละติจูด (Lat)
-                </label>
-                <input
-                  id="pickup-lat-input"
-                  aria-label="ละติจูดจุดรับ"
-                  type="text"
-                  placeholder="18.7883"
-                  value={pickupLatStr}
-                  onChange={(e) => handlePickupLatChange(e.target.value)}
-                  className="w-full px-2 py-1 text-xs font-mono rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 focus:ring-1 focus:ring-emerald-500 outline-none"
-                />
-              </div>
-              <div>
-                <label
-                  htmlFor="pickup-lng-input"
-                  className="block text-[10px] font-medium text-slate-500 dark:text-slate-400 mb-0.5"
-                >
-                  ลองจิจูด (Lng)
-                </label>
-                <input
-                  id="pickup-lng-input"
-                  aria-label="ลองจิจูดจุดรับ"
-                  type="text"
-                  placeholder="98.9853"
-                  value={pickupLngStr}
-                  onChange={(e) => handlePickupLngChange(e.target.value)}
-                  className="w-full px-2 py-1 text-xs font-mono rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 focus:ring-1 focus:ring-emerald-500 outline-none"
-                />
-              </div>
-            </div>
-
-            {/* Quick Location Presets for Pickup */}
-            <div>
-              <div className="text-[10px] text-slate-400 dark:text-slate-500 mb-1">
-                จุดยอดนิยม:
-              </div>
-              <div className="flex flex-wrap gap-1">
-                {POPULAR_LOCATIONS.map((loc) => (
-                  <button
-                    key={loc.name}
-                    type="button"
-                    aria-label={`${loc.name} (จุดรับ)`}
-                    onClick={() => handleApplyPreset('pickup', loc)}
-                    className="px-1.5 py-0.5 text-[10px] rounded bg-emerald-50 dark:bg-emerald-950/60 hover:bg-emerald-100 dark:hover:bg-emerald-900 text-emerald-700 dark:text-emerald-300 border border-emerald-200/60 dark:border-emerald-800/50 transition-colors"
-                  >
-                    {loc.name}
-                  </button>
-                ))}
-              </div>
-            </div>
           </div>
 
           {/* Dropoff Point Input Section */}
@@ -411,22 +261,22 @@ export const TripTestPanel: React.FC<TripTestPanelProps> = ({
               </span>
             </div>
 
-            {/* Quick Unified Coordinate Paste Input */}
+            {/* Unified Coordinates (Lat, Lng) */}
             <div>
               <label
-                htmlFor="dropoff-paste-input"
+                htmlFor="dropoff-coord-input"
                 className="block text-[10px] font-medium text-slate-500 dark:text-slate-400 mb-0.5"
               >
-                วางพิกัดรวม (Lat, Lng):
+                พิกัดจุดส่ง (Lat, Lng)
               </label>
               <div className="relative flex items-center">
                 <input
-                  id="dropoff-paste-input"
-                  aria-label="วางพิกัดจุดส่งรวม"
+                  id="dropoff-coord-input"
+                  aria-label="พิกัดจุดส่ง"
                   type="text"
-                  placeholder="วางพิกัดรวม เช่น 18.79009, 98.96547"
-                  value={dropoffPasteStr}
-                  onChange={(e) => handleDropoffPasteChange(e.target.value)}
+                  placeholder="เช่น 18.7900, 98.9900 หรือวางพิกัดรวม"
+                  value={dropoffCoordStr}
+                  onChange={(e) => setDropoffCoordStr(e.target.value)}
                   className="w-full pl-7 pr-2 py-1 text-xs font-mono rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 placeholder:text-slate-400 placeholder:font-sans focus:ring-1 focus:ring-rose-500 outline-none"
                 />
                 <ClipboardPaste className="w-3.5 h-3.5 text-slate-400 absolute left-2 pointer-events-none" />
@@ -447,64 +297,6 @@ export const TripTestPanel: React.FC<TripTestPanelProps> = ({
                 onChange={(e) => setDropoffName(e.target.value)}
                 className="w-full px-2 py-1 text-xs rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 placeholder:text-slate-400 focus:ring-1 focus:ring-rose-500 outline-none"
               />
-            </div>
-
-            {/* Coordinates Lat / Lng */}
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <label
-                  htmlFor="dropoff-lat-input"
-                  className="block text-[10px] font-medium text-slate-500 dark:text-slate-400 mb-0.5"
-                >
-                  ละติจูด (Lat)
-                </label>
-                <input
-                  id="dropoff-lat-input"
-                  aria-label="ละติจูดจุดส่ง"
-                  type="text"
-                  placeholder="18.7900"
-                  value={dropoffLatStr}
-                  onChange={(e) => handleDropoffLatChange(e.target.value)}
-                  className="w-full px-2 py-1 text-xs font-mono rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 focus:ring-1 focus:ring-rose-500 outline-none"
-                />
-              </div>
-              <div>
-                <label
-                  htmlFor="dropoff-lng-input"
-                  className="block text-[10px] font-medium text-slate-500 dark:text-slate-400 mb-0.5"
-                >
-                  ลองจิจูด (Lng)
-                </label>
-                <input
-                  id="dropoff-lng-input"
-                  aria-label="ลองจิจูดจุดส่ง"
-                  type="text"
-                  placeholder="98.9900"
-                  value={dropoffLngStr}
-                  onChange={(e) => handleDropoffLngChange(e.target.value)}
-                  className="w-full px-2 py-1 text-xs font-mono rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 focus:ring-1 focus:ring-rose-500 outline-none"
-                />
-              </div>
-            </div>
-
-            {/* Quick Location Presets for Dropoff */}
-            <div>
-              <div className="text-[10px] text-slate-400 dark:text-slate-500 mb-1">
-                จุดยอดนิยม:
-              </div>
-              <div className="flex flex-wrap gap-1">
-                {POPULAR_LOCATIONS.map((loc) => (
-                  <button
-                    key={loc.name}
-                    type="button"
-                    aria-label={`${loc.name} (จุดส่ง)`}
-                    onClick={() => handleApplyPreset('dropoff', loc)}
-                    className="px-1.5 py-0.5 text-[10px] rounded bg-rose-50 dark:bg-rose-950/60 hover:bg-rose-100 dark:hover:bg-rose-900 text-rose-700 dark:text-rose-300 border border-rose-200/60 dark:border-rose-800/50 transition-colors"
-                  >
-                    {loc.name}
-                  </button>
-                ))}
-              </div>
             </div>
           </div>
 

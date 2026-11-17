@@ -34,22 +34,18 @@ describe('TripTestPanel', () => {
     // Expand panel
     fireEvent.click(screen.getByRole('button', { name: /ทดสอบเส้นทาง/i }));
 
-    const pickupLatInput = screen.getByLabelText(/ละติจูดจุดรับ/i);
-    const pickupLngInput = screen.getByLabelText(/ลองจิจูดจุดรับ/i);
+    const pickupCoordInput = screen.getByLabelText(/พิกัดจุดรับ/i);
     const pickupNameInput = screen.getByLabelText(/ชื่อจุดรับ/i);
 
-    const dropoffLatInput = screen.getByLabelText(/ละติจูดจุดส่ง/i);
-    const dropoffLngInput = screen.getByLabelText(/ลองจิจูดจุดส่ง/i);
+    const dropoffCoordInput = screen.getByLabelText(/พิกัดจุดส่ง/i);
     const dropoffNameInput = screen.getByLabelText(/ชื่อจุดส่ง/i);
 
     // Enter custom coordinates
     fireEvent.change(pickupNameInput, { target: { value: 'หน้าหอพักแพทย์' } });
-    fireEvent.change(pickupLatInput, { target: { value: '18.78950' } });
-    fireEvent.change(pickupLngInput, { target: { value: '98.98620' } });
+    fireEvent.change(pickupCoordInput, { target: { value: '18.78950, 98.98620' } });
 
     fireEvent.change(dropoffNameInput, { target: { value: 'อาคารเรียนรวม' } });
-    fireEvent.change(dropoffLatInput, { target: { value: '18.79500' } });
-    fireEvent.change(dropoffLngInput, { target: { value: '98.99200' } });
+    fireEvent.change(dropoffCoordInput, { target: { value: '18.79500, 98.99200' } });
 
     const startBtn = screen.getByRole('button', { name: /คำนวณและเริ่มทริป/i });
     fireEvent.click(startBtn);
@@ -61,28 +57,28 @@ describe('TripTestPanel', () => {
     );
   });
 
-  it('allows selecting popular presets to populate pickup and dropoff coordinates', () => {
-    const handleStartTrip = vi.fn();
-    render(<TripTestPanel {...defaultProps} onStartTrip={handleStartTrip} />);
+  it('initializes with default coordinates and does not render popular presets', () => {
+    render(<TripTestPanel {...defaultProps} />);
 
     fireEvent.click(screen.getByRole('button', { name: /ทดสอบเส้นทาง/i }));
 
-    // Click a preset button for pickup
-    const presetBtn = screen.getByRole('button', { name: /รพ\.มหาราชฯ \(จุดรับ\)/i });
-    fireEvent.click(presetBtn);
+    const pickupCoordInput = screen.getByLabelText(/พิกัดจุดรับ/i) as HTMLInputElement;
+    expect(pickupCoordInput.value).toBe('18.7883, 98.9853');
 
-    const pickupLatInput = screen.getByLabelText(/ละติจูดจุดรับ/i) as HTMLInputElement;
-    expect(Number(pickupLatInput.value)).toBeCloseTo(18.7900, 3);
+    const dropoffCoordInput = screen.getByLabelText(/พิกัดจุดส่ง/i) as HTMLInputElement;
+    expect(dropoffCoordInput.value).toBe('18.79, 98.99');
+
+    expect(screen.queryByText('จุดยอดนิยม:')).toBeNull();
   });
 
-  it('shows validation error and disables submit when latitude or longitude is invalid', () => {
+  it('shows validation error and disables submit when coordinates are invalid', () => {
     const handleStartTrip = vi.fn();
     render(<TripTestPanel {...defaultProps} onStartTrip={handleStartTrip} />);
 
     fireEvent.click(screen.getByRole('button', { name: /ทดสอบเส้นทาง/i }));
 
-    const pickupLatInput = screen.getByLabelText(/ละติจูดจุดรับ/i);
-    fireEvent.change(pickupLatInput, { target: { value: 'invalid-coordinate' } });
+    const pickupCoordInput = screen.getByLabelText(/พิกัดจุดรับ/i);
+    fireEvent.change(pickupCoordInput, { target: { value: 'invalid-coordinate' } });
 
     expect(screen.getByText(/กรุณากรอกพิกัดละติจูดและลองจิจูดที่ถูกต้อง/i)).toBeInTheDocument();
 
@@ -206,57 +202,43 @@ describe('TripTestPanel', () => {
       expect(res?.lng).toBeCloseTo(98.96547138, 6);
     });
 
+    it('parses coordinates enclosed in parentheses', () => {
+      const res = parseCoordinateString('(18.790094565006996, 98.96547138689851)');
+      expect(res).not.toBeNull();
+      expect(res?.lat).toBeCloseTo(18.79009456, 6);
+      expect(res?.lng).toBeCloseTo(98.96547138, 6);
+    });
+
     it('returns null for invalid strings', () => {
       expect(parseCoordinateString('invalid text')).toBeNull();
       expect(parseCoordinateString('18.7900')).toBeNull();
     });
   });
 
-  it('automatically splits and populates lat and lng when full coordinate string is pasted into latitude input', () => {
+  it('supports typing or pasting full coordinate string into unified pickup and dropoff inputs', () => {
     const handleStartTrip = vi.fn();
     render(<TripTestPanel {...defaultProps} onStartTrip={handleStartTrip} />);
 
     fireEvent.click(screen.getByRole('button', { name: /ทดสอบเส้นทาง/i }));
 
-    const pickupLatInput = screen.getByLabelText(/ละติจูดจุดรับ/i) as HTMLInputElement;
-    const pickupLngInput = screen.getByLabelText(/ลองจิจูดจุดรับ/i) as HTMLInputElement;
-
-    // Paste full coordinate string into the latitude input
-    fireEvent.change(pickupLatInput, {
+    const pickupCoordInput = screen.getByLabelText(/พิกัดจุดรับ/i) as HTMLInputElement;
+    fireEvent.change(pickupCoordInput, {
       target: { value: '18.790094565006996, 98.96547138689851' },
     });
 
-    expect(Number(pickupLatInput.value)).toBeCloseTo(18.790094565, 6);
-    expect(Number(pickupLngInput.value)).toBeCloseTo(98.965471386, 6);
-  });
-
-  it('supports pasting into dedicated quick paste input for pickup and dropoff', () => {
-    const handleStartTrip = vi.fn();
-    render(<TripTestPanel {...defaultProps} onStartTrip={handleStartTrip} />);
-
-    fireEvent.click(screen.getByRole('button', { name: /ทดสอบเส้นทาง/i }));
-
-    const pickupPasteInput = screen.getByLabelText(/วางพิกัดจุดรับรวม/i);
-    fireEvent.change(pickupPasteInput, {
-      target: { value: '18.790094565006996, 98.96547138689851' },
-    });
-
-    const pickupLatInput = screen.getByLabelText(/ละติจูดจุดรับ/i) as HTMLInputElement;
-    const pickupLngInput = screen.getByLabelText(/ลองจิจูดจุดรับ/i) as HTMLInputElement;
-
-    expect(Number(pickupLatInput.value)).toBeCloseTo(18.790094565, 6);
-    expect(Number(pickupLngInput.value)).toBeCloseTo(98.965471386, 6);
-
-    // Also test dropoff paste
-    const dropoffPasteInput = screen.getByLabelText(/วางพิกัดจุดส่งรวม/i);
-    fireEvent.change(dropoffPasteInput, {
+    const dropoffCoordInput = screen.getByLabelText(/พิกัดจุดส่ง/i) as HTMLInputElement;
+    fireEvent.change(dropoffCoordInput, {
       target: { value: '18.795000000000000, 98.992000000000000' },
     });
 
-    const dropoffLatInput = screen.getByLabelText(/ละติจูดจุดส่ง/i) as HTMLInputElement;
-    const dropoffLngInput = screen.getByLabelText(/ลองจิจูดจุดส่ง/i) as HTMLInputElement;
+    const startBtn = screen.getByRole('button', { name: /คำนวณและเริ่มทริป/i });
+    expect(startBtn).not.toBeDisabled();
+    fireEvent.click(startBtn);
 
-    expect(Number(dropoffLatInput.value)).toBeCloseTo(18.795, 6);
-    expect(Number(dropoffLngInput.value)).toBeCloseTo(98.992, 6);
+    expect(handleStartTrip).toHaveBeenCalledWith(
+      'EV-01',
+      expect.objectContaining({ lat: expect.closeTo(18.790094565, 6), lng: expect.closeTo(98.965471386, 6) }),
+      expect.objectContaining({ lat: expect.closeTo(18.795, 6), lng: expect.closeTo(98.992, 6) })
+    );
   });
 });
