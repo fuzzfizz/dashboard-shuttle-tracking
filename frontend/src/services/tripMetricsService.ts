@@ -10,6 +10,9 @@ export interface TripProgressMetrics {
   progressPercent: number; // 0 - 100
   estimatedRemainingSeconds: number;
   formattedEta: string; // e.g. "~8 นาที", "< 1 นาที", "ถึงจุดส่งแล้ว"
+  etaTitle: string; // e.g. "เวลาที่เหลือจนถึงจุดส่ง" vs "เวลาที่เหลือจนถึงจุดรับ"
+  remainingDistanceLabel: string; // e.g. "เหลืออีก X.XX กม." vs "เหลืออีก X.XX กม. ถึงจุดรับ"
+  targetDestinationName: string; // pickup or dropoff name
 }
 
 /**
@@ -35,7 +38,7 @@ export function formatRemainingTime(seconds: number): string {
 }
 
 /**
- * Calculates start-to-end total distance, remaining distance to dropoff,
+ * Calculates start-to-end total distance, remaining distance to destination (dropoff or pickup),
  * progress percentage, and estimated remaining time (ETA).
  */
 export function calculateTripProgressMetrics(
@@ -67,7 +70,7 @@ export function calculateTripProgressMetrics(
 
   const totalDistanceKm = totalDistanceMeters / 1000;
 
-  // 2. Handle non-transit round stages
+  // 2. Stage: dwelling at dropoff (unloading passengers)
   if (roundStage === 'dwelling-dropoff') {
     return {
       totalDistanceMeters,
@@ -78,10 +81,19 @@ export function calculateTripProgressMetrics(
       progressPercent: 100,
       estimatedRemainingSeconds: 0,
       formattedEta: 'ถึงจุดส่งแล้ว (กำลังส่งคนลง)',
+      etaTitle: 'สถานะการส่งผู้โดยสาร',
+      remainingDistanceLabel: 'จอดส่งผู้โดยสาร (1 นาที)',
+      targetDestinationName: trip.dropoff.name || 'จุดส่ง',
     };
   }
 
+  // 3. Stage: arrived at dropoff, waiting 3-min grace period (departing / heading back)
   if (roundStage === 'arrived-dropoff') {
+    const distToPickupMeters = currentLocation
+      ? haversineDistanceMeters(currentLocation.lat, currentLocation.lng, trip.pickup.lat, trip.pickup.lng)
+      : totalDistanceMeters;
+    const distToPickupKm = distToPickupMeters / 1000;
+
     return {
       totalDistanceMeters,
       totalDistanceKm,
@@ -91,26 +103,47 @@ export function calculateTripProgressMetrics(
       progressPercent: 100,
       estimatedRemainingSeconds: 0,
       formattedEta: 'ส่งผู้โดยสารเสร็จสิ้นแล้ว',
+      etaTitle: 'สถานะการเดินทาง',
+      remainingDistanceLabel: `กำลังกลับจุดรับ (เหลือ ${distToPickupKm.toFixed(2)} กม.)`,
+      targetDestinationName: trip.dropoff.name || 'จุดส่ง',
     };
   }
 
+  // 4. Stage: waiting to reach pickup (actively returning to pickup for next round)
   if (roundStage === 'waiting-pickup') {
+    const distToPickupMeters = currentLocation
+      ? haversineDistanceMeters(currentLocation.lat, currentLocation.lng, trip.pickup.lat, trip.pickup.lng)
+      : totalDistanceMeters;
+    const distToPickupKm = distToPickupMeters / 1000;
+
+    const returnSpeedKmh = currentLocation?.speed && currentLocation.speed >= 15 ? currentLocation.speed : 35;
+    const speedMps = (returnSpeedKmh * 1000) / 3600;
+    const etaToPickupSeconds = distToPickupMeters <= 80 ? 0 : Math.round(distToPickupMeters / speedMps);
+
+    const etaText = distToPickupMeters <= 80 ? 'ถึงจุดรับแล้ว' : formatRemainingTime(etaToPickupSeconds);
+    const returnProgress = Math.min(
+      100,
+      Math.max(0, Math.round(((totalDistanceMeters - distToPickupMeters) / totalDistanceMeters) * 100))
+    );
+
     return {
       totalDistanceMeters,
       totalDistanceKm,
-      remainingDistanceMeters: 0,
-      remainingDistanceKm: 0,
-      traveledDistanceKm: totalDistanceKm,
-      progressPercent: 0,
-      estimatedRemainingSeconds: 0,
-      formattedEta: 'รอเริ่มรอบใหม่ที่จุดรับ',
+      remainingDistanceMeters: distToPickupMeters,
+      remainingDistanceKm: distToPickupKm,
+      traveledDistanceKm: Math.max(0, totalDistanceKm - distToPickupKm),
+      progressPercent: returnProgress,
+      estimatedRemainingSeconds: etaToPickupSeconds,
+      formattedEta: etaText,
+      etaTitle: 'เวลาที่เหลือจนถึงจุดรับ',
+      remainingDistanceLabel: `เหลืออีก ${distToPickupKm.toFixed(2)} กม. ถึงจุดรับ`,
+      targetDestinationName: trip.pickup.name || 'จุดรับ',
     };
   }
 
-  // 3. Stage is in-transit (or initial trip before movement)
+  // 5. Stage: in-transit from pickup to dropoff
   if (!currentLocation) {
-    const nominalSeconds =
-      trip.durationSeconds || Math.round((totalDistanceKm / 35) * 3600);
+    const nominalSeconds = trip.durationSeconds || Math.round((totalDistanceKm / 35) * 3600);
     return {
       totalDistanceMeters,
       totalDistanceKm,
@@ -120,10 +153,13 @@ export function calculateTripProgressMetrics(
       progressPercent: 0,
       estimatedRemainingSeconds: nominalSeconds,
       formattedEta: formatRemainingTime(nominalSeconds),
+      etaTitle: 'เวลาที่เหลือจนถึงจุดส่ง',
+      remainingDistanceLabel: `เหลืออีก ${totalDistanceKm.toFixed(2)} กม.`,
+      targetDestinationName: trip.dropoff.name || 'จุดส่ง',
     };
   }
 
-  // 4. Calculate along-route remaining distance using planned path
+  // Calculate along-route remaining distance using planned path
   let remainingDistanceMeters = 0;
   const distToDropoff = haversineDistanceMeters(
     currentLocation.lat,
@@ -147,14 +183,12 @@ export function calculateTripProgressMetrics(
       }
     }
 
-    // Sum path distance from closest point to destination
     for (let i = closestIdx; i < trip.plannedPath.length - 1; i++) {
       const [lat1, lng1] = trip.plannedPath[i];
       const [lat2, lng2] = trip.plannedPath[i + 1];
       remainingDistanceMeters += haversineDistanceMeters(lat1, lng1, lat2, lng2);
     }
 
-    // Clamp between direct line and total distance
     remainingDistanceMeters = Math.min(
       totalDistanceMeters,
       Math.max(distToDropoff, remainingDistanceMeters)
@@ -170,7 +204,6 @@ export function calculateTripProgressMetrics(
     Math.max(0, Math.round((traveledDistanceKm / totalDistanceKm) * 100))
   );
 
-  // 5. Calculate ETA based on nominal duration and vehicle speed
   const nominalSpeedMps =
     trip.durationSeconds && trip.durationSeconds > 0
       ? totalDistanceMeters / trip.durationSeconds
@@ -198,5 +231,8 @@ export function calculateTripProgressMetrics(
     progressPercent,
     estimatedRemainingSeconds,
     formattedEta,
+    etaTitle: 'เวลาที่เหลือจนถึงจุดส่ง',
+    remainingDistanceLabel: `เหลืออีก ${remainingDistanceKm.toFixed(2)} กม.`,
+    targetDestinationName: trip.dropoff.name || 'จุดส่ง',
   };
 }

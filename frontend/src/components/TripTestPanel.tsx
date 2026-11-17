@@ -384,17 +384,17 @@ export const TripTestPanel: React.FC<TripTestPanelProps> = ({
                   </div>
                 </div>
 
-                {/* Remaining Distance & ETA to Dropoff */}
+                {/* Remaining Distance & ETA to Dropoff / Pickup */}
                 <div className="p-2 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 flex flex-col justify-between">
                   <div className="text-[10px] text-emerald-800 dark:text-emerald-300 flex items-center gap-1 font-medium">
                     <Clock className="w-3 h-3 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                    <span>เวลาที่เหลือจนถึงจุดส่ง</span>
+                    <span>{progressMetrics.etaTitle}</span>
                   </div>
                   <div className="text-sm font-bold text-emerald-700 dark:text-emerald-300 mt-1">
                     {progressMetrics.formattedEta}
                   </div>
                   <div className="text-[9px] text-emerald-600 dark:text-emerald-400/90 font-mono mt-0.5">
-                    เหลืออีก {progressMetrics.remainingDistanceKm.toFixed(2)} กม.
+                    {progressMetrics.remainingDistanceLabel}
                   </div>
                 </div>
               </div>
@@ -422,12 +422,13 @@ export const TripTestPanel: React.FC<TripTestPanelProps> = ({
               )}
               {roundStage === 'arrived-dropoff' && (
                 <div className="text-[10px] text-emerald-700 dark:text-emerald-300 font-semibold p-1.5 rounded-lg flex items-center gap-1.5 bg-emerald-100/70 dark:bg-emerald-900/40 border border-emerald-200 dark:border-emerald-800/50">
-                  <span>🏁 ส่งผู้โดยสารเสร็จสิ้น — หยุดวาดเส้น (แสดงรอยทาง 3 นาที)</span>
+                  <span>🏁 ส่งผู้โดยสารเสร็จสิ้น — กำลังเดินทางกลับจุดรับ</span>
                 </div>
               )}
               {roundStage === 'waiting-pickup' && (
                 <div className="text-[10px] text-amber-700 dark:text-amber-300 font-semibold p-1.5 rounded-lg flex items-center gap-1.5 bg-amber-100/60 dark:bg-amber-900/40 border border-amber-200 dark:border-amber-800/50">
-                  <span>⏳ กำลังเดินทางไปยังจุดรับ เพื่อเริ่มจับรอยทางรอบใหม่</span>
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse shrink-0" />
+                  <span>⏳ รถกำลังเดินทางกลับไปยังจุดรับ (เตรียมเริ่มรอบใหม่)</span>
                 </div>
               )}
               {roundStage === 'in-transit' && (

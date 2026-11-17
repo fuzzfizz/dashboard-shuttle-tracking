@@ -221,4 +221,36 @@ describe('useVehicleTripRoute', () => {
     expect(result.current.actualPaths['shuttle-test-01']).toHaveLength(2);
     expect(result.current.roundStages['shuttle-test-01']).toBe('in-transit');
   });
+
+  it('auto-detects return journey and auto-corrects stage to waiting-pickup when vehicle moves towards pickup', async () => {
+    const mockTrip = {
+      vehicleId: 'shuttle-test-01',
+      pickup: { lat: 18.7900, lng: 98.9655 },
+      dropoff: { lat: 18.7240, lng: 98.9838 },
+      plannedPath: [[18.7900, 98.9655], [18.7240, 98.9838]] as Array<[number, number]>,
+      createdAt: Date.now(),
+    };
+
+    vi.spyOn(tripService, 'calculateTripRoute').mockResolvedValue(mockTrip);
+
+    const { result } = renderHook(() => useVehicleTripRoute());
+
+    await act(async () => {
+      await result.current.startTrip('shuttle-test-01', mockTrip.pickup, mockTrip.dropoff);
+    });
+
+    // 1. Initial point while heading back from Hang Dong
+    act(() => {
+      result.current.recordVehicleBreadcrumb('shuttle-test-01', 18.7300, 98.9820);
+    });
+
+    // 2. Next point moving towards pickup (northward) and away from dropoff
+    act(() => {
+      result.current.recordVehicleBreadcrumb('shuttle-test-01', 18.7350, 98.9810);
+    });
+
+    // Should detect return movement and switch to waiting-pickup
+    expect(result.current.roundStages['shuttle-test-01']).toBe('waiting-pickup');
+    expect(result.current.actualPaths['shuttle-test-01']).toEqual([]);
+  });
 });

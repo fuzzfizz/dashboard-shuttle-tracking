@@ -166,6 +166,9 @@ export function useVehicleTripRoute(options: UseVehicleTripRouteOptions = {}): U
         });
         tripsRef.current[vehicleId] = trip;
 
+        // Check if vehicle has a known location far from pickup
+        const prevLocation = lastCoordsRef.current[vehicleId];
+
         // Reset breadcrumbs for this vehicle for the new trip
         setActualPaths((prev) => {
           const next = { ...prev, [vehicleId]: [] };
@@ -180,11 +183,9 @@ export function useVehicleTripRoute(options: UseVehicleTripRouteOptions = {}): U
           delete dropoffTimersRef.current[vehicleId];
         }
 
-        // Check if vehicle has a known location far from pickup
-        const lastKnown = lastCoordsRef.current[vehicleId];
         const isFarFromPickup =
-          lastKnown &&
-          haversineDistanceMeters(lastKnown.lat, lastKnown.lng, pickup.lat, pickup.lng) > arrivalRadiusMeters * 2;
+          prevLocation &&
+          haversineDistanceMeters(prevLocation.lat, prevLocation.lng, pickup.lat, pickup.lng) > arrivalRadiusMeters * 2;
 
         const initialStage: TripRoundStage = isFarFromPickup ? 'waiting-pickup' : 'in-transit';
         roundStagesRef.current[vehicleId] = initialStage;
@@ -283,6 +284,8 @@ export function useVehicleTripRoute(options: UseVehicleTripRouteOptions = {}): U
 
         // Stage 1: Waiting to reach pickup before starting round capture
         if (currentStage === 'waiting-pickup') {
+          lastCoordsRef.current[vehicleId] = { lat, lng };
+
           if (distToPickup <= arrivalRadiusMeters) {
             // Reached pickup! Start capturing anew for the new round
             roundStagesRef.current[vehicleId] = 'in-transit';
@@ -295,7 +298,6 @@ export function useVehicleTripRoute(options: UseVehicleTripRouteOptions = {}): U
               return next;
             });
 
-            lastCoordsRef.current[vehicleId] = { lat, lng };
             setActualPaths((prev) => {
               const next: Record<string, [number, number][]> = { ...prev, [vehicleId]: [point] };
               saveActualPathsToStorage(next);
@@ -307,6 +309,8 @@ export function useVehicleTripRoute(options: UseVehicleTripRouteOptions = {}): U
 
         // Stage 2: Vehicle is dwelling at dropoff (unloading passengers)
         if (currentStage === 'dwelling-dropoff') {
+          lastCoordsRef.current[vehicleId] = { lat, lng };
+
           if (distToDropoff > arrivalRadiusMeters) {
             // Passenger drop-off complete! Vehicle has departed dropoff station
             const now = Date.now();
@@ -352,6 +356,7 @@ export function useVehicleTripRoute(options: UseVehicleTripRouteOptions = {}): U
 
         // Stage 3: Vehicle has completed dropoff and is in the 3-minute grace period
         if (currentStage === 'arrived-dropoff') {
+          lastCoordsRef.current[vehicleId] = { lat, lng };
           return; // Stop drawing: keep existing round breadcrumb frozen
         }
 
@@ -391,6 +396,41 @@ export function useVehicleTripRoute(options: UseVehicleTripRouteOptions = {}): U
 
             // Note: 3-minute line removal timer will start ONLY after passenger drop-off is complete (when vehicle departs dropoff)
             return;
+          }
+
+          // Intelligent Direction Detection:
+          // If vehicle was presumed 'in-transit' but is demonstrably moving TOWARDS pickup and AWAY from dropoff,
+          // it is on its deadhead return journey (e.g. page opened while returning or missed dropoff trigger).
+          if (prevCoord) {
+            const prevDistToPickup = haversineDistanceMeters(prevCoord.lat, prevCoord.lng, trip.pickup.lat, trip.pickup.lng);
+            const prevDistToDropoff = haversineDistanceMeters(prevCoord.lat, prevCoord.lng, trip.dropoff.lat, trip.dropoff.lng);
+
+            if (
+              distToPickup < prevDistToPickup - 8 &&
+              distToDropoff > prevDistToDropoff + 8 &&
+              distToPickup > arrivalRadiusMeters * 2
+            ) {
+              // Auto-correct stage to waiting-pickup (deadheading back to pickup)
+              roundStagesRef.current[vehicleId] = 'waiting-pickup';
+              setRoundStages((prev) => {
+                const next = { ...prev, [vehicleId]: 'waiting-pickup' as TripRoundStage };
+                saveRoundStagesToStorage({
+                  ...loadRoundStagesFromStorage(),
+                  [vehicleId]: { stage: 'waiting-pickup' },
+                });
+                return next;
+              });
+
+              // Clear breadcrumbs since vehicle is in deadhead return
+              setActualPaths((prev) => {
+                const next: Record<string, [number, number][]> = { ...prev, [vehicleId]: [] };
+                saveActualPathsToStorage(next);
+                return next;
+              });
+
+              lastCoordsRef.current[vehicleId] = { lat, lng };
+              return;
+            }
           }
 
           // While in-transit: apply jitter filter and append

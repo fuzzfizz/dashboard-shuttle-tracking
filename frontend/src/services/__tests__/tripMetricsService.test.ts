@@ -91,18 +91,20 @@ describe('tripMetricsService', () => {
       expect(res?.remainingDistanceKm).toBe(0);
       expect(res?.progressPercent).toBe(100);
       expect(res?.formattedEta).toBe('ส่งผู้โดยสารเสร็จสิ้นแล้ว');
+      expect(res?.remainingDistanceLabel).toMatch(/กำลังกลับจุดรับ/);
     });
 
-    it('returns waiting-pickup status when resetting for new round', () => {
+    it('returns waiting-pickup status and calculates distance/time back to pickup', () => {
       const res = calculateTripProgressMetrics(
         mockTrip,
         { lat: 18.7800, lng: 98.9700, speed: 40 },
         'waiting-pickup'
       );
       expect(res).not.toBeNull();
-      expect(res?.remainingDistanceKm).toBe(0);
-      expect(res?.progressPercent).toBe(0);
-      expect(res?.formattedEta).toBe('รอเริ่มรอบใหม่ที่จุดรับ');
+      expect(res?.etaTitle).toBe('เวลาที่เหลือจนถึงจุดรับ');
+      expect(res?.remainingDistanceKm).toBeGreaterThan(0);
+      expect(res?.remainingDistanceLabel).toMatch(/ถึงจุดรับ/);
+      expect(res?.formattedEta).toMatch(/นาที/);
     });
   });
 });
