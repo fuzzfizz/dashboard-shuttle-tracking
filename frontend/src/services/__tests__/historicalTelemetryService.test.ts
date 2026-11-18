@@ -2,6 +2,8 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import {
   fetch7DayVehicleMetrics,
   fetchTodayHourlyDistanceMap,
+  fetchHistoricalMetricsRange,
+  fetchTimeframeVehicleMetrics,
 } from '../historicalTelemetryService';
 import * as supabaseClientModule from '../supabaseClient';
 
@@ -234,6 +236,169 @@ describe('historicalTelemetryService', () => {
       expect(result['shuttle-02']).toBeDefined();
       expect(result['shuttle-02'][8]).toBeGreaterThan(1.0);
       expect(result['shuttle-02'][9]).toBeUndefined();
+    });
+  });
+
+  describe('fetchHistoricalMetricsRange', () => {
+    it('returns empty array when Supabase is not configured', async () => {
+      vi.spyOn(supabaseClientModule, 'getSupabaseClient').mockReturnValue(null);
+
+      const result = await fetchHistoricalMetricsRange('2026-11-01', '2026-11-18');
+      expect(result).toEqual([]);
+    });
+
+    it('returns empty array when startDateStr or endDateStr is missing', async () => {
+      const mockSupabase = { from: vi.fn() } as any;
+      vi.spyOn(supabaseClientModule, 'getSupabaseClient').mockReturnValue(mockSupabase);
+
+      const res1 = await fetchHistoricalMetricsRange('', '2026-11-18');
+      const res2 = await fetchHistoricalMetricsRange('2026-11-01', '');
+      expect(res1).toEqual([]);
+      expect(res2).toEqual([]);
+      expect(mockSupabase.from).not.toHaveBeenCalled();
+    });
+
+    it('queries daily_vehicle_metrics between startDate and endDate in ascending order', async () => {
+      const mockRows = [
+        { vehicle_id: 'BUS-01', date: '2026-11-01', total_distance_km: 30.5 },
+        { vehicle_id: 'BUS-02', date: '2026-11-02', total_distance_km: 42.1 },
+      ];
+
+      const mockQueryBuilder = {
+        select: vi.fn().mockReturnThis(),
+        gte: vi.fn().mockReturnThis(),
+        lte: vi.fn().mockReturnThis(),
+        order: vi.fn().mockResolvedValue({ data: mockRows, error: null }),
+      };
+
+      const mockSupabase = {
+        from: vi.fn().mockReturnValue(mockQueryBuilder),
+      } as any;
+
+      vi.spyOn(supabaseClientModule, 'getSupabaseClient').mockReturnValue(mockSupabase);
+
+      const result = await fetchHistoricalMetricsRange('2026-11-01', '2026-11-18');
+
+      expect(mockSupabase.from).toHaveBeenCalledWith('daily_vehicle_metrics');
+      expect(mockQueryBuilder.select).toHaveBeenCalledWith('vehicle_id, date, total_distance_km');
+      expect(mockQueryBuilder.gte).toHaveBeenCalledWith('date', '2026-11-01');
+      expect(mockQueryBuilder.lte).toHaveBeenCalledWith('date', '2026-11-18');
+      expect(mockQueryBuilder.order).toHaveBeenCalledWith('date', { ascending: true });
+      expect(result).toEqual([
+        { vehicle_id: 'BUS-01', date: '2026-11-01', total_distance_km: 30.5 },
+        { vehicle_id: 'BUS-02', date: '2026-11-02', total_distance_km: 42.1 },
+      ]);
+    });
+
+    it('returns empty array when Supabase query returns an error', async () => {
+      const mockQueryBuilder = {
+        select: vi.fn().mockReturnThis(),
+        gte: vi.fn().mockReturnThis(),
+        lte: vi.fn().mockReturnThis(),
+        order: vi.fn().mockResolvedValue({ data: null, error: { message: 'Database error' } }),
+      };
+
+      const mockSupabase = {
+        from: vi.fn().mockReturnValue(mockQueryBuilder),
+      } as any;
+
+      vi.spyOn(supabaseClientModule, 'getSupabaseClient').mockReturnValue(mockSupabase);
+
+      const result = await fetchHistoricalMetricsRange('2026-11-01', '2026-11-18');
+      expect(result).toEqual([]);
+    });
+
+    it('handles unexpected exceptions gracefully and returns empty array', async () => {
+      const mockSupabase = {
+        from: vi.fn().mockImplementation(() => {
+          throw new Error('Connection timeout');
+        }),
+      } as any;
+
+      vi.spyOn(supabaseClientModule, 'getSupabaseClient').mockReturnValue(mockSupabase);
+
+      const result = await fetchHistoricalMetricsRange('2026-11-01', '2026-11-18');
+      expect(result).toEqual([]);
+    });
+  });
+
+  describe('fetchTimeframeVehicleMetrics', () => {
+    it('computes correct 6-days prior date for "week" timeframe', async () => {
+      const mockQueryBuilder = {
+        select: vi.fn().mockReturnThis(),
+        gte: vi.fn().mockReturnThis(),
+        lte: vi.fn().mockReturnThis(),
+        order: vi.fn().mockResolvedValue({ data: [], error: null }),
+      };
+      const mockSupabase = {
+        from: vi.fn().mockReturnValue(mockQueryBuilder),
+      } as any;
+      vi.spyOn(supabaseClientModule, 'getSupabaseClient').mockReturnValue(mockSupabase);
+
+      // Reference date: 2026-11-06 (UTC 08:00 is Bangkok 15:00)
+      const refDate = new Date('2026-11-06T08:00:00.000Z');
+      await fetchTimeframeVehicleMetrics('week', refDate);
+
+      expect(mockQueryBuilder.gte).toHaveBeenCalledWith('date', '2026-10-31');
+      expect(mockQueryBuilder.lte).toHaveBeenCalledWith('date', '2026-11-06');
+    });
+
+    it('computes correct 29-days prior date for "month" timeframe', async () => {
+      const mockQueryBuilder = {
+        select: vi.fn().mockReturnThis(),
+        gte: vi.fn().mockReturnThis(),
+        lte: vi.fn().mockReturnThis(),
+        order: vi.fn().mockResolvedValue({ data: [], error: null }),
+      };
+      const mockSupabase = {
+        from: vi.fn().mockReturnValue(mockQueryBuilder),
+      } as any;
+      vi.spyOn(supabaseClientModule, 'getSupabaseClient').mockReturnValue(mockSupabase);
+
+      const refDate = new Date('2026-11-06T08:00:00.000Z');
+      await fetchTimeframeVehicleMetrics('month', refDate);
+
+      // 2026-11-06 minus 29 days is 2026-10-08
+      expect(mockQueryBuilder.gte).toHaveBeenCalledWith('date', '2026-10-08');
+      expect(mockQueryBuilder.lte).toHaveBeenCalledWith('date', '2026-11-06');
+    });
+
+    it('computes correct 364-days prior date for "year" timeframe', async () => {
+      const mockQueryBuilder = {
+        select: vi.fn().mockReturnThis(),
+        gte: vi.fn().mockReturnThis(),
+        lte: vi.fn().mockReturnThis(),
+        order: vi.fn().mockResolvedValue({ data: [], error: null }),
+      };
+      const mockSupabase = {
+        from: vi.fn().mockReturnValue(mockQueryBuilder),
+      } as any;
+      vi.spyOn(supabaseClientModule, 'getSupabaseClient').mockReturnValue(mockSupabase);
+
+      const refDate = new Date('2026-11-06T08:00:00.000Z');
+      await fetchTimeframeVehicleMetrics('year', refDate);
+
+      // 2026-11-06 minus 364 days is 2025-11-07
+      expect(mockQueryBuilder.gte).toHaveBeenCalledWith('date', '2025-11-07');
+      expect(mockQueryBuilder.lte).toHaveBeenCalledWith('date', '2026-11-06');
+    });
+
+    it('uses current Bangkok date when referenceDate is omitted', async () => {
+      const mockQueryBuilder = {
+        select: vi.fn().mockReturnThis(),
+        gte: vi.fn().mockReturnThis(),
+        lte: vi.fn().mockReturnThis(),
+        order: vi.fn().mockResolvedValue({ data: [], error: null }),
+      };
+      const mockSupabase = {
+        from: vi.fn().mockReturnValue(mockQueryBuilder),
+      } as any;
+      vi.spyOn(supabaseClientModule, 'getSupabaseClient').mockReturnValue(mockSupabase);
+
+      const result = await fetchTimeframeVehicleMetrics('week');
+      expect(result).toEqual([]);
+      expect(mockQueryBuilder.gte).toHaveBeenCalled();
+      expect(mockQueryBuilder.lte).toHaveBeenCalled();
     });
   });
 });

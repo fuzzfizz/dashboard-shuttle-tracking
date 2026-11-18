@@ -150,29 +150,24 @@ export async function fetchHistoricalVehicles(): Promise<Array<{ id: string; nam
   }
 }
 
-export async function fetch7DayVehicleMetrics(
-  referenceDate: Date = new Date()
+export async function fetchHistoricalMetricsRange(
+  startDateStr: string,
+  endDateStr: string
 ): Promise<DailyRecordItem[]> {
   const supabase = getSupabaseClient();
-  if (!supabase) return [];
+  if (!supabase || !startDateStr || !endDateStr) return [];
 
   try {
-    const todayDateStr = getBangkokDate(referenceDate);
-    const [year, month, day] = todayDateStr.split('-').map(Number);
-    const startDate = new Date(Date.UTC(year, month - 1, day));
-    startDate.setUTCDate(startDate.getUTCDate() - 6);
-    const startDateStr = startDate.toISOString().slice(0, 10);
-
     const { data, error } = await supabase
       .from('daily_vehicle_metrics')
       .select('vehicle_id, date, total_distance_km')
       .gte('date', startDateStr)
-      .lte('date', todayDateStr)
+      .lte('date', endDateStr)
       .order('date', { ascending: true });
 
     if (error || !data) {
       if (error) {
-        console.warn('Failed to fetch 7-day vehicle metrics from Supabase:', error);
+        console.warn('Failed to fetch historical metrics range:', error);
       }
       return [];
     }
@@ -183,9 +178,35 @@ export async function fetch7DayVehicleMetrics(
       total_distance_km: Number(row.total_distance_km) || 0,
     }));
   } catch (err) {
-    console.warn('Exception during fetch7DayVehicleMetrics:', err);
+    console.warn('Exception during fetchHistoricalMetricsRange:', err);
     return [];
   }
+}
+
+export async function fetchTimeframeVehicleMetrics(
+  timeframe: 'week' | 'month' | 'year',
+  referenceDate: Date = new Date()
+): Promise<DailyRecordItem[]> {
+  const todayDateStr = getBangkokDate(referenceDate);
+  const [year, month, day] = todayDateStr.split('-').map(Number);
+  const startDate = new Date(Date.UTC(year, month - 1, day));
+
+  if (timeframe === 'week') {
+    startDate.setUTCDate(startDate.getUTCDate() - 6);
+  } else if (timeframe === 'month') {
+    startDate.setUTCDate(startDate.getUTCDate() - 29);
+  } else if (timeframe === 'year') {
+    startDate.setUTCDate(startDate.getUTCDate() - 364);
+  }
+
+  const startDateStr = startDate.toISOString().slice(0, 10);
+  return fetchHistoricalMetricsRange(startDateStr, todayDateStr);
+}
+
+export async function fetch7DayVehicleMetrics(
+  referenceDate: Date = new Date()
+): Promise<DailyRecordItem[]> {
+  return fetchTimeframeVehicleMetrics('week', referenceDate);
 }
 
 export async function fetchTodayHourlyDistanceMap(
