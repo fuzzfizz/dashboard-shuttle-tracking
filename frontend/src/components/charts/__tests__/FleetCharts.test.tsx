@@ -67,4 +67,58 @@ describe('Fleet Sub-Charts', () => {
     );
     expect(screen.getByText('แสดงความหนาแน่นการวิ่งของ BUS-01')).toBeInTheDocument();
   });
+
+  it('renders Trend7DayChart with 30 points for monthly trend without overlapping labels', () => {
+    const points30 = Array.from({ length: 30 }, (_, i) => ({
+      date: `2026-11-${String(i + 1).padStart(2, '0')}`,
+      dayLabel: `${i + 1} พ.ย.`,
+      totalDistanceKm: 20 + (i % 5) * 5,
+      isToday: i === 29,
+    }));
+
+    const { container } = render(<Trend7DayChart points={points30} timeframe="month" />);
+    expect(container.querySelector('svg')).toBeInTheDocument();
+    expect(container.querySelector('path')).toBeInTheDocument();
+    expect(
+      screen.getByText('ปริมาณระยะทางสะสมของกองรถ (กม./วัน ย้อนหลัง 30 วัน)')
+    ).toBeInTheDocument();
+    // Verify decimation: not every single day label is rendered as full text to avoid clutter
+    const renderedTexts = screen.getAllByText(/พ.ย.|วันนี้/);
+    expect(renderedTexts.length).toBeLessThanOrEqual(10);
+    expect(renderedTexts.length).toBeGreaterThanOrEqual(4);
+  });
+
+  it('renders Trend7DayChart with 12 points for yearly trend showing monthly labels', () => {
+    const months = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+    const points12 = months.map((m, i) => ({
+      date: `2026-${String(i + 1).padStart(2, '0')}-01`,
+      dayLabel: m,
+      totalDistanceKm: 200 + i * 20,
+      isToday: i === 10,
+    }));
+
+    render(
+      <Trend7DayChart
+        points={points12}
+        timeframe="year"
+        selectedVehicleId="BUS-01"
+        vehicleLabel="BUS-01 (Express)"
+      />
+    );
+    expect(screen.getByText('ม.ค.')).toBeInTheDocument();
+    expect(screen.getByText('ธ.ค.')).toBeInTheDocument();
+    expect(
+      screen.getByText('ปริมาณระยะทางสะสมของ BUS-01 (Express) (กม./เดือน ย้อนหลัง 12 เดือน)')
+    ).toBeInTheDocument();
+  });
+
+  it('renders Trend7DayChart with week timeframe header', () => {
+    const points = [
+      { date: '2026-11-05', dayLabel: 'วันนี้', totalDistanceKm: 25, isToday: true },
+    ];
+    render(<Trend7DayChart points={points} timeframe="week" selectedVehicleId="BUS-01" />);
+    expect(
+      screen.getByText('ปริมาณระยะทางสะสมของ BUS-01 (กม./วัน ย้อนหลัง 7 วัน)')
+    ).toBeInTheDocument();
+  });
 });
