@@ -163,9 +163,7 @@ export const Trend7DayChart: React.FC<Trend7DayChartProps> = ({
                       ? 'fill-emerald-500 stroke-white dark:stroke-slate-900 stroke-2'
                       : 'fill-white dark:fill-slate-900 stroke-emerald-500 stroke-2'
                   }
-                >
-                  <title>{`${p.dayLabel}: ${p.totalDistanceKm.toFixed(1)} km`}</title>
-                </circle>
+                />
                 {shouldShowValue(idx, p.isToday) && p.totalDistanceKm > 0 && (
                   <text
                     x={x}
