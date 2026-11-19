@@ -3,6 +3,7 @@ import { Route, ArrowUpDown, Maximize2, Search, X, Filter, ChevronDown } from 'l
 import { DailyMetricsMap } from '../types/metrics';
 import { FleetMap } from '../types/telemetry';
 import { OFFLINE_THRESHOLD_MS } from '../services/fleetStatus';
+import { formatLastSeen } from '../services/historicalDateUtils';
 
 export type SortMode = 'distance-desc' | 'id-asc';
 export type StatusFilter = 'all' | 'online' | 'offline';
@@ -136,15 +137,6 @@ export const DailyDistanceTable: React.FC<DailyDistanceTableProps> = ({
     return Array.from(ids);
   }, [dailyMetrics, vehicles]);
 
-  const formatActiveTime = (minutes: number) => {
-    if (!minutes || minutes <= 0) return '0 นาที';
-    const h = Math.floor(minutes / 60);
-    const m = Math.round(minutes % 60);
-    if (h > 0 && m > 0) return `${h} ชม. ${m} นาที`;
-    if (h > 0) return `${h} ชม.`;
-    return `${m} นาที`;
-  };
-
   const rows = useMemo(() => {
     const currentTime = now ?? Date.now();
     return allVehicleIds.map((id) => {
@@ -152,9 +144,10 @@ export const DailyDistanceTable: React.FC<DailyDistanceTableProps> = ({
       const vehicle = vehicles[id];
       const distanceKm = metric?.total_distance_km ?? 0;
       const activeMinutes = metric?.active_minutes ?? 0;
-      const lastSeen = lastSeenMap[id] ?? vehicle?.timestamp ?? 0;
+      const lastSeen = lastSeenMap[id] ?? vehicle?.timestamp ?? (metric?.last_updated_at ? new Date(metric.last_updated_at).getTime() : 0);
       const isOnline = lastSeen > 0 && currentTime - lastSeen < OFFLINE_THRESHOLD_MS;
       const liveSpeed = vehicle?.speed ?? 0;
+      const lastSeenFormatted = formatLastSeen(lastSeen, currentTime);
 
       return {
         vehicleId: id,
@@ -162,6 +155,8 @@ export const DailyDistanceTable: React.FC<DailyDistanceTableProps> = ({
         activeMinutes,
         isOnline,
         liveSpeed,
+        lastSeen,
+        lastSeenFormatted,
       };
     });
   }, [allVehicleIds, dailyMetrics, vehicles, lastSeenMap, now]);
@@ -442,7 +437,7 @@ export const DailyDistanceTable: React.FC<DailyDistanceTableProps> = ({
                       </span>
                     </div>
                   </th>
-                  <th className="py-2.5 px-3 font-semibold">เวลาวิ่งสะสม</th>
+                  <th className="py-2.5 px-3 font-semibold">อัปเดตล่าสุด</th>
                   <th className="py-2.5 px-3 font-semibold text-right">แผนที่</th>
                 </tr>
               </thead>
@@ -499,9 +494,14 @@ export const DailyDistanceTable: React.FC<DailyDistanceTableProps> = ({
                         {formatDistance(row.distanceKm, distanceUnit)}
                       </td>
 
-                      {/* Active Time Column */}
-                      <td className="py-3 px-3 font-mono text-slate-700 dark:text-slate-300">
-                        {formatActiveTime(row.activeMinutes)}
+                      {/* Last Seen Column */}
+                      <td className="py-3 px-3">
+                        <div className={`text-xs ${row.lastSeenFormatted.isToday ? 'font-mono font-semibold text-slate-800 dark:text-slate-200' : 'font-medium text-slate-500 dark:text-slate-400'}`}>
+                          {row.lastSeenFormatted.mainText}
+                        </div>
+                        <div className={`text-[10px] ${row.isOnline && row.lastSeenFormatted.isToday ? 'text-emerald-600 dark:text-emerald-400 font-medium' : 'text-slate-400 dark:text-slate-500'}`}>
+                          {row.lastSeenFormatted.subText}
+                        </div>
                       </td>
 
                       {/* Action Column */}
@@ -575,7 +575,7 @@ export const DailyDistanceTable: React.FC<DailyDistanceTableProps> = ({
                     </span>
                   </div>
 
-                  {/* 2-Metric Grid (Distance & Active Time) with high-contrast typography */}
+                  {/* 2-Metric Grid (Distance & Last Seen) with high-contrast typography */}
                   <div className="grid grid-cols-2 gap-2.5 text-xs">
                     <div className="bg-slate-50 dark:bg-slate-900/60 rounded-xl p-3 border border-slate-200/80 dark:border-slate-800/80">
                       <span className="text-xs font-medium text-slate-500 dark:text-slate-400 block mb-1">
@@ -586,10 +586,15 @@ export const DailyDistanceTable: React.FC<DailyDistanceTableProps> = ({
                       </span>
                     </div>
                     <div className="bg-slate-50 dark:bg-slate-900/60 rounded-xl p-3 border border-slate-200/80 dark:border-slate-800/80">
-                      <span className="text-xs font-medium text-slate-500 dark:text-slate-400 block mb-1">เวลาวิ่งสะสม</span>
-                      <span className="font-mono font-bold text-amber-600 dark:text-amber-400 text-sm sm:text-base">
-                        {formatActiveTime(row.activeMinutes)}
+                      <span className="text-xs font-medium text-slate-500 dark:text-slate-400 block mb-1">
+                        อัปเดตล่าสุด
                       </span>
+                      <div className={`text-xs sm:text-sm font-semibold ${row.lastSeenFormatted.isToday ? 'font-mono text-slate-800 dark:text-slate-200' : 'text-slate-600 dark:text-slate-400'}`}>
+                        {row.lastSeenFormatted.mainText}
+                      </div>
+                      <div className={`text-[11px] mt-0.5 ${row.isOnline && row.lastSeenFormatted.isToday ? 'text-emerald-600 dark:text-emerald-400 font-medium' : 'text-slate-400 dark:text-slate-500'}`}>
+                        {row.lastSeenFormatted.subText}
+                      </div>
                     </div>
                   </div>
 

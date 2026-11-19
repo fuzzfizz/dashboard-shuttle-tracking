@@ -300,10 +300,10 @@ describe('DailyDistanceTable', () => {
     expect(screen.queryByText('Max Speed')).toBeNull();
     expect(screen.queryByText('Tracked Shuttles')).toBeNull();
 
-    // Table rows still display each vehicle's distance and active time
+    // Table rows still display each vehicle's distance and last seen header
     expect(screen.getAllByText('12.50 km').length).toBeGreaterThan(0);
     expect(screen.getAllByText('25.50 km').length).toBeGreaterThan(0);
-    expect(screen.getAllByText(/1 ชม\. 5 นาที|1h 5m/).length).toBeGreaterThan(0);
+    expect(screen.getByRole('columnheader', { name: /อัปเดตล่าสุด/i })).toBeInTheDocument();
   });
 
   it('handles mobile card clicks only via action button with accessible min-h-[44px] targets', () => {
@@ -343,7 +343,7 @@ describe('DailyDistanceTable', () => {
     expect(handleOpenMap).toHaveBeenCalledWith('EV-01');
   });
 
-  it('renders mobile card with today distance and active time without max speed', () => {
+  it('renders mobile card with today distance and last seen without max speed', () => {
     const metrics: DailyMetricsMap = {
       'EV-01': {
         vehicle_id: 'EV-01',
@@ -351,7 +351,7 @@ describe('DailyDistanceTable', () => {
         total_distance_km: 15.5,
         max_speed_kmh: 48.0,
         avg_speed_kmh: 24.0,
-        active_minutes: 75, // 1h 15m
+        active_minutes: 75,
         last_updated_at: new Date().toISOString(),
       },
     };
@@ -368,7 +368,7 @@ describe('DailyDistanceTable', () => {
 
     const mobileCard = screen.getByTestId('mobile-vehicle-card-EV-01');
     expect(mobileCard).toHaveTextContent('15.50 km');
-    expect(mobileCard).toHaveTextContent(/1 ชม\. 15 นาที|1h 15m/);
+    expect(mobileCard).toHaveTextContent(/อัปเดตล่าสุด/);
     expect(mobileCard).not.toHaveTextContent('48.0 km/h');
   });
 
@@ -539,6 +539,58 @@ describe('DailyDistanceTable', () => {
       const kmBtn = screen.getByTestId('unit-km-btn');
       fireEvent.click(kmBtn);
       expect(handleUnitChange).toHaveBeenCalledWith('km');
+    });
+  });
+
+  describe('Last Seen & Cross-Day Display (Task 2)', () => {
+    it('renders "อัปเดตล่าสุด" in table header instead of "เวลาวิ่งสะสม"', () => {
+      render(
+        <DailyDistanceTable
+          dailyMetrics={{}}
+          vehicles={{ 'BUS-01': { vehicle_id: 'BUS-01', lat: 18.7, lng: 98.9, speed: 10, timestamp: Date.now() } }}
+          lastSeenMap={{ 'BUS-01': Date.now() }}
+          selectedVehicleId={null}
+          onOpenVehicleMap={vi.fn()}
+        />
+      );
+
+      expect(screen.getByRole('columnheader', { name: /อัปเดตล่าสุด/i })).toBeInTheDocument();
+      expect(screen.queryByRole('columnheader', { name: /เวลาวิ่งสะสม/i })).toBeNull();
+    });
+
+    it('renders today time and "เมื่อสักครู่" for vehicles updated recently today', () => {
+      const now = new Date('2026-11-19T07:00:00Z').getTime(); // 14:00 Bangkok
+      render(
+        <DailyDistanceTable
+          dailyMetrics={{}}
+          vehicles={{ 'BUS-01': { vehicle_id: 'BUS-01', lat: 18.7, lng: 98.9, speed: 10, timestamp: now - 10000 } }}
+          lastSeenMap={{ 'BUS-01': now - 10000 }}
+          selectedVehicleId={null}
+          onOpenVehicleMap={vi.fn()}
+          now={now}
+        />
+      );
+
+      expect(screen.getAllByText(/13:59 น\.|14:00 น\./i).length).toBeGreaterThan(0);
+      expect(screen.getAllByText(/เมื่อสักครู่/i).length).toBeGreaterThan(0);
+    });
+
+    it('renders "วันนี้ยังไม่มีการเดินทาง" and contextual last seen when vehicle last reported yesterday', () => {
+      const now = new Date('2026-11-19T07:00:00Z').getTime();
+      const yesterday = new Date('2026-11-18T10:30:00Z').getTime(); // 17:30 Bangkok yesterday
+      render(
+        <DailyDistanceTable
+          dailyMetrics={{}}
+          vehicles={{ 'BUS-02': { vehicle_id: 'BUS-02', lat: 18.7, lng: 98.9, speed: 0, timestamp: yesterday } }}
+          lastSeenMap={{ 'BUS-02': yesterday }}
+          selectedVehicleId={null}
+          onOpenVehicleMap={vi.fn()}
+          now={now}
+        />
+      );
+
+      expect(screen.getAllByText(/วันนี้ยังไม่มีการเดินทาง/i).length).toBeGreaterThan(0);
+      expect(screen.getAllByText(/พบล่าสุด: เมื่อวาน 17:30 น\./i).length).toBeGreaterThan(0);
     });
   });
 });

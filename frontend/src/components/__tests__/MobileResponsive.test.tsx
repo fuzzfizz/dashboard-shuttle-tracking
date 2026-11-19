@@ -51,7 +51,7 @@ describe('Mobile Responsive Ergonomics & Clarity', () => {
     const mobileCard = screen.getByTestId('mobile-vehicle-card-BUS-01');
     expect(mobileCard.className).toContain('min-h-[44px]');
     expect(mobileCard).toHaveTextContent('26.40 km');
-    expect(mobileCard).toHaveTextContent(/1 ชม\. 25 นาที|1h 25m/);
+    expect(mobileCard).toHaveTextContent(/อัปเดตล่าสุด/);
     expect(mobileCard).toHaveTextContent(/ออนไลน์|Live/);
 
     // Verify mobile card button has min-h-[44px]
