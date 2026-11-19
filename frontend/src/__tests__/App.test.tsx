@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { App } from '../App';
 import * as shuttleHook from '../hooks/useShuttleTelemetry';
@@ -324,8 +324,9 @@ describe('App Integration', () => {
 
   it('renders "วันนี้" and "ประวัติย้อนหลัง" navigation tabs in the header', () => {
     render(<App />);
-    expect(screen.getByRole('button', { name: 'วันนี้' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'ประวัติย้อนหลัง' })).toBeInTheDocument();
+    const nav = screen.getByRole('navigation', { name: 'Main Navigation' });
+    expect(within(nav).getByRole('button', { name: 'วันนี้' })).toBeInTheDocument();
+    expect(within(nav).getByRole('button', { name: 'ประวัติย้อนหลัง' })).toBeInTheDocument();
   });
 
   it('switches view to historical replay when "ประวัติย้อนหลัง" is clicked, and back to live view when "วันนี้" is clicked', () => {
