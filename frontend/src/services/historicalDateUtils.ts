@@ -61,6 +61,13 @@ const THAI_MONTHS_SHORT = [
   'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.',
 ];
 
+const BANGKOK_TIME_FORMATTER = new Intl.DateTimeFormat('en-GB', {
+  timeZone: 'Asia/Bangkok',
+  hour: '2-digit',
+  minute: '2-digit',
+  hour12: false,
+});
+
 export function formatLastSeen(
   lastSeenMs: number,
   nowMs: number = Date.now()
@@ -80,13 +87,7 @@ export function formatLastSeen(
   const nowDateStr = getBangkokDate(nowDate);
 
   // Time in Bangkok
-  const timeFormatter = new Intl.DateTimeFormat('en-GB', {
-    timeZone: 'Asia/Bangkok',
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-  });
-  const timeStr = `${timeFormatter.format(lastSeenDate)} น.`;
+  const timeStr = `${BANGKOK_TIME_FORMATTER.format(lastSeenDate)} น.`;
 
   if (lastSeenDateStr === nowDateStr) {
     const diffSec = Math.max(0, Math.floor((nowMs - lastSeenMs) / 1000));
