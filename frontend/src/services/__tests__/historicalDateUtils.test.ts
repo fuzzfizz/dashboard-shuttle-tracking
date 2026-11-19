@@ -6,6 +6,7 @@ import {
   formatDateDisplay,
   getBangkokDate,
   getBangkokHour,
+  formatLastSeen,
 } from '../historicalDateUtils';
 
 describe('historicalDateUtils', () => {
@@ -49,6 +50,76 @@ describe('historicalDateUtils', () => {
     expect(getBangkokHour(new Date('2026-10-28T17:00:00.000Z'))).toBe(0);
     // Invalid date fallback
     expect(getBangkokHour('invalid')).toBe(0);
+  });
+
+  describe('formatLastSeen', () => {
+    // Reference now: 2026-11-19T14:00:00+07:00 (UTC: 2026-11-19T07:00:00Z)
+    const mockNow = new Date('2026-11-19T07:00:00Z').getTime();
+
+    it('returns default fallback when timestamp is 0 or invalid', () => {
+      expect(formatLastSeen(0, mockNow)).toEqual({
+        mainText: 'วันนี้ยังไม่มีการเดินทาง',
+        subText: 'ไม่มีประวัติสัญญาณ',
+        isToday: false,
+      });
+      expect(formatLastSeen(NaN, mockNow)).toEqual({
+        mainText: 'วันนี้ยังไม่มีการเดินทาง',
+        subText: 'ไม่มีประวัติสัญญาณ',
+        isToday: false,
+      });
+      expect(formatLastSeen(-5, mockNow)).toEqual({
+        mainText: 'วันนี้ยังไม่มีการเดินทาง',
+        subText: 'ไม่มีประวัติสัญญาณ',
+        isToday: false,
+      });
+      expect(formatLastSeen(null as any, mockNow)).toEqual({
+        mainText: 'วันนี้ยังไม่มีการเดินทาง',
+        subText: 'ไม่มีประวัติสัญญาณ',
+        isToday: false,
+      });
+    });
+
+    it('returns "เมื่อสักครู่" when last seen is within 60 seconds today', () => {
+      const lastSeen = mockNow - 30 * 1000; // 30s ago
+      const res = formatLastSeen(lastSeen, mockNow);
+      expect(res.mainText).toBe('13:59 น.');
+      expect(res.subText).toBe('เมื่อสักครู่');
+      expect(res.isToday).toBe(true);
+    });
+
+    it('returns minutes relative time when last seen was 5 minutes ago today', () => {
+      const lastSeen = mockNow - 5 * 60 * 1000;
+      const res = formatLastSeen(lastSeen, mockNow);
+      expect(res.mainText).toBe('13:55 น.');
+      expect(res.subText).toBe('เมื่อ 5 นาทีที่แล้ว');
+      expect(res.isToday).toBe(true);
+    });
+
+    it('returns hours relative time when last seen was 2 hours ago today', () => {
+      const lastSeen = mockNow - 2 * 3600 * 1000;
+      const res = formatLastSeen(lastSeen, mockNow);
+      expect(res.mainText).toBe('12:00 น.');
+      expect(res.subText).toBe('เมื่อ 2 ชม. ที่แล้ว');
+      expect(res.isToday).toBe(true);
+    });
+
+    it('returns "วันนี้ยังไม่มีการเดินทาง" and yesterday time when last seen was yesterday', () => {
+      // Yesterday 17:30 Bangkok time (2026-11-18T10:30:00Z)
+      const lastSeen = new Date('2026-11-18T10:30:00Z').getTime();
+      const res = formatLastSeen(lastSeen, mockNow);
+      expect(res.mainText).toBe('วันนี้ยังไม่มีการเดินทาง');
+      expect(res.subText).toBe('พบล่าสุด: เมื่อวาน 17:30 น.');
+      expect(res.isToday).toBe(false);
+    });
+
+    it('returns "วันนี้ยังไม่มีการเดินทาง" and date string when last seen was 2 days ago', () => {
+      // 2026-11-17T07:20:00Z = 14:20 Bangkok time
+      const lastSeen = new Date('2026-11-17T07:20:00Z').getTime();
+      const res = formatLastSeen(lastSeen, mockNow);
+      expect(res.mainText).toBe('วันนี้ยังไม่มีการเดินทาง');
+      expect(res.subText).toBe('พบล่าสุด: 17 พ.ย. 14:20 น.');
+      expect(res.isToday).toBe(false);
+    });
   });
 });
 

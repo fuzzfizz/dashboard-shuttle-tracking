@@ -50,3 +50,81 @@ export function getBangkokHour(isoStr: string | Date): number {
   return (d.getUTCHours() + 7) % 24;
 }
 
+export interface LastSeenFormatted {
+  mainText: string;
+  subText: string;
+  isToday: boolean;
+}
+
+const THAI_MONTHS_SHORT = [
+  'ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.',
+  'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.',
+];
+
+export function formatLastSeen(
+  lastSeenMs: number,
+  nowMs: number = Date.now()
+): LastSeenFormatted {
+  if (!lastSeenMs || lastSeenMs <= 0 || isNaN(lastSeenMs)) {
+    return {
+      mainText: 'วันนี้ยังไม่มีการเดินทาง',
+      subText: 'ไม่มีประวัติสัญญาณ',
+      isToday: false,
+    };
+  }
+
+  const lastSeenDate = new Date(lastSeenMs);
+  const nowDate = new Date(nowMs);
+
+  const lastSeenDateStr = getBangkokDate(lastSeenDate);
+  const nowDateStr = getBangkokDate(nowDate);
+
+  // Time in Bangkok
+  const timeFormatter = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Asia/Bangkok',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  });
+  const timeStr = `${timeFormatter.format(lastSeenDate)} น.`;
+
+  if (lastSeenDateStr === nowDateStr) {
+    const diffSec = Math.max(0, Math.floor((nowMs - lastSeenMs) / 1000));
+    let subText: string;
+    if (diffSec < 60) {
+      subText = 'เมื่อสักครู่';
+    } else if (diffSec < 3600) {
+      subText = `เมื่อ ${Math.floor(diffSec / 60)} นาทีที่แล้ว`;
+    } else {
+      subText = `เมื่อ ${Math.floor(diffSec / 3600)} ชม. ที่แล้ว`;
+    }
+
+    return {
+      mainText: timeStr,
+      subText,
+      isToday: true,
+    };
+  }
+
+  // Cross-day calculation
+  const [nowY, nowM, nowD] = nowDateStr.split('-').map(Number);
+  const [lsY, lsM, lsD] = lastSeenDateStr.split('-').map(Number);
+
+  const nowMidnightUtc = Date.UTC(nowY, nowM - 1, nowD);
+  const lsMidnightUtc = Date.UTC(lsY, lsM - 1, lsD);
+  const diffDays = Math.round((nowMidnightUtc - lsMidnightUtc) / (24 * 3600 * 1000));
+
+  let subText: string;
+  if (diffDays === 1) {
+    subText = `พบล่าสุด: เมื่อวาน ${timeStr}`;
+  } else {
+    subText = `พบล่าสุด: ${lsD} ${THAI_MONTHS_SHORT[lsM - 1]} ${timeStr}`;
+  }
+
+  return {
+    mainText: 'วันนี้ยังไม่มีการเดินทาง',
+    subText,
+    isToday: false,
+  };
+}
+
