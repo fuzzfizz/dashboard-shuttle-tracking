@@ -1,10 +1,14 @@
-import { render, screen, fireEvent } from '@testing-library/react';
-import { describe, it, expect } from 'vitest';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import { FleetDistanceAnalyticsCard } from '../FleetDistanceAnalyticsCard';
 import { DailyMetricsMap } from '../../types/metrics';
 import { FleetMap } from '../../types/telemetry';
+import * as historicalService from '../../services/historicalTelemetryService';
 
 describe('FleetDistanceAnalyticsCard', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
   const mockDailyMetrics: DailyMetricsMap = {
     'BUS-01': {
       vehicle_id: 'BUS-01',
@@ -63,12 +67,14 @@ describe('FleetDistanceAnalyticsCard', () => {
     // Default tab: By Vehicle
     expect(screen.getAllByText('BUS-01').length).toBeGreaterThanOrEqual(1);
 
-    // Click 7-Day Trend tab
+    // Switch to Week timeframe and click 7-Day Trend tab
+    fireEvent.click(screen.getByRole('button', { name: 'สัปดาห์' }));
     const trendTabBtn = screen.getByRole('button', { name: /7 วัน/i });
     fireEvent.click(trendTabBtn);
     expect(screen.getByText(/ปริมาณระยะทางสะสมของกองรถ/i)).toBeInTheDocument();
 
-    // Click Hourly Activity tab
+    // Switch back to Today timeframe and click Hourly Activity tab
+    fireEvent.click(screen.getByRole('button', { name: 'วันนี้' }));
     const hourlyTabBtn = screen.getByRole('button', { name: /รายชั่วโมง/i });
     fireEvent.click(hourlyTabBtn);
     expect(screen.getByText(/ช่วงเร่งด่วนเช้า/i)).toBeInTheDocument();
@@ -85,10 +91,10 @@ describe('FleetDistanceAnalyticsCard', () => {
 
     const toggleBtn = screen.getByRole('button', { name: /ย่อการ์ด|ขยายการ์ด/i });
     fireEvent.click(toggleBtn);
-    expect(screen.queryByRole('button', { name: /7 วัน/i })).toBeNull();
+    expect(screen.queryByRole('button', { name: /เปรียบเทียบรายคัน/i })).toBeNull();
 
     fireEvent.click(toggleBtn);
-    expect(screen.getByRole('button', { name: /7 วัน/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /เปรียบเทียบรายคัน/i })).toBeInTheDocument();
   });
 
   it('renders Vehicle Selector with all options and allows vehicle selection', () => {
@@ -139,12 +145,14 @@ describe('FleetDistanceAnalyticsCard', () => {
     const selector = screen.getByRole('combobox', { name: /เลือกคันรถสำหรับดูกราฟ/i });
     fireEvent.change(selector, { target: { value: 'BUS-01' } });
 
-    // Switch to 7-Day Trend tab
+    // Switch to Week timeframe and click 7-Day Trend tab
+    fireEvent.click(screen.getByRole('button', { name: 'สัปดาห์' }));
     const trendTabBtn = screen.getByRole('button', { name: /7 วัน/i });
     fireEvent.click(trendTabBtn);
     expect(screen.getByText(/ปริมาณระยะทางสะสมของ BUS-01/i)).toBeInTheDocument();
 
-    // Switch to Hourly Activity tab
+    // Switch to Today timeframe and click Hourly Activity tab
+    fireEvent.click(screen.getByRole('button', { name: 'วันนี้' }));
     const hourlyTabBtn = screen.getByRole('button', { name: /รายชั่วโมง/i });
     fireEvent.click(hourlyTabBtn);
     expect(screen.getByText(/แสดงความหนาแน่นการวิ่งของ BUS-01/i)).toBeInTheDocument();
@@ -166,5 +174,195 @@ describe('FleetDistanceAnalyticsCard', () => {
     const selectedRow = container.querySelector('[data-selected="true"]');
     expect(selectedRow).not.toBeNull();
     expect(selectedRow).toHaveTextContent('BUS-01');
+  });
+
+  describe('Timeframe Selector & Dynamic Tabs (Task 4)', () => {
+    it('renders 4 timeframe buttons (วันนี้, สัปดาห์, เดือน, ปี) with วันนี้ pressed by default', () => {
+      render(
+        <FleetDistanceAnalyticsCard
+          dailyMetrics={mockDailyMetrics}
+          vehicles={mockVehicles}
+          lastSeenMap={{}}
+        />
+      );
+
+      const todayBtn = screen.getByRole('button', { name: 'วันนี้' });
+      const weekBtn = screen.getByRole('button', { name: 'สัปดาห์' });
+      const monthBtn = screen.getByRole('button', { name: 'เดือน' });
+      const yearBtn = screen.getByRole('button', { name: 'ปี' });
+
+      expect(todayBtn).toBeInTheDocument();
+      expect(weekBtn).toBeInTheDocument();
+      expect(monthBtn).toBeInTheDocument();
+      expect(yearBtn).toBeInTheDocument();
+
+      expect(todayBtn).toHaveAttribute('aria-pressed', 'true');
+      expect(weekBtn).toHaveAttribute('aria-pressed', 'false');
+      expect(monthBtn).toHaveAttribute('aria-pressed', 'false');
+      expect(yearBtn).toHaveAttribute('aria-pressed', 'false');
+    });
+
+    it('switches active timeframe and toggles aria-pressed when timeframe buttons are clicked', () => {
+      render(
+        <FleetDistanceAnalyticsCard
+          dailyMetrics={mockDailyMetrics}
+          vehicles={mockVehicles}
+          lastSeenMap={{}}
+        />
+      );
+
+      const todayBtn = screen.getByRole('button', { name: 'วันนี้' });
+      const weekBtn = screen.getByRole('button', { name: 'สัปดาห์' });
+      const monthBtn = screen.getByRole('button', { name: 'เดือน' });
+      const yearBtn = screen.getByRole('button', { name: 'ปี' });
+
+      fireEvent.click(weekBtn);
+      expect(todayBtn).toHaveAttribute('aria-pressed', 'false');
+      expect(weekBtn).toHaveAttribute('aria-pressed', 'true');
+
+      fireEvent.click(monthBtn);
+      expect(weekBtn).toHaveAttribute('aria-pressed', 'false');
+      expect(monthBtn).toHaveAttribute('aria-pressed', 'true');
+
+      fireEvent.click(yearBtn);
+      expect(monthBtn).toHaveAttribute('aria-pressed', 'false');
+      expect(yearBtn).toHaveAttribute('aria-pressed', 'true');
+    });
+
+    it('dynamically updates Tab 2 label according to active timeframe', () => {
+      render(
+        <FleetDistanceAnalyticsCard
+          dailyMetrics={mockDailyMetrics}
+          vehicles={mockVehicles}
+          lastSeenMap={{}}
+        />
+      );
+
+      // 1. Today: Tab 2 is กิจกรรมรายชั่วโมง
+      expect(screen.getByRole('button', { name: /กิจกรรมรายชั่วโมง/i })).toBeInTheDocument();
+
+      // 2. Week: Tab 2 is แนวโน้ม 7 วัน
+      fireEvent.click(screen.getByRole('button', { name: 'สัปดาห์' }));
+      expect(screen.getByRole('button', { name: /แนวโน้ม 7 วัน/i })).toBeInTheDocument();
+
+      // 3. Month: Tab 2 is แนวโน้ม 30 วัน
+      fireEvent.click(screen.getByRole('button', { name: 'เดือน' }));
+      expect(screen.getByRole('button', { name: /แนวโน้ม 30 วัน/i })).toBeInTheDocument();
+
+      // 4. Year: Tab 2 is แนวโน้ม 12 เดือน
+      fireEvent.click(screen.getByRole('button', { name: 'ปี' }));
+      expect(screen.getByRole('button', { name: /แนวโน้ม 12 เดือน/i })).toBeInTheDocument();
+    });
+
+    it('preserves active tab state when switching between timeframes', () => {
+      render(
+        <FleetDistanceAnalyticsCard
+          dailyMetrics={mockDailyMetrics}
+          vehicles={mockVehicles}
+          lastSeenMap={{}}
+        />
+      );
+
+      // Click Tab 2 (Hourly Activity under 'today')
+      const hourlyTabBtn = screen.getByRole('button', { name: /กิจกรรมรายชั่วโมง/i });
+      fireEvent.click(hourlyTabBtn);
+      expect(screen.getByText(/ช่วงเร่งด่วนเช้า/i)).toBeInTheDocument();
+
+      // Switch to 'week' timeframe - Tab 2 remains active and displays Trend7DayChart
+      fireEvent.click(screen.getByRole('button', { name: 'สัปดาห์' }));
+      expect(screen.getByText(/ปริมาณระยะทางสะสมของกองรถ/i)).toBeInTheDocument();
+
+      // Switch back to 'vehicles' tab (Tab 1)
+      fireEvent.click(screen.getByRole('button', { name: /เปรียบเทียบรายคัน/i }));
+      expect(screen.getByText(/ระยะทางรถแต่ละคัน/i)).toBeInTheDocument();
+
+      // Switch to 'month' timeframe - Tab 1 remains active on vehicle comparison
+      fireEvent.click(screen.getByRole('button', { name: 'เดือน' }));
+      expect(screen.getByText(/ระยะทางรถแต่ละคัน/i)).toBeInTheDocument();
+    });
+
+    it('fetches 30-day records on demand when switching to month and caches the result', async () => {
+      const mock30DayRecords = [
+        { vehicle_id: 'BUS-01', date: '2026-10-25', total_distance_km: 60.0 },
+        { vehicle_id: 'BUS-02', date: '2026-10-26', total_distance_km: 40.0 },
+      ];
+      const fetchSpy = vi
+        .spyOn(historicalService, 'fetchTimeframeVehicleMetrics')
+        .mockResolvedValue(mock30DayRecords);
+
+      render(
+        <FleetDistanceAnalyticsCard
+          dailyMetrics={mockDailyMetrics}
+          vehicles={mockVehicles}
+          lastSeenMap={{}}
+        />
+      );
+
+      // Switch to 'month'
+      fireEvent.click(screen.getByRole('button', { name: 'เดือน' }));
+
+      await waitFor(() => {
+        expect(fetchSpy).toHaveBeenCalledWith('month', expect.anything());
+      });
+
+      expect(fetchSpy).toHaveBeenCalledTimes(1);
+
+      // Switch to 'week' and back to 'month' - should use cache and not fetch again
+      fireEvent.click(screen.getByRole('button', { name: 'สัปดาห์' }));
+      fireEvent.click(screen.getByRole('button', { name: 'เดือน' }));
+
+      expect(fetchSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('fetches 12-month records on demand when switching to year and updates vehicle comparison benchmark', async () => {
+      // BUS-01: today (45) + past 100 = 145 km
+      // BUS-02: today (35) + past 50 = 85 km
+      // Average fleet = (145 + 85) / 2 = 115.0 km
+      const mock12MonthRecords = [
+        { vehicle_id: 'BUS-01', date: '2026-06-15', total_distance_km: 100.0 },
+        { vehicle_id: 'BUS-02', date: '2026-06-15', total_distance_km: 50.0 },
+      ];
+      const fetchSpy = vi
+        .spyOn(historicalService, 'fetchTimeframeVehicleMetrics')
+        .mockResolvedValue(mock12MonthRecords);
+
+      render(
+        <FleetDistanceAnalyticsCard
+          dailyMetrics={mockDailyMetrics}
+          vehicles={mockVehicles}
+          lastSeenMap={{}}
+        />
+      );
+
+      fireEvent.click(screen.getByRole('button', { name: 'ปี' }));
+
+      await waitFor(() => {
+        expect(fetchSpy).toHaveBeenCalledWith('year', expect.anything());
+      });
+
+      // Benchmark text should reflect updated fleet average: (145 + 85) / 2 = 115.0 km
+      await waitFor(() => {
+        expect(screen.getByText(/ค่าเฉลี่ยฟลีต \(115\.0 km\)/i)).toBeInTheDocument();
+      });
+    });
+
+    it('uses past7DayRecords for week cache without making an external fetch', () => {
+      const mockPast7DayRecords = [
+        { vehicle_id: 'BUS-01', date: '2026-11-04', total_distance_km: 20.0 },
+      ];
+      const fetchSpy = vi.spyOn(historicalService, 'fetchTimeframeVehicleMetrics');
+
+      render(
+        <FleetDistanceAnalyticsCard
+          dailyMetrics={mockDailyMetrics}
+          vehicles={mockVehicles}
+          lastSeenMap={{}}
+          past7DayRecords={mockPast7DayRecords}
+        />
+      );
+
+      fireEvent.click(screen.getByRole('button', { name: 'สัปดาห์' }));
+      expect(fetchSpy).not.toHaveBeenCalled();
+    });
   });
 });
