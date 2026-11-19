@@ -80,8 +80,9 @@ export function formatLastSeen(
     };
   }
 
+  const safeNowMs = !nowMs || isNaN(nowMs) ? Date.now() : nowMs;
   const lastSeenDate = new Date(lastSeenMs);
-  const nowDate = new Date(nowMs);
+  const nowDate = new Date(safeNowMs);
 
   const lastSeenDateStr = getBangkokDate(lastSeenDate);
   const nowDateStr = getBangkokDate(nowDate);
@@ -90,7 +91,7 @@ export function formatLastSeen(
   const timeStr = `${BANGKOK_TIME_FORMATTER.format(lastSeenDate)} น.`;
 
   if (lastSeenDateStr === nowDateStr) {
-    const diffSec = Math.max(0, Math.floor((nowMs - lastSeenMs) / 1000));
+    const diffSec = Math.max(0, Math.floor((safeNowMs - lastSeenMs) / 1000));
     let subText: string;
     if (diffSec < 60) {
       subText = 'เมื่อสักครู่';
@@ -119,7 +120,8 @@ export function formatLastSeen(
   if (diffDays === 1) {
     subText = `พบล่าสุด: เมื่อวาน ${timeStr}`;
   } else {
-    subText = `พบล่าสุด: ${lsD} ${THAI_MONTHS_SHORT[lsM - 1]} ${timeStr}`;
+    const yearSuffix = nowY !== lsY ? ` ${lsY}` : '';
+    subText = `พบล่าสุด: ${lsD} ${THAI_MONTHS_SHORT[lsM - 1]}${yearSuffix} ${timeStr}`;
   }
 
   return {

@@ -143,8 +143,8 @@ export const DailyDistanceTable: React.FC<DailyDistanceTableProps> = ({
       const metric = dailyMetrics[id];
       const vehicle = vehicles[id];
       const distanceKm = metric?.total_distance_km ?? 0;
-      const activeMinutes = metric?.active_minutes ?? 0;
-      const lastSeen = lastSeenMap[id] ?? vehicle?.timestamp ?? (metric?.last_updated_at ? new Date(metric.last_updated_at).getTime() : 0);
+      const parsedLastUpdated = metric?.last_updated_at ? Date.parse(metric.last_updated_at) : 0;
+      const lastSeen = lastSeenMap[id] ?? vehicle?.timestamp ?? (Number.isFinite(parsedLastUpdated) ? parsedLastUpdated : 0);
       const isOnline = lastSeen > 0 && currentTime - lastSeen < OFFLINE_THRESHOLD_MS;
       const liveSpeed = vehicle?.speed ?? 0;
       const lastSeenFormatted = formatLastSeen(lastSeen, currentTime);
@@ -152,7 +152,6 @@ export const DailyDistanceTable: React.FC<DailyDistanceTableProps> = ({
       return {
         vehicleId: id,
         distanceKm,
-        activeMinutes,
         isOnline,
         liveSpeed,
         lastSeen,
