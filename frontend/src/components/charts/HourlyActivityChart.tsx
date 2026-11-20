@@ -21,6 +21,54 @@ export const HourlyActivityChart: React.FC<HourlyActivityChartProps> = ({
   }
 
   const maxDist = Math.max(...hours.map((h) => h.distanceKm), 1);
+  const chartWidth = 500;
+  const chartHeight = 180;
+  const paddingX = 40;
+  const paddingTop = 25;
+  const paddingBottom = 30;
+
+  const innerWidth = chartWidth - paddingX * 2;
+  const innerHeight = chartHeight - paddingTop - paddingBottom;
+
+  const coords = hours.map((h, idx) => {
+    const x = paddingX + (idx / Math.max(hours.length - 1, 1)) * innerWidth;
+    const y = paddingTop + innerHeight - (h.distanceKm / maxDist) * innerHeight;
+    return { x, y, h };
+  });
+
+  const linePath = coords.reduce(
+    (acc, curr, idx) => (idx === 0 ? `M ${curr.x} ${curr.y}` : `${acc} L ${curr.x} ${curr.y}`),
+    ''
+  );
+
+  const areaPath = `
+    ${linePath}
+    L ${coords[coords.length - 1].x} ${paddingTop + innerHeight}
+    L ${coords[0].x} ${paddingTop + innerHeight}
+    Z
+  `;
+
+  // Morning Peak (07:00 - 09:00, index 1 to 3 in 06:00-20:00 range)
+  const mStartIdx = hours.findIndex((h) => h.hour === 7);
+  const mEndIdx = hours.findIndex((h) => h.hour === 9);
+  const morningPeakZone =
+    mStartIdx !== -1 && mEndIdx !== -1
+      ? {
+          x: coords[mStartIdx].x - 6,
+          width: coords[mEndIdx].x - coords[mStartIdx].x + 12,
+        }
+      : null;
+
+  // Evening Peak (16:00 - 18:00, index 10 to 12 in 06:00-20:00 range)
+  const eStartIdx = hours.findIndex((h) => h.hour === 16);
+  const eEndIdx = hours.findIndex((h) => h.hour === 18);
+  const eveningPeakZone =
+    eStartIdx !== -1 && eEndIdx !== -1
+      ? {
+          x: coords[eStartIdx].x - 6,
+          width: coords[eEndIdx].x - coords[eStartIdx].x + 12,
+        }
+      : null;
 
   const isVehicleSpecific = Boolean(selectedVehicleId && selectedVehicleId !== 'all');
   const subtitleLabel = isVehicleSpecific
@@ -28,57 +76,134 @@ export const HourlyActivityChart: React.FC<HourlyActivityChartProps> = ({
     : 'แสดงความหนาแน่นการวิ่งตลอดวัน';
 
   return (
-    <div className="space-y-3 py-1">
-      {/* Peak Info Header */}
-      <div className="flex flex-wrap items-center justify-between text-xs text-slate-500 dark:text-slate-400 px-1 gap-2 font-sans">
+    <div className="w-full overflow-hidden py-1">
+      {/* Header Info */}
+      <div className="flex flex-wrap items-center justify-between text-xs text-slate-500 dark:text-slate-400 px-1 mb-2 gap-2 font-sans">
         <span className="flex items-center gap-1.5">
-          <span className="w-2.5 h-2.5 rounded-full bg-amber-500" />
+          <span className="w-2.5 h-2.5 rounded-full bg-amber-500 shrink-0" />
           <span>ช่วงเร่งด่วนเช้า (07:00–09:00) และเย็น (16:00–18:00)</span>
         </span>
-        <span className="text-[11px] font-medium text-slate-400">
-          {subtitleLabel}
-        </span>
+        <div className="flex items-center gap-3">
+          <span className="text-[11px] font-medium text-slate-400">
+            {subtitleLabel}
+          </span>
+          <span className="font-mono text-emerald-600 dark:text-emerald-400 font-semibold">
+            สูงสุด: {maxDist.toFixed(1)} km
+          </span>
+        </div>
       </div>
 
-      {/* Hourly Vertical Bars */}
-      <div className="grid grid-cols-8 xs:grid-cols-15 gap-1.5 items-end h-36 pt-4 pb-2 border-b border-slate-200 dark:border-slate-800">
-        {hours.map((h) => {
-          const heightPct = Math.max(12, Math.round((h.distanceKm / maxDist) * 100));
+      <div className="w-full relative">
+        <svg
+          viewBox={`0 0 ${chartWidth} ${chartHeight}`}
+          className="w-full h-auto overflow-visible select-none"
+        >
+          <defs>
+            <linearGradient id="hourlyAreaGradient" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#10b981" stopOpacity="0.38" />
+              <stop offset="100%" stopColor="#10b981" stopOpacity="0.0" />
+            </linearGradient>
+          </defs>
 
-          return (
-            <div
-              key={h.hour}
-              className="flex flex-col items-center justify-end h-full group relative"
-              title={`${h.hourLabel}: ~${h.distanceKm.toFixed(1)} km`}
-            >
-              {/* Tooltip on Hover */}
-              <div className="opacity-0 group-hover:opacity-100 transition-opacity absolute -top-7 z-20 pointer-events-none bg-slate-900 text-white text-[9px] font-mono px-1.5 py-0.5 rounded shadow whitespace-nowrap">
-                {h.distanceKm.toFixed(1)} km
-              </div>
+          {/* Peak Hours Backdrop Zones */}
+          {morningPeakZone && (
+            <rect
+              x={morningPeakZone.x}
+              y={paddingTop - 4}
+              width={morningPeakZone.width}
+              height={innerHeight + 8}
+              rx="6"
+              className="fill-amber-500/10 dark:fill-amber-400/10 pointer-events-none"
+            />
+          )}
+          {eveningPeakZone && (
+            <rect
+              x={eveningPeakZone.x}
+              y={paddingTop - 4}
+              width={eveningPeakZone.width}
+              height={innerHeight + 8}
+              rx="6"
+              className="fill-amber-500/10 dark:fill-amber-400/10 pointer-events-none"
+            />
+          )}
 
-              {/* Bar Column */}
-              <div
-                style={{ height: `${heightPct}%` }}
-                className={`w-full max-w-[20px] rounded-t-md transition-all duration-300 ${
-                  h.isPeak
-                    ? 'bg-gradient-to-t from-amber-500 to-amber-400 shadow-sm'
-                    : 'bg-emerald-500/80 hover:bg-emerald-500 dark:bg-emerald-600/70'
-                }`}
-              />
+          {/* Gridlines */}
+          {[0, 0.5, 1].map((pct, idx) => {
+            const y = paddingTop + innerHeight * (1 - pct);
+            return (
+              <g key={idx}>
+                <line
+                  x1={paddingX}
+                  y1={y}
+                  x2={chartWidth - paddingX}
+                  y2={y}
+                  stroke="currentColor"
+                  strokeDasharray="4 4"
+                  className="text-slate-200 dark:text-slate-800"
+                  strokeWidth="1"
+                />
+                <text
+                  x={paddingX - 8}
+                  y={y + 3}
+                  textAnchor="end"
+                  className="text-[9px] font-mono fill-slate-400 dark:fill-slate-500"
+                >
+                  {(maxDist * pct).toFixed(1)}k
+                </text>
+              </g>
+            );
+          })}
 
-              {/* Hour X Label */}
-              <span
-                className={`text-[9px] font-mono mt-1 ${
-                  h.isPeak
-                    ? 'font-bold text-amber-600 dark:text-amber-400'
-                    : 'text-slate-400 dark:text-slate-500'
-                }`}
-              >
-                {h.hourLabel}
-              </span>
-            </div>
-          );
-        })}
+          {/* Area fill */}
+          <path d={areaPath} fill="url(#hourlyAreaGradient)" />
+
+          {/* Line stroke */}
+          <path
+            d={linePath}
+            fill="none"
+            stroke="#10b981"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+
+          {/* Data Points and Labels */}
+          {coords.map(({ x, y, h }, idx) => {
+            const circleRadius = h.isPeak ? 4 : 3;
+            // Show hour labels for every other hour or key points to avoid overlap
+            const shouldShowLabel = hours.length <= 8 || idx % 2 === 0 || idx === coords.length - 1;
+
+            return (
+              <g key={h.hour}>
+                <circle
+                  cx={x}
+                  cy={y}
+                  r={circleRadius}
+                  aria-label={`${h.hourLabel}: ${h.distanceKm.toFixed(1)} km`}
+                  className={
+                    h.isPeak
+                      ? 'fill-amber-500 stroke-white dark:stroke-slate-900 stroke-2'
+                      : 'fill-white dark:fill-slate-900 stroke-emerald-500 stroke-2'
+                  }
+                />
+                {shouldShowLabel && (
+                  <text
+                    x={x}
+                    y={chartHeight - 8}
+                    textAnchor="middle"
+                    className={`text-[9px] font-mono ${
+                      h.isPeak
+                        ? 'font-bold fill-amber-600 dark:fill-amber-400'
+                        : 'fill-slate-400 dark:fill-slate-500'
+                    }`}
+                  >
+                    {h.hourLabel}
+                  </text>
+                )}
+              </g>
+            );
+          })}
+        </svg>
       </div>
     </div>
   );
