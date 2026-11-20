@@ -76,6 +76,43 @@ export const Trend7DayChart: React.FC<Trend7DayChartProps> = ({
 
   const isMultiPoint = points.length > 14;
 
+  const [hoveredIdx, setHoveredIdx] = React.useState<number | null>(null);
+  const svgRef = React.useRef<SVGSVGElement | null>(null);
+
+  const handlePointerMove = (
+    e: React.PointerEvent<SVGSVGElement> | React.TouchEvent<SVGSVGElement>
+  ) => {
+    if (!svgRef.current || coords.length === 0) return;
+    const rect = svgRef.current.getBoundingClientRect();
+    const clientX =
+      typeof (e as any).clientX === 'number'
+        ? (e as any).clientX
+        : (e as any).touches?.[0]?.clientX ?? 0;
+    const width = rect.width > 0 ? rect.width : chartWidth;
+    const left = rect.width > 0 ? rect.left : 0;
+    const svgX = ((clientX - left) / width) * chartWidth;
+
+    let closest = 0;
+    let minDist = Infinity;
+    coords.forEach((c, idx) => {
+      const d = Math.abs(c.x - svgX);
+      if (d < minDist) {
+        minDist = d;
+        closest = idx;
+      }
+    });
+    setHoveredIdx(closest);
+  };
+
+  const handlePointerLeave = () => {
+    setHoveredIdx(null);
+  };
+
+  const activeCoord =
+    hoveredIdx !== null && hoveredIdx >= 0 && hoveredIdx < coords.length
+      ? coords[hoveredIdx]
+      : null;
+
   const shouldShowLabel = (idx: number): boolean => {
     if (!isMultiPoint) return true;
     if (idx === points.length - 1) return true;
@@ -96,10 +133,16 @@ export const Trend7DayChart: React.FC<Trend7DayChartProps> = ({
         </span>
       </div>
 
-      <div className="w-full">
+      <div className="w-full relative">
         <svg
+          ref={svgRef}
           viewBox={`0 0 ${chartWidth} ${chartHeight}`}
-          className="w-full h-auto overflow-visible select-none"
+          className="w-full h-auto overflow-visible select-none cursor-crosshair touch-none"
+          onPointerMove={handlePointerMove}
+          onPointerLeave={handlePointerLeave}
+          onTouchMove={handlePointerMove}
+          onTouchEnd={handlePointerLeave}
+          onTouchCancel={handlePointerLeave}
         >
           <defs>
             <linearGradient id="areaGradient" x1="0" y1="0" x2="0" y2="1">
@@ -191,7 +234,70 @@ export const Trend7DayChart: React.FC<Trend7DayChartProps> = ({
               </g>
             );
           })}
+
+          {/* Guideline when hovering */}
+          {activeCoord && (
+            <line
+              data-testid="trend-guideline"
+              x1={activeCoord.x}
+              y1={paddingTop - 4}
+              x2={activeCoord.x}
+              y2={paddingTop + innerHeight}
+              stroke="currentColor"
+              strokeDasharray="3 3"
+              className="text-slate-400 dark:text-slate-500 pointer-events-none"
+              strokeWidth="1.5"
+              aria-hidden="true"
+            />
+          )}
+
+          {/* Active Point Halo */}
+          {activeCoord && (
+            <g className="pointer-events-none" aria-hidden="true">
+              <circle
+                cx={activeCoord.x}
+                cy={activeCoord.y}
+                r={9}
+                className="fill-emerald-500/20 stroke-emerald-500/40"
+                strokeWidth="1.5"
+              />
+              <circle
+                cx={activeCoord.x}
+                cy={activeCoord.y}
+                r={6}
+                className="fill-emerald-500 stroke-white dark:stroke-slate-900 stroke-2"
+              />
+            </g>
+          )}
         </svg>
+
+        {/* Floating Tooltip Card */}
+        {activeCoord && (
+          <div
+            data-testid="trend-tooltip"
+            role="tooltip"
+            style={{
+              left: `${(activeCoord.x / chartWidth) * 100}%`,
+              top: `${Math.max(10, (activeCoord.y / chartHeight) * 100 - 18)}%`,
+              transform: 'translate(-50%, -100%)',
+            }}
+            className="absolute pointer-events-none z-30 flex flex-col items-center bg-slate-900/95 dark:bg-slate-950/95 text-white border border-slate-700/60 rounded-xl px-3 py-1.5 shadow-xl transition-transform duration-75 backdrop-blur-xs min-w-[95px]"
+          >
+            <div className="flex items-center gap-1.5 text-[10px] text-slate-300 font-sans">
+              <span>📅</span>
+              <span>{activeCoord.p.dayLabel}</span>
+            </div>
+            <div className="text-sm font-bold font-mono text-emerald-400 mt-0.5">
+              {activeCoord.p.totalDistanceKm.toFixed(1)}{' '}
+              <span className="text-[10px] font-normal text-slate-300">km</span>
+            </div>
+            {activeCoord.p.isToday && (
+              <span className="mt-1 px-1.5 py-0.5 rounded text-[9px] font-semibold bg-emerald-500/25 text-emerald-300 border border-emerald-400/30 whitespace-nowrap">
+                วันนี้
+              </span>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

@@ -136,6 +136,7 @@ export const HourlyActivityChart: React.FC<HourlyActivityChartProps> = ({
           onPointerLeave={handlePointerLeave}
           onTouchMove={handlePointerMove}
           onTouchEnd={handlePointerLeave}
+          onTouchCancel={handlePointerLeave}
         >
           <defs>
             <linearGradient id="hourlyAreaGradient" x1="0" y1="0" x2="0" y2="1">
@@ -255,12 +256,13 @@ export const HourlyActivityChart: React.FC<HourlyActivityChartProps> = ({
               strokeDasharray="3 3"
               className="text-slate-400 dark:text-slate-500 pointer-events-none"
               strokeWidth="1.5"
+              aria-hidden="true"
             />
           )}
 
           {/* Active Point Halo */}
           {activeCoord && (
-            <g className="pointer-events-none">
+            <g className="pointer-events-none" aria-hidden="true">
               <circle
                 cx={activeCoord.x}
                 cy={activeCoord.y}
@@ -290,6 +292,7 @@ export const HourlyActivityChart: React.FC<HourlyActivityChartProps> = ({
         {activeCoord && (
           <div
             data-testid="hourly-tooltip"
+            role="tooltip"
             style={{
               left: `${(activeCoord.x / chartWidth) * 100}%`,
               top: `${Math.max(10, (activeCoord.y / chartHeight) * 100 - 18)}%`,

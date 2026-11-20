@@ -30,6 +30,30 @@ describe('Fleet Sub-Charts', () => {
     expect(container.querySelector('path')).toBeInTheDocument();
   });
 
+  it('displays interactive guideline and tooltip badge when hovered on Trend7DayChart', () => {
+    const points = [
+      { date: '2026-11-04', dayLabel: 'พฤ. 4', totalDistanceKm: 45.2, isToday: false },
+      { date: '2026-11-05', dayLabel: 'วันนี้', totalDistanceKm: 78.6, isToday: true },
+    ];
+    const { container } = render(<Trend7DayChart points={points} />);
+    const svg = container.querySelector('svg');
+    expect(svg).toBeInTheDocument();
+
+    fireEvent.pointerMove(svg!, { clientX: 250, clientY: 50 });
+
+    const guideline = container.querySelector('[data-testid="trend-guideline"]');
+    expect(guideline).toBeInTheDocument();
+    expect(guideline).toHaveAttribute('aria-hidden', 'true');
+
+    const tooltip = container.querySelector('[data-testid="trend-tooltip"]');
+    expect(tooltip).toBeInTheDocument();
+    expect(tooltip).toHaveAttribute('role', 'tooltip');
+    expect(tooltip).toHaveTextContent(/km/);
+
+    fireEvent.pointerLeave(svg!);
+    expect(container.querySelector('[data-testid="trend-tooltip"]')).not.toBeInTheDocument();
+  });
+
   it('renders HourlyActivityChart with SVG trend line, area, and peak commute zones', () => {
     const hours = [
       { hour: 7, hourLabel: '07:00', intensity: 0.9, distanceKm: 12.5, isPeak: true },
