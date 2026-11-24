@@ -8,7 +8,11 @@ import {
   fetchLastKnownTelemetry,
 } from '../services/telemetryStorage';
 
-const DEFAULT_BROKER = import.meta.env.VITE_MQTT_BROKER_URL || 'ws://localhost:8083/mqtt';
+const DEFAULT_BROKER =
+  import.meta.env.VITE_MQTT_BROKER_URL ||
+  (typeof window !== 'undefined' && window.location.protocol === 'https:'
+    ? '/api/telemetry/stream'
+    : 'ws://localhost:8083/mqtt');
 const DEFAULT_TOPIC = import.meta.env.VITE_MQTT_TOPIC || 'shuttle/+';
 const DEFAULT_USERNAME = import.meta.env.VITE_MQTT_USERNAME;
 const DEFAULT_PASSWORD = import.meta.env.VITE_MQTT_PASSWORD;
