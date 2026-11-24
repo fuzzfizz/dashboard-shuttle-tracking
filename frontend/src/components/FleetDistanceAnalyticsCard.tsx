@@ -238,7 +238,7 @@ export const FleetDistanceAnalyticsCard: React.FC<FleetDistanceAnalyticsCardProp
                     type="button"
                     aria-pressed={isSelected}
                     onClick={() => handleTimeframeChange(opt.id)}
-                    className={`flex-1 sm:flex-initial px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all min-h-[42px] sm:min-h-0 flex items-center justify-center ${
+                    className={`flex-1 sm:flex-initial px-2.5 py-1 rounded-lg text-xs font-semibold transition-all min-h-[38px] sm:min-h-0 flex items-center justify-center ${
                       isSelected
                         ? 'bg-white dark:bg-slate-900 text-emerald-600 dark:text-emerald-400 shadow-xs'
                         : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
@@ -279,7 +279,7 @@ export const FleetDistanceAnalyticsCard: React.FC<FleetDistanceAnalyticsCardProp
               type="button"
               onClick={() => setActiveTab('vehicles')}
               aria-label="ดูกราฟเปรียบเทียบรายคัน"
-              className={`flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all min-h-[42px] sm:min-h-0 ${
+              className={`flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all min-h-[38px] sm:min-h-0 ${
                 activeTab === 'vehicles'
                   ? 'bg-white text-slate-900 shadow-sm dark:bg-slate-900 dark:text-emerald-400'
                   : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
@@ -293,7 +293,7 @@ export const FleetDistanceAnalyticsCard: React.FC<FleetDistanceAnalyticsCardProp
               type="button"
               onClick={() => setActiveTab('trend')}
               aria-label={tab2Config.ariaLabel}
-              className={`flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all min-h-[42px] sm:min-h-0 ${
+              className={`flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all min-h-[38px] sm:min-h-0 ${
                 activeTab === 'trend'
                   ? 'bg-white text-slate-900 shadow-sm dark:bg-slate-900 dark:text-emerald-400'
                   : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'

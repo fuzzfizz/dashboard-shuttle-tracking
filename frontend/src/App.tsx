@@ -220,11 +220,11 @@ function OperationalDashboard() {
                   <h2 className="text-xs sm:text-sm font-semibold text-slate-800 dark:text-slate-200">
                     <span>แผนที่ตำแหน่งรถสด</span> <span className="text-xs font-normal text-slate-400 dark:text-slate-500 ml-1">Fleet Live Map</span>
                   </h2>
-                  <span className="px-2.5 py-1 rounded-full text-xs sm:text-sm font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                  <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
                     ออนไลน์ {fleetStats.onlineVehicles}
                   </span>
                   {fleetStats.totalVehicles - fleetStats.onlineVehicles > 0 && (
-                    <span className="px-2.5 py-1 rounded-full text-xs sm:text-sm font-semibold bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20">
+                    <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20">
                       ขาดสัญญาณ {fleetStats.totalVehicles - fleetStats.onlineVehicles}
                     </span>
                   )}

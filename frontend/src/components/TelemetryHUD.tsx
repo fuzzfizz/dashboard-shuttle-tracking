@@ -60,7 +60,7 @@ export const TelemetryHUD: React.FC<TelemetryHUDProps> = ({
 
   return (
     <div className={className ?? "absolute bottom-3 sm:bottom-6 left-2 right-2 sm:left-1/2 sm:-translate-x-1/2 z-[1000] w-auto sm:w-[92vw] sm:max-w-xl pb-[env(safe-area-inset-bottom)]"}>
-      <div className="bg-white/95 border-slate-200 text-slate-900 shadow-xl dark:bg-slate-900/95 dark:border-slate-800 dark:text-white dark:shadow-2xl backdrop-blur-md border p-4 sm:px-6 sm:py-4 rounded-2xl flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-5 transition-colors">
+      <div className="bg-white/95 border-slate-200 text-slate-900 shadow-xl dark:bg-slate-900/95 dark:border-slate-800 dark:text-white dark:shadow-2xl backdrop-blur-md border p-3.5 sm:px-5 sm:py-3 rounded-2xl flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 transition-colors">
         {/* Status & Vehicle Info Header */}
         <div className="flex items-center justify-between sm:justify-start gap-3 w-full sm:w-auto">
           <div className="flex items-center gap-3">
@@ -99,7 +99,7 @@ export const TelemetryHUD: React.FC<TelemetryHUDProps> = ({
                 </div>
               )}
 
-              <div className="text-base sm:text-lg font-bold tracking-tight text-slate-900 dark:text-white flex items-center gap-2 mt-0.5">
+              <div className="text-sm sm:text-base font-bold tracking-tight text-slate-900 dark:text-white flex items-center gap-2 mt-0.5">
                 <Bus className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
                 <span className="font-mono">
                   {telemetry
@@ -126,15 +126,15 @@ export const TelemetryHUD: React.FC<TelemetryHUDProps> = ({
         {/* Telemetry Metrics Grid / Row (Clean 3-metric layout with generous spacing) */}
         <div className="grid grid-cols-3 sm:flex sm:items-center gap-3 sm:gap-6 pt-3 sm:pt-0 border-t sm:border-t-0 sm:border-l border-slate-200 dark:border-slate-800 sm:pl-6 w-full sm:w-auto">
           {/* Speed (Shows '--' when signal is lost) */}
-          <div className="flex items-center gap-2.5 bg-slate-50 sm:bg-transparent dark:bg-slate-800/40 sm:dark:bg-transparent p-2 sm:p-0 rounded-xl">
-            <div className={`p-2 bg-white dark:bg-slate-800/80 rounded-xl shrink-0 shadow-xs sm:shadow-none ${
+          <div className="flex items-center gap-2 bg-slate-50 sm:bg-transparent dark:bg-slate-800/40 sm:dark:bg-transparent p-2 sm:p-0 rounded-xl">
+            <div className={`p-1.5 bg-white dark:bg-slate-800/80 rounded-xl shrink-0 shadow-xs sm:shadow-none ${
               isOnline === false ? 'text-slate-400 dark:text-slate-500' : 'text-emerald-600 dark:text-emerald-400'
             }`}>
-              <Gauge className="w-4 h-4 sm:w-5 sm:h-5" />
+              <Gauge className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
             </div>
             <div>
               <div className="text-xs font-medium text-slate-500 dark:text-slate-400 leading-normal">ความเร็ว</div>
-              <div className="text-sm sm:text-base font-bold font-mono text-slate-900 dark:text-white leading-tight">
+              <div className="text-xs sm:text-sm font-bold font-mono text-slate-900 dark:text-white leading-tight">
                 {telemetry
                   ? (isOnline === false ? '--' : telemetry.speed.toFixed(1))
                   : fleetStats?.averageSpeed !== undefined
@@ -152,13 +152,13 @@ export const TelemetryHUD: React.FC<TelemetryHUDProps> = ({
 
           {/* Today Distance (if available) */}
           {dailyDistanceKm !== undefined && (
-            <div className="flex items-center gap-2.5 bg-slate-50 sm:bg-transparent dark:bg-slate-800/40 sm:dark:bg-transparent p-2 sm:p-0 rounded-xl">
-              <div className="p-2 bg-white dark:bg-slate-800/80 rounded-xl text-indigo-600 dark:text-indigo-400 shrink-0 shadow-xs sm:shadow-none">
-                <Route className="w-4 h-4 sm:w-5 sm:h-5" />
+            <div className="flex items-center gap-2 bg-slate-50 sm:bg-transparent dark:bg-slate-800/40 sm:dark:bg-transparent p-2 sm:p-0 rounded-xl">
+              <div className="p-1.5 bg-white dark:bg-slate-800/80 rounded-xl text-indigo-600 dark:text-indigo-400 shrink-0 shadow-xs sm:shadow-none">
+                <Route className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
               </div>
               <div>
                 <div className="text-xs font-medium text-slate-500 dark:text-slate-400 leading-normal">ระยะทางวันนี้</div>
-                <div className="text-sm sm:text-base font-bold font-mono text-slate-900 dark:text-white leading-tight">
+                <div className="text-xs sm:text-sm font-bold font-mono text-slate-900 dark:text-white leading-tight">
                   {distanceUnit === 'mile'
                     ? (dailyDistanceKm * 0.621371192).toFixed(2)
                     : dailyDistanceKm.toFixed(2)}
@@ -171,13 +171,13 @@ export const TelemetryHUD: React.FC<TelemetryHUDProps> = ({
           )}
 
           {/* Last Seen / Heartbeat */}
-          <div className="flex items-center gap-2.5 bg-slate-50 sm:bg-transparent dark:bg-slate-800/40 sm:dark:bg-transparent p-2 sm:p-0 rounded-xl">
-            <div className="p-2 bg-white dark:bg-slate-800/80 rounded-xl text-amber-600 dark:text-amber-400 shrink-0 shadow-xs sm:shadow-none">
-              <Clock className="w-4 h-4 sm:w-5 sm:h-5" />
+          <div className="flex items-center gap-2 bg-slate-50 sm:bg-transparent dark:bg-slate-800/40 sm:dark:bg-transparent p-2 sm:p-0 rounded-xl">
+            <div className="p-1.5 bg-white dark:bg-slate-800/80 rounded-xl text-amber-600 dark:text-amber-400 shrink-0 shadow-xs sm:shadow-none">
+              <Clock className="w-4 h-4 text-amber-600 dark:text-amber-400" />
             </div>
             <div>
               <div className="text-xs font-medium text-slate-500 dark:text-slate-400 leading-normal">อัปเดตล่าสุด</div>
-              <div className="text-sm sm:text-base font-bold font-mono text-slate-900 dark:text-white leading-tight">
+              <div className="text-xs sm:text-sm font-bold font-mono text-slate-900 dark:text-white leading-tight">
                 {formatLastSeen(lastSeen)}
               </div>
             </div>

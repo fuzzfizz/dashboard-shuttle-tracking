@@ -50,7 +50,7 @@ export const LicensePlateBadge: React.FC<LicensePlateBadgeProps> = ({
   return (
     <div
       data-testid="license-plate-badge"
-      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[4px] bg-white border-2 transition-all select-none shadow-xs ${
+      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-[4px] bg-white border-2 transition-all select-none shadow-xs ${
         isSelected
           ? 'border-[#4a7c0b] ring-2 ring-[#5c990e]/35 shadow-sm'
           : 'border-slate-800 dark:border-slate-700 hover:border-slate-900 dark:hover:border-slate-600'
@@ -65,7 +65,7 @@ export const LicensePlateBadge: React.FC<LicensePlateBadgeProps> = ({
       {/* Left Stamped Rivet Screw */}
       <span className="w-1 h-1 rounded-full bg-slate-300 dark:bg-slate-400 border border-slate-500 shrink-0" />
       {/* License Plate String */}
-      <span className="font-mono font-black text-slate-900 text-sm tracking-wider uppercase leading-none">
+      <span className="font-mono font-bold text-slate-900 text-xs tracking-wider uppercase leading-none">
         {plateNumber}
       </span>
       {/* Right Stamped Rivet Screw */}
@@ -457,7 +457,7 @@ export const DailyDistanceTable: React.FC<DailyDistanceTableProps> = ({
                       {/* Vehicle Column */}
                       <td
                         data-testid="vehicle-id-cell"
-                        className="py-3 px-3 flex items-center"
+                        className="py-2.5 px-3 flex items-center"
                       >
                         <LicensePlateBadge
                           plateNumber={row.vehicleId}
@@ -466,7 +466,7 @@ export const DailyDistanceTable: React.FC<DailyDistanceTableProps> = ({
                       </td>
 
                       {/* Status Column */}
-                      <td className="py-3 px-3">
+                      <td className="py-2.5 px-3">
                         <div className="flex items-center gap-1.5">
                           <span className="relative flex h-2 w-2">
                             {row.isOnline && (
@@ -479,7 +479,7 @@ export const DailyDistanceTable: React.FC<DailyDistanceTableProps> = ({
                             />
                           </span>
                           <span
-                            className={`text-sm font-medium ${
+                            className={`text-xs sm:text-sm font-medium ${
                               row.isOnline ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-500 dark:text-slate-400'
                             }`}
                           >
@@ -489,13 +489,13 @@ export const DailyDistanceTable: React.FC<DailyDistanceTableProps> = ({
                       </td>
 
                       {/* Today's Distance Column */}
-                      <td className="py-3 px-3 font-mono font-bold text-sm sm:text-base text-slate-800 dark:text-slate-200">
+                      <td className="py-2.5 px-3 font-mono font-bold text-sm text-slate-800 dark:text-slate-200">
                         {formatDistance(row.distanceKm, distanceUnit)}
                       </td>
 
                       {/* Last Seen Column */}
-                      <td className="py-3 px-3">
-                        <div className={`text-xs sm:text-sm font-semibold ${row.lastSeenFormatted.isToday ? 'font-mono text-slate-800 dark:text-slate-200' : 'text-slate-500 dark:text-slate-400'}`}>
+                      <td className="py-2.5 px-3">
+                        <div className={`text-xs font-semibold ${row.lastSeenFormatted.isToday ? 'font-mono text-slate-800 dark:text-slate-200' : 'text-slate-500 dark:text-slate-400'}`}>
                           {row.lastSeenFormatted.mainText}
                         </div>
                         <div className={`text-xs ${row.isOnline && row.lastSeenFormatted.isToday ? 'text-emerald-600 dark:text-emerald-400 font-medium' : 'text-slate-400 dark:text-slate-500'}`}>
@@ -504,13 +504,13 @@ export const DailyDistanceTable: React.FC<DailyDistanceTableProps> = ({
                       </td>
 
                       {/* Action Column */}
-                      <td className="py-3 px-3 text-right">
+                      <td className="py-2.5 px-3 text-right">
                         <button
                           type="button"
                           onClick={() => onOpenVehicleMap(row.vehicleId)}
                           aria-label={`Open map for ${row.vehicleId}`}
                           title={`เปิดแผนที่สำหรับ ${row.vehicleId}`}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-slate-900 border border-slate-200 dark:bg-slate-800 dark:hover:bg-slate-750 dark:text-slate-300 dark:hover:text-white dark:border-slate-700/80 text-xs sm:text-sm font-semibold transition-all group-hover:border-emerald-500/50"
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-slate-900 border border-slate-200 dark:bg-slate-800 dark:hover:bg-slate-750 dark:text-slate-300 dark:hover:text-white dark:border-slate-700/80 text-xs font-semibold transition-all group-hover:border-emerald-500/50"
                         >
                           <Maximize2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                           <span>เปิดแผนที่</span>
@@ -532,7 +532,7 @@ export const DailyDistanceTable: React.FC<DailyDistanceTableProps> = ({
                 <div
                   key={row.vehicleId}
                   data-testid={`mobile-vehicle-card-${row.vehicleId}`}
-                  className={`p-4 rounded-2xl border transition-all min-h-[44px] flex flex-col gap-3 shadow-sm ${
+                  className={`p-3 rounded-2xl border transition-all min-h-[44px] flex flex-col gap-2.5 shadow-sm ${
                     isSelected
                       ? 'bg-emerald-500/10 border-emerald-500/80 shadow-md ring-1 ring-emerald-500/30'
                       : 'bg-white border-slate-200 hover:border-slate-300 dark:bg-slate-850 dark:border-slate-800 dark:hover:border-slate-700'
@@ -549,7 +549,7 @@ export const DailyDistanceTable: React.FC<DailyDistanceTableProps> = ({
 
                     {/* Status Pill Badge */}
                     <span
-                      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs sm:text-sm font-semibold ${
+                      className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-semibold ${
                         row.isOnline
                           ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60'
                           : 'bg-rose-50 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300 border border-rose-200 dark:border-rose-800/60'
@@ -570,20 +570,20 @@ export const DailyDistanceTable: React.FC<DailyDistanceTableProps> = ({
                   </div>
 
                   {/* 2-Metric Grid (Distance & Last Seen) with high-contrast typography */}
-                  <div className="grid grid-cols-2 gap-2.5 text-xs">
-                    <div className="bg-slate-50 dark:bg-slate-900/60 rounded-xl p-3 border border-slate-200/80 dark:border-slate-800/80">
-                      <span className="text-xs font-medium text-slate-500 dark:text-slate-400 block mb-1">
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div className="bg-slate-50 dark:bg-slate-900/60 rounded-xl p-2.5 border border-slate-200/80 dark:border-slate-800/80">
+                      <span className="text-xs font-medium text-slate-500 dark:text-slate-400 block mb-0.5">
                         ระยะทางวันนี้ ({distanceUnit})
                       </span>
-                      <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400 text-base sm:text-lg">
+                      <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400 text-sm sm:text-base">
                         {formatDistance(row.distanceKm, distanceUnit)}
                       </span>
                     </div>
-                    <div className="bg-slate-50 dark:bg-slate-900/60 rounded-xl p-3 border border-slate-200/80 dark:border-slate-800/80">
-                      <span className="text-xs font-medium text-slate-500 dark:text-slate-400 block mb-1">
+                    <div className="bg-slate-50 dark:bg-slate-900/60 rounded-xl p-2.5 border border-slate-200/80 dark:border-slate-800/80">
+                      <span className="text-xs font-medium text-slate-500 dark:text-slate-400 block mb-0.5">
                         อัปเดตล่าสุด
                       </span>
-                      <div className={`text-xs sm:text-sm font-semibold ${row.lastSeenFormatted.isToday ? 'font-mono text-slate-800 dark:text-slate-200' : 'text-slate-600 dark:text-slate-400'}`}>
+                      <div className={`text-xs font-semibold ${row.lastSeenFormatted.isToday ? 'font-mono text-slate-800 dark:text-slate-200' : 'text-slate-600 dark:text-slate-400'}`}>
                         {row.lastSeenFormatted.mainText}
                       </div>
                       <div className={`text-xs mt-0.5 ${row.isOnline && row.lastSeenFormatted.isToday ? 'text-emerald-600 dark:text-emerald-400 font-medium' : 'text-slate-400 dark:text-slate-500'}`}>
@@ -598,7 +598,7 @@ export const DailyDistanceTable: React.FC<DailyDistanceTableProps> = ({
                     onClick={() => onOpenVehicleMap(row.vehicleId)}
                     aria-label={`View map for ${row.vehicleId}`}
                     title={`เปิดแผนที่ ${row.vehicleId}`}
-                    className="w-full min-h-[44px] flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 active:bg-slate-300 text-slate-800 border border-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 dark:active:bg-slate-650 dark:text-slate-200 dark:border-slate-700 text-sm font-semibold transition-all shadow-sm"
+                    className="w-full min-h-[44px] flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 active:bg-slate-300 text-slate-800 border border-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 dark:active:bg-slate-650 dark:text-slate-200 dark:border-slate-700 text-xs sm:text-sm font-semibold transition-all shadow-sm"
                   >
                     <Maximize2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                     <span>เปิดแผนที่</span>
