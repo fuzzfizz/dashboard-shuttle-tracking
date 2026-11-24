@@ -82,7 +82,7 @@ describe('App Integration', () => {
     const analyticsSection = container.querySelector('#fleet-analytics');
     expect(analyticsSection).toBeInTheDocument();
     expect(analyticsSection).toHaveClass('w-full');
-    expect(screen.getByText('Daily Distance Overview')).toBeInTheDocument();
+    expect(screen.getByText('ระยะทางประจำวัน')).toBeInTheDocument();
   });
 
   it('renders FleetDistanceAnalyticsCard between the live map and daily distance table in Layout Option A', () => {
@@ -334,7 +334,7 @@ describe('App Integration', () => {
 
     // Initially in live view (today tab)
     expect(screen.getByText('Fleet Live Map')).toBeInTheDocument();
-    expect(screen.getByText('Daily Distance Overview')).toBeInTheDocument();
+    expect(screen.getByText('ระยะทางประจำวัน')).toBeInTheDocument();
     expect(screen.queryByLabelText(/select date/i)).toBeNull();
 
     // Click "ประวัติย้อนหลัง" tab
@@ -343,7 +343,7 @@ describe('App Integration', () => {
 
     // Live view replaced by historical replay view
     expect(screen.queryByText('Fleet Live Map')).toBeNull();
-    expect(screen.queryByText('Daily Distance Overview')).toBeNull();
+    expect(screen.queryByText('ระยะทางประจำวัน')).toBeNull();
     expect(screen.getByLabelText(/select date/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/select vehicle/i)).toBeInTheDocument();
     expect(screen.getByRole('slider')).toBeInTheDocument();
@@ -354,7 +354,7 @@ describe('App Integration', () => {
 
     // Live view elements restored
     expect(screen.getByText('Fleet Live Map')).toBeInTheDocument();
-    expect(screen.getByText('Daily Distance Overview')).toBeInTheDocument();
+    expect(screen.getByText('ระยะทางประจำวัน')).toBeInTheDocument();
     expect(screen.queryByLabelText(/select date/i)).toBeNull();
   });
 

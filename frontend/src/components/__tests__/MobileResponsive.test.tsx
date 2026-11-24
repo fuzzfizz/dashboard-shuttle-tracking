@@ -44,7 +44,7 @@ describe('Mobile Responsive Ergonomics & Clarity', () => {
     );
 
     // Verify search input has mobile-safe text size
-    const searchInput = screen.getByPlaceholderText(/search vehicle/i);
+    const searchInput = screen.getByPlaceholderText(/ค้นหาหมายเลขรถ/i);
     expect(searchInput.className).toContain('text-sm');
 
     // Verify mobile card has min-h-[44px]

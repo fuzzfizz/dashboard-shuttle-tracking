@@ -191,7 +191,7 @@ describe('DailyDistanceTable', () => {
     expect(screen.getAllByText('shuttle-cm-02').length).toBeGreaterThan(0);
 
     // Filter by search query: "cm-02"
-    const searchInput = screen.getByPlaceholderText(/search vehicle/i);
+    const searchInput = screen.getByPlaceholderText(/ค้นหาหมายเลขรถ/i);
     fireEvent.change(searchInput, { target: { value: 'cm-02' } });
 
     expect(screen.queryByTestId('vehicle-row-EV-01')).toBeNull();
