@@ -8,8 +8,8 @@ import {
   fetchLastKnownTelemetry,
 } from '../services/telemetryStorage';
 
-const DEFAULT_BROKER = import.meta.env.VITE_MQTT_BROKER_URL || 'wss://broker.emqx.io:8084/mqtt';
-const DEFAULT_TOPIC = import.meta.env.VITE_MQTT_TOPIC || 'shuttle/fleet/v1/+/telemetry';
+const DEFAULT_BROKER = import.meta.env.VITE_MQTT_BROKER_URL || 'ws://localhost:8083/mqtt';
+const DEFAULT_TOPIC = import.meta.env.VITE_MQTT_TOPIC || 'shuttle/+';
 const DEFAULT_USERNAME = import.meta.env.VITE_MQTT_USERNAME;
 const DEFAULT_PASSWORD = import.meta.env.VITE_MQTT_PASSWORD;
 
@@ -88,8 +88,8 @@ export function useShuttleTelemetry(options: UseShuttleTelemetryOptions = {}) {
       });
     });
 
-    client.on('message', (_topic, message) => {
-      const parsed = parseTelemetryPayload(message.toString());
+    client.on('message', (msgTopic, message) => {
+      const parsed = parseTelemetryPayload(message.toString(), msgTopic);
       if (parsed) {
         const timestamp = Date.now();
         setNow(timestamp);

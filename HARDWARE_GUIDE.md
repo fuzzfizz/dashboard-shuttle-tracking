@@ -10,11 +10,11 @@
 
 | รายการ | ค่าที่ต้องตั้งในโปรแกรม | คำอธิบาย |
 | :--- | :--- | :--- |
-| **MQTT Broker Host** | `broker.emqx.io` | โฮสต์เซิร์ฟเวอร์ Broker สาธารณะ (ใช้งานได้ทันที) |
+| **MQTT Broker Host** | `YOUR_MQTT_BROKER_HOST` | ระบุโฮสต์เซิร์ฟเวอร์ Broker (ดูจากเอกสารภายใน mqtt.md) |
 | **Port (TCP)** | `1883` | พอร์ตมาตรฐานสำหรับฮาร์ดแวร์ทั่วไป (ไม่เข้ารหัส TLS) |
 | **Port (TLS/SSL)** | `8883` | *(ทางเลือก)* พอร์ตเข้ารหัส SSL หากโมดูลรองรับ MQTTS |
-| **Username** | *(เว้นว่าง / ปล่อยเป็น `NULL`)* | ไม่ต้องใส่ |
-| **Password** | *(เว้นว่าง / ปล่อยเป็น `NULL`)* | ไม่ต้องใส่ |
+| **Username** | `YOUR_MQTT_USERNAME` | ชื่อผู้ใช้งาน (ดูจากเอกสารภายใน mqtt.md) |
+| **Password** | `YOUR_MQTT_PASSWORD` | รหัสผ่าน (ดูจากเอกสารภายใน mqtt.md) |
 | **Client ID** | เช่น `esp32_shuttle_01` | ควรตั้งไม่ให้ซ้ำกับอุปกรณ์อื่น |
 | **Keep Alive** | `60` วินาที | ช่วงเวลาส่ง Ping เช็คสถานะเชื่อมต่อ |
 | **Clean Session** | `true` | ไม่ต้องค้าง Session เก่า |
@@ -25,7 +25,7 @@
 
 - **Topic Name:**
   ```text
-  shuttle/fleet/v1/shuttle-01/telemetry
+  shuttle/shuttle-01
   ```
 - **QoS:** `0` (หรือ `1`)
 - **Retain:** `false`
@@ -93,9 +93,11 @@ const char* ssid = "YOUR_WIFI_SSID";          // เปลี่ยนเป็�
 const char* password = "YOUR_WIFI_PASSWORD";  // เปลี่ยนเป็นรหัสผ่าน WiFi
 
 // 2. ตั้งค่า MQTT Broker
-const char* mqtt_server = "broker.emqx.io";
+const char* mqtt_server = "YOUR_MQTT_BROKER_HOST"; // ดูจากเอกสารภายใน mqtt.md
 const int mqtt_port = 1883;
-const char* mqtt_topic = "shuttle/fleet/v1/shuttle-01/telemetry";
+const char* mqtt_user = "YOUR_MQTT_USERNAME";      // ดูจากเอกสารภายใน mqtt.md
+const char* mqtt_pass = "YOUR_MQTT_PASSWORD";      // ดูจากเอกสารภายใน mqtt.md
+const char* mqtt_topic = "shuttle/shuttle-01";
 const char* vehicle_id = "shuttle-01";
 
 // 3. กำหนดขา Serial สำหรับเชื่อมต่อกับ GPS (GPIO 16 = RX2, GPIO 17 = TX2)
@@ -147,7 +149,7 @@ void reconnectMQTT() {
     Serial.println(mqtt_server);
     
     String clientId = "ESP32_Shuttle_" + String(random(0xffff), HEX);
-    if (client.connect(clientId.c_str())) {
+    if (client.connect(clientId.c_str(), mqtt_user, mqtt_pass)) {
       Serial.println("MQTT เชื่อมต่อสำเร็จ พร้อมส่งข้อมูล!");
     } else {
       Serial.print("เชื่อมต่อล้มเหลว (rc=");

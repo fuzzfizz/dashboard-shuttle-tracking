@@ -9,6 +9,9 @@ dist/
 .env.local
 *.log
 
+# Private hardware credentials
+mqtt.md
+
 # OS & Editor
 .DS_Store
 Thumbs.db

@@ -1,11 +1,15 @@
 import mqtt from 'mqtt';
 
-const BROKER = process.env.MQTT_BROKER || 'mqtt://broker.emqx.io:1883';
-const BASE_TOPIC = 'shuttle/fleet/v1';
+const BROKER = process.env.MQTT_BROKER || process.env.VITE_MQTT_BROKER_URL || 'mqtt://localhost:1883';
+const BASE_TOPIC = process.env.VITE_MQTT_TOPIC_BASE || process.env.MQTT_TOPIC_BASE || 'shuttle';
+const USERNAME = process.env.VITE_MQTT_USERNAME || process.env.MQTT_USERNAME;
+const PASSWORD = process.env.VITE_MQTT_PASSWORD || process.env.MQTT_PASSWORD;
 
 console.log(`Connecting to ${BROKER}...`);
 const client = mqtt.connect(BROKER, {
   clientId: `sim_fleet_${Math.random().toString(16).slice(2, 8)}`,
+  ...(USERNAME ? { username: USERNAME } : {}),
+  ...(PASSWORD ? { password: PASSWORD } : {}),
 });
 
 // Configure 2 distinct test shuttles in Bangkok
@@ -31,7 +35,10 @@ const vehicles = [
 client.on('connect', () => {
   console.log(`Connected to broker!`);
   console.log(`Simulating fleet of ${vehicles.length} shuttles:`);
-  vehicles.forEach((v) => console.log(` - ${v.id} -> ${BASE_TOPIC}/${v.id}/telemetry`));
+  vehicles.forEach((v) => {
+    const topic = BASE_TOPIC.includes('v1') ? `${BASE_TOPIC}/${v.id}/telemetry` : `${BASE_TOPIC}/${v.id}`;
+    console.log(` - ${v.id} -> ${topic}`);
+  });
   console.log(`Press Ctrl+C to stop simulation.\n`);
 
   setInterval(() => {
@@ -51,7 +58,7 @@ client.on('connect', () => {
         timestamp: Date.now(),
       };
 
-      const topic = `${BASE_TOPIC}/${v.id}/telemetry`;
+      const topic = BASE_TOPIC.includes('v1') ? `${BASE_TOPIC}/${v.id}/telemetry` : `${BASE_TOPIC}/${v.id}`;
       client.publish(topic, JSON.stringify(payload), { qos: 0 });
       console.log(`[${new Date().toLocaleTimeString()}] ${v.id}: ${payload.lat}, ${payload.lng} | ${payload.speed} km/h`);
     });

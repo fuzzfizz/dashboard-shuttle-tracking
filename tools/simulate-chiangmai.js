@@ -7,8 +7,10 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Configuration
-const BROKER = process.env.MQTT_BROKER || 'mqtt://broker.emqx.io:1883';
-const BASE_TOPIC = process.env.MQTT_TOPIC_BASE || 'shuttle/fleet/v1';
+const BROKER = process.env.MQTT_BROKER || process.env.VITE_MQTT_BROKER_URL || 'mqtt://localhost:1883';
+const BASE_TOPIC = process.env.VITE_MQTT_TOPIC_BASE || process.env.MQTT_TOPIC_BASE || 'shuttle';
+const USERNAME = process.env.VITE_MQTT_USERNAME || process.env.MQTT_USERNAME;
+const PASSWORD = process.env.VITE_MQTT_PASSWORD || process.env.MQTT_PASSWORD;
 const VEHICLE_ID = process.env.VEHICLE_ID || 'shuttle-cm-01';
 const INTERVAL_SEC = parseFloat(process.env.INTERVAL_SEC || '5'); // 5 seconds
 const BASE_SPEED_KMH = parseFloat(process.env.SPEED_KMH || '32'); // City cruising speed
@@ -80,6 +82,8 @@ function getPositionAtDistance(distMeters) {
   return { lat: last.to.lat, lng: last.to.lng, bearing: last.bearing };
 }
 
+const publishTopic = BASE_TOPIC.includes('v1') ? `${BASE_TOPIC}/${VEHICLE_ID}/telemetry` : `${BASE_TOPIC}/${VEHICLE_ID}`;
+
 console.log('='.repeat(70));
 console.log('🚌 Chiang Mai Shuttle Telemetry Simulator');
 console.log('='.repeat(70));
@@ -89,11 +93,13 @@ console.log(`- Destination:  Chiang Mai Technical College (18.7928, 98.9835)`);
 console.log(`- Distance:     ${(totalRouteMeters / 1000).toFixed(2)} km`);
 console.log(`- Interval:     ${INTERVAL_SEC} seconds`);
 console.log(`- MQTT Broker:  ${BROKER}`);
-console.log(`- Topic:        ${BASE_TOPIC}/${VEHICLE_ID}/telemetry`);
+console.log(`- Topic:        ${publishTopic}`);
 console.log('='.repeat(70));
 
 const client = mqtt.connect(BROKER, {
   clientId: `sim_${VEHICLE_ID}_${Math.random().toString(16).slice(2, 8)}`,
+  ...(USERNAME ? { username: USERNAME } : {}),
+  ...(PASSWORD ? { password: PASSWORD } : {}),
 });
 
 let currentDistance = 0;
@@ -125,7 +131,7 @@ client.on('connect', () => {
         heading: parseFloat(pos.bearing.toFixed(1)),
         timestamp: Date.now(),
       };
-      client.publish(`${BASE_TOPIC}/${VEHICLE_ID}/telemetry`, JSON.stringify(payload));
+      client.publish(publishTopic, JSON.stringify(payload));
       console.log(
         `[Step ${step}] 🛑 STOPPED at ${isReversing ? 'Central Airport' : 'Technical College'} (Pause ${pauseTicksRemaining * INTERVAL_SEC}s left)`
       );
@@ -169,7 +175,7 @@ client.on('connect', () => {
       timestamp: Date.now(),
     };
 
-    const topic = `${BASE_TOPIC}/${VEHICLE_ID}/telemetry`;
+    const topic = publishTopic;
     client.publish(topic, JSON.stringify(payload), { qos: 0 });
 
     const progressPct = ((currentDistance / totalRouteMeters) * 100).toFixed(1);

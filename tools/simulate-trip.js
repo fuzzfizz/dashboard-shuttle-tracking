@@ -49,8 +49,10 @@ function parseArgs() {
     intervalSec: 5.0,
     dropoffDwellSec: 60.0, // Dwell 1 minute (60s) at dropoff for passenger drop-off
     pickupDwellSec: 15.0,
-    broker: process.env.MQTT_BROKER || 'mqtt://broker.emqx.io:1883',
-    topicBase: process.env.MQTT_TOPIC_BASE || 'shuttle/fleet/v1',
+    broker: process.env.MQTT_BROKER || process.env.VITE_MQTT_BROKER_URL || 'mqtt://localhost:1883',
+    topicBase: process.env.VITE_MQTT_TOPIC_BASE || process.env.MQTT_TOPIC_BASE || 'shuttle',
+    username: process.env.VITE_MQTT_USERNAME || process.env.MQTT_USERNAME,
+    password: process.env.VITE_MQTT_PASSWORD || process.env.MQTT_PASSWORD,
     loop: true,
     mapboxToken: process.env.MAPBOX_TOKEN || process.env.VITE_MAPBOX_TOKEN || '',
   };
@@ -227,6 +229,8 @@ async function runSimulation() {
   const client = mqtt.connect(config.broker, {
     clientId: `sim_${config.vehicleId}_${Math.random().toString(16).slice(2, 8)}`,
     clean: true,
+    ...(config.username ? { username: config.username } : {}),
+    ...(config.password ? { password: config.password } : {}),
   });
 
   let currentDistance = 0;
@@ -259,7 +263,9 @@ async function runSimulation() {
           timestamp: Date.now(),
         };
 
-        const topic = `${config.topicBase}/${config.vehicleId}/telemetry`;
+        const topic = config.topicBase.includes('v1')
+          ? `${config.topicBase}/${config.vehicleId}/telemetry`
+          : `${config.topicBase}/${config.vehicleId}`;
         client.publish(topic, JSON.stringify(payload), { qos: 0 });
 
         const locationLabel = isReversing
@@ -314,7 +320,9 @@ async function runSimulation() {
         timestamp: Date.now(),
       };
 
-      const topic = `${config.topicBase}/${config.vehicleId}/telemetry`;
+      const topic = config.topicBase.includes('v1')
+        ? `${config.topicBase}/${config.vehicleId}/telemetry`
+        : `${config.topicBase}/${config.vehicleId}`;
       client.publish(topic, JSON.stringify(payload), { qos: 0 });
 
       const progressPct = ((currentDistance / totalRouteMeters) * 100).toFixed(1);

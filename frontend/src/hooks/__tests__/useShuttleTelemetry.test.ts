@@ -33,7 +33,7 @@ describe('useShuttleTelemetry', () => {
 
     act(() => {
       messageHandler(
-        'shuttle/fleet/v1/shuttle-01/telemetry',
+        'shuttle/shuttle-01',
         Buffer.from(
           JSON.stringify({
             vehicle_id: 'shuttle-01',
@@ -48,7 +48,7 @@ describe('useShuttleTelemetry', () => {
 
     act(() => {
       messageHandler(
-        'shuttle/fleet/v1/shuttle-02/telemetry',
+        'shuttle/shuttle-02',
         Buffer.from(
           JSON.stringify({
             vehicle_id: 'shuttle-02',
@@ -90,7 +90,7 @@ describe('useShuttleTelemetry', () => {
 
     act(() => {
       messageHandler(
-        'shuttle/fleet/v1/shuttle-01/telemetry',
+        'shuttle/shuttle-01',
         Buffer.from(
           JSON.stringify({
             vehicle_id: 'shuttle-01',
@@ -108,7 +108,7 @@ describe('useShuttleTelemetry', () => {
 
     act(() => {
       messageHandler(
-        'shuttle/fleet/v1/shuttle-02/telemetry',
+        'shuttle/shuttle-02',
         Buffer.from(
           JSON.stringify({
             vehicle_id: 'shuttle-02',
@@ -167,5 +167,39 @@ describe('useShuttleTelemetry', () => {
     expect(result.current.vehicles['cached-shuttle']).toBeDefined();
     expect(result.current.vehicles['cached-shuttle'].vehicle_id).toBe('cached-shuttle');
     expect(result.current.lastSeenMap['cached-shuttle']).toBe(1000);
+  });
+
+  it('subscribes strictly to faculty topic shuttle/+ by default', () => {
+    renderHook(() => useShuttleTelemetry());
+    const connectHandler = mockMqttClient.on.mock.calls.find((call) => call[0] === 'connect')?.[1];
+    expect(connectHandler).toBeDefined();
+    connectHandler();
+
+    expect(mockMqttClient.subscribe).toHaveBeenCalledWith(
+      'shuttle/+',
+      expect.any(Function)
+    );
+  });
+
+  it('ingests vehicles from concise topic shuttle/<id>', () => {
+    const { result } = renderHook(() => useShuttleTelemetry());
+
+    act(() => {
+      messageHandler(
+        'shuttle/shuttle-01',
+        Buffer.from(
+          JSON.stringify({
+            vehicle_id: 'shuttle-01',
+            lat: 18.78,
+            lng: 98.98,
+            speed: 35,
+            timestamp: 1000,
+          })
+        )
+      );
+    });
+
+    expect(result.current.vehicles['shuttle-01']).toBeDefined();
+    expect(result.current.vehicles['shuttle-01'].speed).toBe(35);
   });
 });

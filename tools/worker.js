@@ -29,8 +29,10 @@ export function haversineDistance(lat1, lng1, lat2, lng2) {
 }
 
 export function startWorker(options = {}) {
-  const BROKER = options.broker || process.env.MQTT_BROKER || 'mqtt://broker.emqx.io:1883';
-  const TOPIC = options.topic || process.env.MQTT_TOPIC || 'shuttle/fleet/v1/+/telemetry';
+  const BROKER = options.broker || process.env.MQTT_BROKER || process.env.VITE_MQTT_BROKER_URL || 'mqtt://localhost:1883';
+  const TOPIC = options.topic || process.env.VITE_MQTT_TOPIC || process.env.MQTT_TOPIC || 'shuttle/+';
+  const USERNAME = options.username || process.env.VITE_MQTT_USERNAME || process.env.MQTT_USERNAME;
+  const PASSWORD = options.password || process.env.VITE_MQTT_PASSWORD || process.env.MQTT_PASSWORD;
   const SUPABASE_URL = options.supabaseUrl || process.env.SUPABASE_URL;
   const SUPABASE_KEY = options.supabaseKey || process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY;
 
@@ -47,6 +49,8 @@ export function startWorker(options = {}) {
   console.log(`[Worker] Connecting to MQTT broker: ${BROKER}...`);
   const client = mqtt.connect(BROKER, {
     clientId: `shuttle_ingest_worker_${Math.random().toString(16).slice(2, 8)}`,
+    ...(USERNAME ? { username: USERNAME } : {}),
+    ...(PASSWORD ? { password: PASSWORD } : {}),
   });
 
   // In-memory state tracking per vehicle
@@ -160,11 +164,20 @@ export function startWorker(options = {}) {
   // Background timer to flush idle vehicles every 5 seconds
   const flushInterval = setInterval(flushAllVehicles, 5000);
 
-  client.on('message', async (_topic, message) => {
+  client.on('message', async (topicReceived, message) => {
     try {
       totalPacketsReceived++;
       const data = JSON.parse(message.toString());
-      const { vehicle_id, lat, lng, speed, heading, timestamp } = data;
+      let vehicle_id = data.vehicle_id;
+      if (!vehicle_id && topicReceived) {
+        const parts = topicReceived.split('/');
+        if (parts[0] === 'shuttle' && parts.length === 2) {
+          vehicle_id = parts[1];
+        } else if (parts.length >= 4 && parts[parts.length - 1] === 'telemetry') {
+          vehicle_id = parts[parts.length - 2];
+        }
+      }
+      const { lat, lng, speed, heading, timestamp } = data;
 
       if (!vehicle_id || typeof lat !== 'number' || typeof lng !== 'number') {
         return;
