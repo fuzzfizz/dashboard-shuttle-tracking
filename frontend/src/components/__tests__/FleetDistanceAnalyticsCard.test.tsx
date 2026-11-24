@@ -77,7 +77,7 @@ describe('FleetDistanceAnalyticsCard', () => {
     fireEvent.click(screen.getByRole('button', { name: 'วันนี้' }));
     const hourlyTabBtn = screen.getByRole('button', { name: /รายชั่วโมง/i });
     fireEvent.click(hourlyTabBtn);
-    expect(screen.getByText(/ช่วงเร่งด่วนเช้า/i)).toBeInTheDocument();
+    expect(screen.getByText(/แสดงความหนาแน่นการวิ่งตลอดวัน/i)).toBeInTheDocument();
   });
 
   it('toggles collapse and expand when header toggle is clicked', () => {
@@ -266,7 +266,7 @@ describe('FleetDistanceAnalyticsCard', () => {
       // Click Tab 2 (Hourly Activity under 'today')
       const hourlyTabBtn = screen.getByRole('button', { name: /กิจกรรมรายชั่วโมง/i });
       fireEvent.click(hourlyTabBtn);
-      expect(screen.getByText(/ช่วงเร่งด่วนเช้า/i)).toBeInTheDocument();
+      expect(screen.getByText(/แสดงความหนาแน่นการวิ่งตลอดวัน/i)).toBeInTheDocument();
 
       // Switch to 'week' timeframe - Tab 2 remains active and displays Trend7DayChart
       fireEvent.click(screen.getByRole('button', { name: 'สัปดาห์' }));

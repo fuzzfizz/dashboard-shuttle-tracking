@@ -54,7 +54,7 @@ describe('Fleet Sub-Charts', () => {
     expect(container.querySelector('[data-testid="trend-tooltip"]')).not.toBeInTheDocument();
   });
 
-  it('renders HourlyActivityChart with SVG trend line, area, and peak commute zones', () => {
+  it('renders HourlyActivityChart with SVG trend line, area, and hourly points', () => {
     const hours = [
       { hour: 7, hourLabel: '07:00', intensity: 0.9, distanceKm: 12.5, isPeak: true },
       { hour: 12, hourLabel: '12:00', intensity: 0.4, distanceKm: 4.2, isPeak: false },
@@ -64,7 +64,7 @@ describe('Fleet Sub-Charts', () => {
     expect(screen.getByText('07:00')).toBeInTheDocument();
     expect(screen.getByText('12:00')).toBeInTheDocument();
     expect(screen.getByText('17:00')).toBeInTheDocument();
-    expect(screen.getByText(/ช่วงเร่งด่วนเช้า/i)).toBeInTheDocument();
+    expect(screen.getByText(/แสดงความหนาแน่นการวิ่งตลอดวัน/i)).toBeInTheDocument();
 
     // Verify SVG and path elements
     const svg = container.querySelector('svg');

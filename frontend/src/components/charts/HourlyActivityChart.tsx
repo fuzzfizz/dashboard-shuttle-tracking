@@ -48,28 +48,6 @@ export const HourlyActivityChart: React.FC<HourlyActivityChartProps> = ({
     Z
   `;
 
-  // Morning Peak (07:00 - 09:00, index 1 to 3 in 06:00-20:00 range)
-  const mStartIdx = hours.findIndex((h) => h.hour === 7);
-  const mEndIdx = hours.findIndex((h) => h.hour === 9);
-  const morningPeakZone =
-    mStartIdx !== -1 && mEndIdx !== -1
-      ? {
-          x: coords[mStartIdx].x - 6,
-          width: coords[mEndIdx].x - coords[mStartIdx].x + 12,
-        }
-      : null;
-
-  // Evening Peak (16:00 - 18:00, index 10 to 12 in 06:00-20:00 range)
-  const eStartIdx = hours.findIndex((h) => h.hour === 16);
-  const eEndIdx = hours.findIndex((h) => h.hour === 18);
-  const eveningPeakZone =
-    eStartIdx !== -1 && eEndIdx !== -1
-      ? {
-          x: coords[eStartIdx].x - 6,
-          width: coords[eEndIdx].x - coords[eStartIdx].x + 12,
-        }
-      : null;
-
   const isVehicleSpecific = Boolean(selectedVehicleId && selectedVehicleId !== 'all');
   const subtitleLabel = isVehicleSpecific
     ? `แสดงความหนาแน่นการวิ่งของ ${vehicleLabel || selectedVehicleId}`
@@ -115,19 +93,11 @@ export const HourlyActivityChart: React.FC<HourlyActivityChartProps> = ({
   return (
     <div className="w-full overflow-hidden py-1">
       {/* Header Info */}
-      <div className="flex flex-wrap items-center justify-between text-xs text-slate-500 dark:text-slate-400 px-1 mb-2 gap-2 font-sans">
-        <span className="flex items-center gap-1.5">
-          <span className="w-2.5 h-2.5 rounded-full bg-amber-500 shrink-0" />
-          <span>ช่วงเร่งด่วนเช้า (07:00–09:00) และเย็น (16:00–18:00)</span>
+      <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 px-1 mb-2 font-sans">
+        <span>{subtitleLabel}</span>
+        <span className="font-mono text-emerald-600 dark:text-emerald-400 font-semibold">
+          สูงสุด: {maxDist.toFixed(1)} km
         </span>
-        <div className="flex items-center gap-3">
-          <span className="text-[11px] font-medium text-slate-400">
-            {subtitleLabel}
-          </span>
-          <span className="font-mono text-emerald-600 dark:text-emerald-400 font-semibold">
-            สูงสุด: {maxDist.toFixed(1)} km
-          </span>
-        </div>
       </div>
 
       <div className="w-full relative">
@@ -147,28 +117,6 @@ export const HourlyActivityChart: React.FC<HourlyActivityChartProps> = ({
               <stop offset="100%" stopColor="#10b981" stopOpacity="0.0" />
             </linearGradient>
           </defs>
-
-          {/* Peak Hours Backdrop Zones */}
-          {morningPeakZone && (
-            <rect
-              x={morningPeakZone.x}
-              y={paddingTop - 4}
-              width={morningPeakZone.width}
-              height={innerHeight + 8}
-              rx="6"
-              className="fill-amber-500/10 dark:fill-amber-400/10 pointer-events-none"
-            />
-          )}
-          {eveningPeakZone && (
-            <rect
-              x={eveningPeakZone.x}
-              y={paddingTop - 4}
-              width={eveningPeakZone.width}
-              height={innerHeight + 8}
-              rx="6"
-              className="fill-amber-500/10 dark:fill-amber-400/10 pointer-events-none"
-            />
-          )}
 
           {/* Gridlines */}
           {[0, 0.5, 1].map((pct, idx) => {
@@ -212,7 +160,6 @@ export const HourlyActivityChart: React.FC<HourlyActivityChartProps> = ({
 
           {/* Data Points and Labels */}
           {coords.map(({ x, y, h }, idx) => {
-            const circleRadius = h.isPeak ? 4 : 3;
             // Show hour labels for every other hour or key points to avoid overlap
             const shouldShowLabel = hours.length <= 8 || idx % 2 === 0 || idx === coords.length - 1;
 
@@ -221,24 +168,16 @@ export const HourlyActivityChart: React.FC<HourlyActivityChartProps> = ({
                 <circle
                   cx={x}
                   cy={y}
-                  r={circleRadius}
+                  r={3}
                   aria-label={`${h.hourLabel}: ${h.distanceKm.toFixed(1)} km`}
-                  className={
-                    h.isPeak
-                      ? 'fill-amber-500 stroke-white dark:stroke-slate-900 stroke-2'
-                      : 'fill-white dark:fill-slate-900 stroke-emerald-500 stroke-2'
-                  }
+                  className="fill-white dark:fill-slate-900 stroke-emerald-500 stroke-2"
                 />
                 {shouldShowLabel && (
                   <text
                     x={x}
                     y={chartHeight - 8}
                     textAnchor="middle"
-                    className={`text-[9px] font-mono ${
-                      h.isPeak
-                        ? 'font-bold fill-amber-600 dark:fill-amber-400'
-                        : 'fill-slate-400 dark:fill-slate-500'
-                    }`}
+                    className="text-[9px] font-mono fill-slate-400 dark:fill-slate-500"
                   >
                     {h.hourLabel}
                   </text>
@@ -270,22 +209,14 @@ export const HourlyActivityChart: React.FC<HourlyActivityChartProps> = ({
                 cx={activeCoord.x}
                 cy={activeCoord.y}
                 r={9}
-                className={
-                  activeCoord.h.isPeak
-                    ? 'fill-amber-500/20 stroke-amber-500/40'
-                    : 'fill-emerald-500/20 stroke-emerald-500/40'
-                }
+                className="fill-emerald-500/20 stroke-emerald-500/40"
                 strokeWidth="1.5"
               />
               <circle
                 cx={activeCoord.x}
                 cy={activeCoord.y}
                 r={5.5}
-                className={
-                  activeCoord.h.isPeak
-                    ? 'fill-amber-500 stroke-white dark:stroke-slate-900 stroke-2'
-                    : 'fill-emerald-500 stroke-white dark:stroke-slate-900 stroke-2'
-                }
+                className="fill-emerald-500 stroke-white dark:stroke-slate-900 stroke-2"
               />
             </g>
           )}
@@ -310,11 +241,6 @@ export const HourlyActivityChart: React.FC<HourlyActivityChartProps> = ({
             <div className="text-sm font-bold font-mono text-emerald-400 mt-0.5">
               {activeCoord.h.distanceKm.toFixed(1)} <span className="text-[10px] font-normal text-slate-300">km</span>
             </div>
-            {activeCoord.h.isPeak && (
-              <span className="mt-1 px-1.5 py-0.5 rounded text-[9px] font-semibold bg-amber-500/25 text-amber-300 border border-amber-400/30 whitespace-nowrap">
-                🔥 {activeCoord.h.hour < 12 ? 'ช่วงเร่งด่วนเช้า' : 'ช่วงเร่งด่วนเย็น'}
-              </span>
-            )}
           </div>
         )}
       </div>
