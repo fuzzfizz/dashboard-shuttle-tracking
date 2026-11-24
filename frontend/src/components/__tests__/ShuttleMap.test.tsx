@@ -247,6 +247,42 @@ describe('ShuttleMap', () => {
     invalidateSizeSpy.mockRestore();
   });
 
+  it('zooms in and flies to focused vehicle when transitioning to fullscreen', async () => {
+    const flyToSpy = vi.spyOn(L.Map.prototype, 'flyTo').mockImplementation(() => ({} as any));
+    const vehicles: FleetMap = {
+      'EV-01': {
+        vehicle_id: 'EV-01',
+        lat: 18.7883,
+        lng: 98.9853,
+        speed: 20,
+        heading: 90,
+        timestamp: Date.now(),
+      },
+    };
+
+    const { rerender } = render(
+      <ShuttleMap vehicles={vehicles} selectedVehicleId={null} isFullscreen={false} />
+    );
+
+    // Simulate clicking "เปิดแผนที่": sets selectedVehicleId to EV-01 and isFullscreen to true
+    rerender(
+      <ShuttleMap vehicles={vehicles} selectedVehicleId="EV-01" isFullscreen={true} />
+    );
+
+    // Wait for resize invalidation timer
+    await new Promise((resolve) => setTimeout(resolve, 150));
+
+    expect(flyToSpy).toHaveBeenCalledWith(
+      [18.7883, 98.9853],
+      expect.any(Number),
+      { duration: 0.6 }
+    );
+    const zoomArg = flyToSpy.mock.calls[0][1];
+    expect(zoomArg).toBeGreaterThanOrEqual(16);
+
+    flyToSpy.mockRestore();
+  });
+
   it('displays a friendly notice when selected vehicle has no GPS location data', () => {
     const { getByText } = render(
       <ShuttleMap vehicles={{}} selectedVehicleId="UNKNOWN-01" />

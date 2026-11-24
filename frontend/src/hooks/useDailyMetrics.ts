@@ -21,16 +21,24 @@ export function useDailyMetrics(vehicles: FleetMap) {
   // In-memory tracking of previous coordinate and active seconds per vehicle
   const prevCoordsRef = useRef<Record<string, CoordinatePoint>>({});
   const activeSecondsRef = useRef<Record<string, number>>({});
+  const isMountedRef = useRef<boolean>(true);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   const todayStr = getBangkokDate();
 
   // Fetch metrics from Supabase if configured
   const fetchSupabaseMetrics = useCallback(async () => {
     const supabase = getSupabaseClient();
-    if (!supabase) return;
+    if (!supabase || !isMountedRef.current) return;
 
     try {
-      setIsLoading(true);
+      if (isMountedRef.current) setIsLoading(true);
 
       const [metricsResult, sevenDayResult, hourlyResult] = await Promise.allSettled([
         supabase
@@ -98,7 +106,9 @@ export function useDailyMetrics(vehicles: FleetMap) {
     } catch (err) {
       console.warn('Supabase daily metrics query error:', err);
     } finally {
-      setIsLoading(false);
+      if (isMountedRef.current) {
+        setIsLoading(false);
+      }
     }
   }, [todayStr]);
 

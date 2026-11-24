@@ -73,7 +73,8 @@ export const FleetCameraController: React.FC<{
 
   useEffect(() => {
     // If a new active trip was assigned or calculated, auto-frame the planned road route (including alternative paths)
-    if (activeTrip && activeTrip !== prevTripRef.current && activeTrip.plannedPath && activeTrip.plannedPath.length >= 2) {
+    // Only auto-frame the whole route when NOT in focused single-vehicle tracking mode
+    if (!selectedVehicleId && activeTrip && activeTrip !== prevTripRef.current && activeTrip.plannedPath && activeTrip.plannedPath.length >= 2) {
       try {
         const allCoords = [...activeTrip.plannedPath];
         if (activeTrip.alternativePaths) {
@@ -86,7 +87,7 @@ export const FleetCameraController: React.FC<{
       } catch {}
     }
     prevTripRef.current = activeTrip;
-  }, [activeTrip, map]);
+  }, [activeTrip, map, selectedVehicleId]);
 
   useEffect(() => {
     const vehicleList = Object.values(vehicles);
@@ -113,7 +114,11 @@ export const FleetCameraController: React.FC<{
           : false;
 
         if (isInitialFocus || isFarJump) {
-          // Initial focus or large jump: snap/quick pan directly to vehicle
+          // Initial focus or large jump: snap/quick pan directly to vehicle and zoom in to street level if zoomed out
+          const currentZoom = map.getZoom();
+          if (currentZoom < 16) {
+            map.setZoom(16, { animate: false });
+          }
           map.panTo([target.lat, target.lng], { animate: true, duration: 1.0 });
         } else {
           // Synchronize camera panning duration with the vehicle telemetry interval
@@ -166,14 +171,24 @@ export const FleetCameraController: React.FC<{
   return null;
 };
 
-export const MapResizeHandler: React.FC<{ isFullscreen?: boolean }> = ({ isFullscreen }) => {
+export const MapResizeHandler: React.FC<{
+  isFullscreen?: boolean;
+  selectedVehicleId?: string | null;
+  vehicles?: FleetMap;
+}> = ({ isFullscreen, selectedVehicleId, vehicles }) => {
   const map = useMap();
 
   useEffect(() => {
     // Invalidate Leaflet canvas dimensions after transition/state update
     const timer = setTimeout(() => {
       map.invalidateSize();
-    }, 100);
+      if (selectedVehicleId && vehicles && vehicles[selectedVehicleId]) {
+        const target = vehicles[selectedVehicleId];
+        const currentZoom = map.getZoom();
+        const targetZoom = Math.max(currentZoom, 16);
+        map.flyTo([target.lat, target.lng], targetZoom, { duration: 0.6 });
+      }
+    }, 120);
 
     const handleWindowResize = () => {
       map.invalidateSize();
@@ -184,7 +199,7 @@ export const MapResizeHandler: React.FC<{ isFullscreen?: boolean }> = ({ isFulls
       clearTimeout(timer);
       window.removeEventListener('resize', handleWindowResize);
     };
-  }, [isFullscreen, map]);
+  }, [isFullscreen, map, selectedVehicleId, vehicles]);
 
   return null;
 };
@@ -539,7 +554,11 @@ export const ShuttleMap: React.FC<ShuttleMapProps> = ({
         />
 
         {/* Leaflet resize invalidation handler */}
-        <MapResizeHandler isFullscreen={isFullscreen} />
+        <MapResizeHandler
+          isFullscreen={isFullscreen}
+          selectedVehicleId={selectedVehicleId}
+          vehicles={effectiveVehicles}
+        />
 
         {/* Floating Re-center / Focus map button */}
         <MapRecenterButton

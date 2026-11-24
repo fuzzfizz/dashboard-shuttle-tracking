@@ -45,15 +45,32 @@ export async function fetchLastKnownTelemetry(): Promise<FleetMap> {
   if (!supabase) return {};
 
   try {
-    const { data, error } = await supabase
-      .from('telemetry_logs')
-      .select('vehicle_id, lat, lng, speed, heading, recorded_at')
-      .order('recorded_at', { ascending: false })
-      .limit(100);
+    // 1. Try querying latest_vehicle_telemetry view first (which does DISTINCT ON per vehicle)
+    let data: any[] | null = null;
+    try {
+      const viewRes = await supabase
+        .from('latest_vehicle_telemetry')
+        .select('vehicle_id, lat, lng, speed, heading, recorded_at');
+      if (viewRes && !viewRes.error && Array.isArray(viewRes.data) && viewRes.data.length > 0) {
+        data = viewRes.data;
+      }
+    } catch {
+      // view might not exist in mock or non-migrated environment
+    }
 
-    if (error || !data) {
-      if (error) console.warn('Supabase fetchLastKnownTelemetry error:', error.message);
-      return {};
+    if (!data) {
+      // 2. Fallback to querying telemetry_logs
+      const { data: logsData, error } = await supabase
+        .from('telemetry_logs')
+        .select('vehicle_id, lat, lng, speed, heading, recorded_at')
+        .order('recorded_at', { ascending: false })
+        .limit(100);
+
+      if (error || !logsData) {
+        if (error) console.warn('Supabase fetchLastKnownTelemetry error:', error.message);
+        return {};
+      }
+      data = logsData;
     }
 
     const latestFleet: FleetMap = {};
