@@ -5,7 +5,7 @@ import { TelemetryHUD } from '../TelemetryHUD';
 describe('TelemetryHUD', () => {
   it('renders connecting state when no telemetry received yet', () => {
     render(<TelemetryHUD telemetry={null} status="connecting" lastSeen={null} />);
-    expect(screen.getByText(/Broker: connecting/i)).toBeInTheDocument();
+    expect(screen.getByText('กำลังเชื่อมต่อ...')).toBeInTheDocument();
     expect(screen.getByText('Overview (0 online)')).toBeInTheDocument();
     expect(screen.getByText('Never')).toBeInTheDocument();
   });
@@ -23,14 +23,15 @@ describe('TelemetryHUD', () => {
     expect(screen.getByText('shuttle-01')).toBeInTheDocument();
     expect(screen.getByText('32.4')).toBeInTheDocument();
     expect(screen.getByText(/km\/h/i)).toBeInTheDocument();
+    expect(screen.getByText('กำลังวิ่ง')).toBeInTheDocument();
     // Heading is removed for passenger clarity
     expect(screen.queryByText('90°')).toBeNull();
-    expect(screen.queryByText('Signal Lost')).toBeNull();
+    expect(screen.queryByText('ขาดสัญญาณ')).toBeNull();
   });
 
   it('renders disconnected state appropriately', () => {
     render(<TelemetryHUD telemetry={null} status="disconnected" lastSeen={null} />);
-    expect(screen.getByText(/Broker: disconnected/i)).toBeInTheDocument();
+    expect(screen.getByText('ขาดการเชื่อมต่อ')).toBeInTheDocument();
     expect(screen.getByText('Overview (0 online)')).toBeInTheDocument();
   });
 
@@ -46,6 +47,7 @@ describe('TelemetryHUD', () => {
     };
     render(<TelemetryHUD telemetry={telemetry} status="connected" lastSeen={pastTime} />);
     expect(screen.getByText(/5s ago/i)).toBeInTheDocument();
+    expect(screen.getByText('จอดพัก')).toBeInTheDocument();
   });
 
   it('formats hours and days cleanly for offline vehicles', () => {
@@ -72,7 +74,7 @@ describe('TelemetryHUD', () => {
       />
     );
     expect(screen.getByText('Overview (2 online)')).toBeInTheDocument();
-    expect(screen.getByText(/Broker: connected/i)).toBeInTheDocument();
+    expect(screen.getByText('เชื่อมต่อระบบแล้ว')).toBeInTheDocument();
     expect(screen.getAllByText('--')).toHaveLength(1);
   });
 
@@ -96,7 +98,8 @@ describe('TelemetryHUD', () => {
     expect(screen.getByText('Overview (2 online)')).toBeInTheDocument();
     expect(screen.getByText('24.6')).toBeInTheDocument();
     expect(screen.getByText('2s ago')).toBeInTheDocument();
-    expect(screen.queryByText('Signal Lost')).toBeNull();
+    expect(screen.getByText('เชื่อมต่อระบบแล้ว')).toBeInTheDocument();
+    expect(screen.queryByText('ขาดสัญญาณ')).toBeNull();
   });
 
   it('renders Signal Lost badge when focused vehicle is offline', () => {
@@ -119,7 +122,7 @@ describe('TelemetryHUD', () => {
     );
 
     expect(screen.getByText('shuttle-09')).toBeInTheDocument();
-    expect(screen.getByText('Signal Lost')).toBeInTheDocument();
+    expect(screen.getByText('ขาดสัญญาณ')).toBeInTheDocument();
   });
 
   it('renders -- for speed when vehicle is offline instead of showing stale speed', () => {

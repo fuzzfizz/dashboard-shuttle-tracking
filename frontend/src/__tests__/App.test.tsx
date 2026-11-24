@@ -30,7 +30,7 @@ describe('App Integration', () => {
   it('renders default operational dashboard at / without any public map-test button', () => {
     window.history.pushState({}, '', '/');
     const { queryByText, getByText } = render(<App />);
-    expect(getByText('Shuttle Tracker')).toBeInTheDocument();
+    expect(getByText('ระบบติดตามรถรับส่ง')).toBeInTheDocument();
     // No public button pointing to map-test on main dashboard
     expect(queryByText(/Map Provider Lab/i)).toBeNull();
   });
@@ -47,7 +47,7 @@ describe('App Integration', () => {
     const { findByText, getByText, queryByText } = render(<App />);
     const backBtn = await findByText(/Back/i, {}, { timeout: 5000 });
     fireEvent.click(backBtn);
-    expect(getByText('Shuttle Tracker')).toBeInTheDocument();
+    expect(getByText('ระบบติดตามรถรับส่ง')).toBeInTheDocument();
     expect(queryByText(/Map Provider Lab/i)).toBeNull();
   });
 
@@ -63,14 +63,14 @@ describe('App Integration', () => {
     const { findByText, getByText, queryByText } = render(<App />);
     const backBtn = await findByText(/กลับสู่แดชบอร์ด/i, {}, { timeout: 5000 });
     fireEvent.click(backBtn);
-    expect(getByText('Shuttle Tracker')).toBeInTheDocument();
+    expect(getByText('ระบบติดตามรถรับส่ง')).toBeInTheDocument();
     expect(queryByText(/Route Engine Comparison Lab/i)).toBeNull();
   });
 
   it('renders top brand header, clean full-width map, and daily distance table without Fleet Status clutter', () => {
     const { container } = render(<App />);
-    expect(screen.getByText('Shuttle Tracker')).toBeInTheDocument();
-    expect(screen.getByText('Multi-Vehicle Fleet Gateway')).toBeInTheDocument();
+    expect(screen.getByText('ระบบติดตามรถรับส่ง')).toBeInTheDocument();
+    expect(screen.getByText('ติดตามตำแหน่งและระยะทางแบบเรียลไทม์')).toBeInTheDocument();
     expect(screen.getByText('Fleet Live Map')).toBeInTheDocument();
     // Confirms Fleet Status panel has been removed from main dashboard
     expect(screen.queryByText('Fleet Status')).toBeNull();
@@ -290,7 +290,7 @@ describe('App Integration', () => {
     expect(screen.getAllByText('shuttle-cm-01').length).toBeGreaterThan(0);
     expect(screen.getByText('35.5')).toBeInTheDocument();
     expect(screen.getByText(/18.25/)).toBeInTheDocument();
-    expect(screen.getByText(/Moving \/ กำลังวิ่ง/i)).toBeInTheDocument();
+    expect(screen.getByText('กำลังวิ่ง')).toBeInTheDocument();
 
     // Confirms no broker technical jargon is shown
     expect(screen.queryByText(/Broker:/i)).toBeNull();

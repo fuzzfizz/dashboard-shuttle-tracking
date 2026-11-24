@@ -75,28 +75,27 @@ export const TelemetryHUD: React.FC<TelemetryHUDProps> = ({
                 // Consumer-friendly vehicle status without broker jargon
                 <div className="text-xs sm:text-sm font-semibold flex items-center gap-1.5 leading-normal">
                   {isOnline === false ? (
-                    <span className="text-rose-600 dark:text-rose-400 flex items-center gap-1.5">
+                    <span className="text-rose-600 dark:text-rose-400 font-semibold flex items-center gap-1.5">
                       <span className="w-2 h-2 rounded-full bg-rose-500" />
-                      <span>Signal Lost</span>
-                      <span className="text-rose-500/80 font-normal">/ ขาดการเชื่อมต่อ</span>
+                      <span>ขาดสัญญาณ</span>
                     </span>
                   ) : isMoving ? (
-                    <span className="text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
+                    <span className="text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1.5">
                       <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                      <span>Moving / กำลังวิ่ง</span>
+                      <span>กำลังวิ่ง</span>
                     </span>
                   ) : (
-                    <span className="text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                    <span className="text-slate-600 dark:text-slate-300 font-medium flex items-center gap-1.5">
                       <span className="w-2 h-2 rounded-full bg-slate-400" />
-                      <span>Stopped / จอดพัก</span>
+                      <span>จอดพัก</span>
                     </span>
                   )}
                 </div>
               ) : (
                 // Overview mode status
-                <div className="text-xs font-mono uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                <div className="text-xs font-medium text-slate-600 dark:text-slate-300 flex items-center gap-1.5">
                   <Radio className="w-3.5 h-3.5" />
-                  <span>Broker: {status}</span>
+                  <span>{status === 'connected' ? 'เชื่อมต่อระบบแล้ว' : status === 'connecting' ? 'กำลังเชื่อมต่อ...' : 'ขาดการเชื่อมต่อ'}</span>
                 </div>
               )}
 
@@ -135,7 +134,7 @@ export const TelemetryHUD: React.FC<TelemetryHUDProps> = ({
             </div>
             <div>
               <div className="text-xs font-medium text-slate-500 dark:text-slate-400 leading-normal">ความเร็ว</div>
-              <div className="text-base sm:text-lg font-bold font-mono text-slate-900 dark:text-white leading-tight">
+              <div className="text-sm sm:text-base font-bold font-mono text-slate-900 dark:text-white leading-tight">
                 {telemetry
                   ? (isOnline === false ? '--' : telemetry.speed.toFixed(1))
                   : fleetStats?.averageSpeed !== undefined
@@ -159,7 +158,7 @@ export const TelemetryHUD: React.FC<TelemetryHUDProps> = ({
               </div>
               <div>
                 <div className="text-xs font-medium text-slate-500 dark:text-slate-400 leading-normal">ระยะทางวันนี้</div>
-                <div className="text-base sm:text-lg font-bold font-mono text-slate-900 dark:text-white leading-tight">
+                <div className="text-sm sm:text-base font-bold font-mono text-slate-900 dark:text-white leading-tight">
                   {distanceUnit === 'mile'
                     ? (dailyDistanceKm * 0.621371192).toFixed(2)
                     : dailyDistanceKm.toFixed(2)}
@@ -178,7 +177,7 @@ export const TelemetryHUD: React.FC<TelemetryHUDProps> = ({
             </div>
             <div>
               <div className="text-xs font-medium text-slate-500 dark:text-slate-400 leading-normal">อัปเดตล่าสุด</div>
-              <div className="text-xs sm:text-sm font-bold font-mono text-slate-900 dark:text-white leading-tight">
+              <div className="text-sm sm:text-base font-bold font-mono text-slate-900 dark:text-white leading-tight">
                 {formatLastSeen(lastSeen)}
               </div>
             </div>

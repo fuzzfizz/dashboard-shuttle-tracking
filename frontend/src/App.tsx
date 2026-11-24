@@ -156,9 +156,9 @@ function OperationalDashboard() {
               <Bus className="w-5 h-5" />
             </div>
             <div>
-              <h1 className="text-xs sm:text-sm md:text-base font-bold uppercase tracking-wider text-slate-900 dark:text-white leading-tight">Shuttle Tracker</h1>
-              <p className="text-[10px] md:text-xs text-slate-500 dark:text-slate-400 font-mono hidden sm:block">
-                <span>ระบบติดตามรถบริการรับ-ส่ง</span> <span className="text-slate-400 dark:text-slate-500 ml-1">Multi-Vehicle Fleet Gateway</span>
+              <h1 className="text-xs sm:text-sm md:text-base font-bold tracking-tight text-slate-900 dark:text-white leading-tight">ระบบติดตามรถรับส่ง</h1>
+              <p className="text-xs text-slate-500 dark:text-slate-400 font-sans hidden sm:block">
+                ติดตามตำแหน่งและระยะทางแบบเรียลไทม์
               </p>
             </div>
           </div>
@@ -220,9 +220,14 @@ function OperationalDashboard() {
                   <h2 className="text-xs sm:text-sm font-semibold text-slate-800 dark:text-slate-200">
                     <span>แผนที่ตำแหน่งรถสด</span> <span className="text-xs font-normal text-slate-400 dark:text-slate-500 ml-1">Fleet Live Map</span>
                   </h2>
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-                    ออนไลน์ {fleetStats.onlineVehicles} คัน
+                  <span className="px-2.5 py-1 rounded-full text-xs sm:text-sm font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                    ออนไลน์ {fleetStats.onlineVehicles}
                   </span>
+                  {fleetStats.totalVehicles - fleetStats.onlineVehicles > 0 && (
+                    <span className="px-2.5 py-1 rounded-full text-xs sm:text-sm font-semibold bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20">
+                      ขาดสัญญาณ {fleetStats.totalVehicles - fleetStats.onlineVehicles}
+                    </span>
+                  )}
                   <span className="px-1.5 py-0.5 rounded text-[10px] font-mono font-medium bg-slate-100 text-slate-600 border border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700/60 hidden sm:inline-block">
                     Longdo Map
                   </span>
@@ -311,9 +316,9 @@ function OperationalDashboard() {
                         <Bus className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                       </div>
                       <div>
-                        <h1 className="text-xs sm:text-sm font-bold uppercase tracking-wider text-slate-900 dark:text-white leading-tight">Shuttle Tracker</h1>
+                        <h1 className="text-xs sm:text-sm font-bold tracking-tight text-slate-900 dark:text-white leading-tight">ระบบติดตามรถรับส่ง</h1>
                         <p className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 font-sans leading-tight">
-                          {selectedVehicleId ? `กำลังติดตาม ${selectedVehicleId}` : `ออนไลน์ ${fleetStats.onlineVehicles} / ${fleetStats.totalVehicles} คัน`}
+                          {selectedVehicleId ? `กำลังติดตาม ${selectedVehicleId}` : `ออนไลน์ ${fleetStats.onlineVehicles} / ${fleetStats.totalVehicles}`}
                         </p>
                       </div>
                     </div>
