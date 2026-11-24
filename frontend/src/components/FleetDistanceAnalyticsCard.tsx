@@ -189,13 +189,10 @@ export const FleetDistanceAnalyticsCard: React.FC<FleetDistanceAnalyticsCardProp
           </div>
           <div className="min-w-0">
             <h2 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white flex items-center gap-2 truncate">
-              <span>กราฟวิเคราะห์การเดินรถ</span>
-              <span className="text-xs font-normal text-slate-400 dark:text-slate-500 hidden sm:inline font-sans">
-                Fleet Distance Analytics
-              </span>
+              <span>สถิติระยะทางวิ่ง</span>
             </h2>
-            <p className="text-xs text-slate-500 dark:text-slate-400 font-sans truncate">
-              เปรียบเทียบระยะทางรายคัน และแนวโน้มการเดินรถตามช่วงเวลา
+            <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 font-sans truncate">
+              เปรียบเทียบระยะทางและแนวโน้มการใช้งานของกองรถ
             </p>
           </div>
         </div>
@@ -241,9 +238,9 @@ export const FleetDistanceAnalyticsCard: React.FC<FleetDistanceAnalyticsCardProp
                     type="button"
                     aria-pressed={isSelected}
                     onClick={() => handleTimeframeChange(opt.id)}
-                    className={`flex-1 sm:flex-initial px-3 py-1.5 rounded-lg text-xs font-medium transition-all min-h-[42px] sm:min-h-0 flex items-center justify-center ${
+                    className={`flex-1 sm:flex-initial px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all min-h-[42px] sm:min-h-0 flex items-center justify-center ${
                       isSelected
-                        ? 'bg-white dark:bg-slate-900 text-emerald-600 dark:text-emerald-400 font-semibold shadow-xs'
+                        ? 'bg-white dark:bg-slate-900 text-emerald-600 dark:text-emerald-400 shadow-xs'
                         : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
                     }`}
                   >
@@ -282,7 +279,7 @@ export const FleetDistanceAnalyticsCard: React.FC<FleetDistanceAnalyticsCardProp
               type="button"
               onClick={() => setActiveTab('vehicles')}
               aria-label="ดูกราฟเปรียบเทียบรายคัน"
-              className={`flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 py-2 sm:py-1.5 rounded-lg text-xs font-semibold transition-all min-h-[42px] sm:min-h-0 ${
+              className={`flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all min-h-[42px] sm:min-h-0 ${
                 activeTab === 'vehicles'
                   ? 'bg-white text-slate-900 shadow-sm dark:bg-slate-900 dark:text-emerald-400'
                   : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
@@ -296,7 +293,7 @@ export const FleetDistanceAnalyticsCard: React.FC<FleetDistanceAnalyticsCardProp
               type="button"
               onClick={() => setActiveTab('trend')}
               aria-label={tab2Config.ariaLabel}
-              className={`flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 py-2 sm:py-1.5 rounded-lg text-xs font-semibold transition-all min-h-[42px] sm:min-h-0 ${
+              className={`flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all min-h-[42px] sm:min-h-0 ${
                 activeTab === 'trend'
                   ? 'bg-white text-slate-900 shadow-sm dark:bg-slate-900 dark:text-emerald-400'
                   : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'

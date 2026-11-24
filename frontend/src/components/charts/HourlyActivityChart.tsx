@@ -93,7 +93,7 @@ export const HourlyActivityChart: React.FC<HourlyActivityChartProps> = ({
   return (
     <div className="w-full overflow-hidden py-1">
       {/* Header Info */}
-      <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 px-1 mb-2 font-sans">
+      <div className="flex items-center justify-between text-xs sm:text-sm font-medium text-slate-500 dark:text-slate-400 px-1 mb-2 font-sans">
         <span>{subtitleLabel}</span>
         <span className="font-mono text-emerald-600 dark:text-emerald-400 font-semibold">
           สูงสุด: {maxDist.toFixed(1)} km
@@ -137,7 +137,7 @@ export const HourlyActivityChart: React.FC<HourlyActivityChartProps> = ({
                   x={paddingX - 8}
                   y={y + 3}
                   textAnchor="end"
-                  className="text-[9px] font-mono fill-slate-400 dark:fill-slate-500"
+                  className="text-[11px] font-mono fill-slate-400 dark:fill-slate-500"
                 >
                   {(maxDist * pct).toFixed(1)}k
                 </text>
@@ -177,7 +177,7 @@ export const HourlyActivityChart: React.FC<HourlyActivityChartProps> = ({
                     x={x}
                     y={chartHeight - 8}
                     textAnchor="middle"
-                    className="text-[9px] font-mono fill-slate-400 dark:fill-slate-500"
+                    className="text-[11px] font-mono fill-slate-400 dark:fill-slate-500"
                   >
                     {h.hourLabel}
                   </text>
@@ -234,12 +234,12 @@ export const HourlyActivityChart: React.FC<HourlyActivityChartProps> = ({
             }}
             className="absolute pointer-events-none z-30 flex flex-col items-center bg-slate-900/95 dark:bg-slate-950/95 text-white border border-slate-700/60 rounded-xl px-3 py-1.5 shadow-xl transition-transform duration-75 backdrop-blur-xs min-w-[95px]"
           >
-            <div className="flex items-center gap-1.5 text-[10px] text-slate-300 font-sans">
+            <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-300 font-sans">
               <span>⏰</span>
               <span>{activeCoord.h.hourLabel} น.</span>
             </div>
             <div className="text-sm font-bold font-mono text-emerald-400 mt-0.5">
-              {activeCoord.h.distanceKm.toFixed(1)} <span className="text-[10px] font-normal text-slate-300">km</span>
+              {activeCoord.h.distanceKm.toFixed(1)} <span className="text-xs font-normal text-slate-300">km</span>
             </div>
           </div>
         )}

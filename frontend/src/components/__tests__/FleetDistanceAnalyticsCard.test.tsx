@@ -45,7 +45,7 @@ describe('FleetDistanceAnalyticsCard', () => {
     );
 
     // Header title
-    expect(screen.getByText('กราฟวิเคราะห์การเดินรถ')).toBeInTheDocument();
+    expect(screen.getByText('สถิติระยะทางวิ่ง')).toBeInTheDocument();
     // Executive KPI stat cards are removed as requested
     expect(screen.queryByText('ระยะทางรวมวันนี้')).toBeNull();
     expect(screen.queryByText('เฉลี่ยต่อคัน')).toBeNull();

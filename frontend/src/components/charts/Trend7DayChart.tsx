@@ -130,7 +130,7 @@ export const Trend7DayChart: React.FC<Trend7DayChartProps> = ({
 
   return (
     <div className="w-full overflow-hidden py-1">
-      <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 px-1 mb-2 font-sans">
+      <div className="flex items-center justify-between text-xs sm:text-sm font-medium text-slate-500 dark:text-slate-400 px-1 mb-2 font-sans">
         <span>{headerLabel}</span>
         <span className="font-mono text-emerald-600 dark:text-emerald-400 font-semibold">
           สูงสุด: {maxVal.toFixed(1)} km
@@ -174,7 +174,7 @@ export const Trend7DayChart: React.FC<Trend7DayChartProps> = ({
                   x={paddingX - 8}
                   y={y + 3}
                   textAnchor="end"
-                  className="text-[9px] font-mono fill-slate-400 dark:fill-slate-500"
+                  className="text-[11px] font-mono fill-slate-400 dark:fill-slate-500"
                 >
                   {Math.round(maxVal * pct)}k
                 </text>
@@ -216,7 +216,7 @@ export const Trend7DayChart: React.FC<Trend7DayChartProps> = ({
                     x={x}
                     y={y - 8}
                     textAnchor="middle"
-                    className="text-[9px] font-mono font-bold fill-slate-700 dark:fill-slate-200"
+                    className="text-[11px] font-mono font-bold fill-slate-700 dark:fill-slate-200"
                   >
                     {p.totalDistanceKm.toFixed(0)}
                   </text>
@@ -226,7 +226,7 @@ export const Trend7DayChart: React.FC<Trend7DayChartProps> = ({
                     x={x}
                     y={chartHeight - 8}
                     textAnchor="middle"
-                    className={`text-[10px] font-sans ${
+                    className={`text-[11px] font-mono ${
                       p.isToday
                         ? 'font-bold fill-emerald-600 dark:fill-emerald-400'
                         : 'fill-slate-500 dark:fill-slate-400'
@@ -287,7 +287,7 @@ export const Trend7DayChart: React.FC<Trend7DayChartProps> = ({
             }}
             className="absolute pointer-events-none z-30 flex flex-col items-center bg-slate-900/95 dark:bg-slate-950/95 text-white border border-slate-700/60 rounded-xl px-3 py-1.5 shadow-xl transition-transform duration-75 backdrop-blur-xs min-w-[95px]"
           >
-            <div className="flex items-center gap-1.5 text-[10px] text-slate-300 font-sans">
+            <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-300 font-sans">
               <span>📅</span>
               <span>
                 {timeframe === 'year'
@@ -297,10 +297,10 @@ export const Trend7DayChart: React.FC<Trend7DayChartProps> = ({
             </div>
             <div className="text-sm font-bold font-mono text-emerald-400 mt-0.5">
               {activeCoord.p.totalDistanceKm.toFixed(1)}{' '}
-              <span className="text-[10px] font-normal text-slate-300">km</span>
+              <span className="text-xs font-normal text-slate-300">km</span>
             </div>
             {activeCoord.p.isToday && (
-              <span className="mt-1 px-1.5 py-0.5 rounded text-[9px] font-semibold bg-emerald-500/25 text-emerald-300 border border-emerald-400/30 whitespace-nowrap">
+              <span className="mt-1 px-1.5 py-0.5 rounded text-xs font-semibold bg-emerald-500/25 text-emerald-300 border border-emerald-400/30 whitespace-nowrap">
                 {timeframe === 'year' ? 'เดือนนี้' : 'วันนี้'}
               </span>
             )}

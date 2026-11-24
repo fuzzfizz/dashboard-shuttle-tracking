@@ -27,7 +27,7 @@ export const VehicleComparisonChart: React.FC<VehicleComparisonChartProps> = ({
   return (
     <div className="space-y-3.5 py-1">
       {/* Benchmark Legend */}
-      <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 px-1 font-sans">
+      <div className="flex items-center justify-between text-xs sm:text-sm font-medium text-slate-500 dark:text-slate-400 px-1 font-sans">
         <span className="flex items-center gap-1.5">
           <span className="w-3 h-3 rounded bg-emerald-500 inline-block" />
           <span>ระยะทางรถแต่ละคัน (กม.)</span>
@@ -74,7 +74,7 @@ export const VehicleComparisonChart: React.FC<VehicleComparisonChartProps> = ({
                   }`}
                 />
                 <span
-                  className={`font-mono font-bold text-xs truncate ${
+                  className={`font-mono font-bold text-xs sm:text-sm truncate ${
                     isSelected
                       ? 'text-emerald-700 dark:text-emerald-300'
                       : 'text-slate-700 dark:text-slate-200'
@@ -97,7 +97,7 @@ export const VehicleComparisonChart: React.FC<VehicleComparisonChartProps> = ({
               </div>
 
               {/* Value Label */}
-              <div className="w-16 shrink-0 text-right font-mono font-bold text-xs text-slate-800 dark:text-slate-100">
+              <div className="w-16 sm:w-20 shrink-0 text-right font-mono font-bold text-xs sm:text-sm text-slate-800 dark:text-slate-100">
                 {item.distanceKm.toFixed(1)} km
               </div>
             </div>
