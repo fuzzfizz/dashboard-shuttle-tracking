@@ -451,6 +451,15 @@ export const ShuttleMap: React.FC<ShuttleMapProps> = ({
   const isSelectedVehicleMissing =
     Boolean(selectedVehicleId) && !effectiveVehicles[selectedVehicleId!];
 
+  // In Focus Mode (selectedVehicleId provided and vehicle exists in fleet), isolate to that single vehicle.
+  // In Overview Mode (selectedVehicleId is null or vehicle has no GPS yet), display all vehicles.
+  const displayedVehicles = React.useMemo(() => {
+    if (selectedVehicleId && effectiveVehicles[selectedVehicleId]) {
+      return [effectiveVehicles[selectedVehicleId]];
+    }
+    return vehicleList;
+  }, [selectedVehicleId, effectiveVehicles, vehicleList]);
+
   return (
     <div className="relative w-full h-full">
       {isSelectedVehicleMissing && (
@@ -551,7 +560,7 @@ export const ShuttleMap: React.FC<ShuttleMapProps> = ({
         />
 
         {/* Render animated vehicle markers with 60 FPS gliding */}
-        {vehicleList.map((v) => {
+        {displayedVehicles.map((v) => {
           const isSelected = selectedVehicleId === v.vehicle_id;
           const isOnline = computeVehicleStatus(
             v,

@@ -384,4 +384,82 @@ describe('ShuttleMap', () => {
 
     expect(screen.getByRole('button', { name: /ทดสอบเส้นทาง/i })).toBeInTheDocument();
   });
+
+  it('renders only the selected vehicle marker when selectedVehicleId is specified', () => {
+    const vehicles: FleetMap = {
+      'EV-01': {
+        vehicle_id: 'EV-01',
+        lat: 18.7883,
+        lng: 98.9853,
+        speed: 20,
+        heading: 90,
+        timestamp: Date.now(),
+      },
+      'EV-02': {
+        vehicle_id: 'EV-02',
+        lat: 18.7900,
+        lng: 98.9800,
+        speed: 15,
+        heading: 180,
+        timestamp: Date.now(),
+      },
+    };
+
+    const { container } = render(
+      <ShuttleMap vehicles={vehicles} selectedVehicleId="EV-01" />
+    );
+
+    // EV-01 should be present in marker inner html
+    expect(container.innerHTML).toContain('EV-01');
+    // EV-02 should NOT be rendered when focusing EV-01
+    expect(container.innerHTML).not.toContain('EV-02');
+  });
+
+  it('renders all vehicles when selectedVehicleId is null (Overview Mode)', () => {
+    const vehicles: FleetMap = {
+      'EV-01': {
+        vehicle_id: 'EV-01',
+        lat: 18.7883,
+        lng: 98.9853,
+        speed: 20,
+        heading: 90,
+        timestamp: Date.now(),
+      },
+      'EV-02': {
+        vehicle_id: 'EV-02',
+        lat: 18.7900,
+        lng: 98.9800,
+        speed: 15,
+        heading: 180,
+        timestamp: Date.now(),
+      },
+    };
+
+    const { container } = render(
+      <ShuttleMap vehicles={vehicles} selectedVehicleId={null} />
+    );
+
+    expect(container.innerHTML).toContain('EV-01');
+    expect(container.innerHTML).toContain('EV-02');
+  });
+
+  it('falls back to rendering all vehicles if selectedVehicleId is not in effectiveVehicles', () => {
+    const vehicles: FleetMap = {
+      'EV-01': {
+        vehicle_id: 'EV-01',
+        lat: 18.7883,
+        lng: 98.9853,
+        speed: 20,
+        heading: 90,
+        timestamp: Date.now(),
+      },
+    };
+
+    const { container } = render(
+      <ShuttleMap vehicles={vehicles} selectedVehicleId="UNKNOWN_BUS" />
+    );
+
+    expect(container.innerHTML).toContain('EV-01');
+    expect(container.innerHTML).toContain('No GPS coordinates recorded for UNKNOWN_BUS yet');
+  });
 });
