@@ -179,4 +179,28 @@ describe('Fleet Sub-Charts', () => {
       screen.getByText('ปริมาณระยะทางสะสมของ BUS-01 (กม./วัน ย้อนหลัง 7 วัน)')
     ).toBeInTheDocument();
   });
+
+  it('displays "เดือนนี้" instead of "วันนี้" in tooltip badge when hovered on the current month in yearly trend chart', () => {
+    const points12 = [
+      { date: '2026-10-01', dayLabel: 'ต.ค.', totalDistanceKm: 250, isToday: false },
+      { date: '2026-11-01', dayLabel: 'พ.ย.', totalDistanceKm: 420.5, isToday: true },
+    ];
+
+    const { container } = render(<Trend7DayChart points={points12} timeframe="year" />);
+    const svg = container.querySelector('svg');
+    expect(svg).toBeInTheDocument();
+
+    svg!.getBoundingClientRect = () =>
+      ({ width: 500, height: 180, left: 0, top: 0, right: 500, bottom: 180 } as any);
+
+    // Hover over the second point (current month at x = 460)
+    fireEvent.pointerMove(svg!, { clientX: 460, clientY: 50 });
+
+    const tooltip = container.querySelector('[data-testid="trend-tooltip"]');
+    expect(tooltip).toBeInTheDocument();
+    expect(tooltip).toHaveTextContent('เดือนนี้');
+    expect(tooltip).not.toHaveTextContent('วันนี้');
+    expect(tooltip).toHaveTextContent('เดือน พ.ย.');
+    expect(tooltip).toHaveTextContent('420.5 km');
+  });
 });

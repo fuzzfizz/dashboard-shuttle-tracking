@@ -84,7 +84,14 @@ export const Trend7DayChart: React.FC<Trend7DayChartProps> = ({
   ) => {
     if (!svgRef.current || coords.length === 0) return;
     const rect = svgRef.current.getBoundingClientRect();
-    const clientX = 'clientX' in e ? e.clientX : e.touches?.[0]?.clientX ?? 0;
+    const native = (e as any).nativeEvent || e;
+    const rawX =
+      typeof (e as any).clientX === 'number'
+        ? (e as any).clientX
+        : typeof native.clientX === 'number'
+        ? native.clientX
+        : (e as any).touches?.[0]?.clientX ?? 0;
+    const clientX = rawX;
     const width = rect.width > 0 ? rect.width : chartWidth;
     const left = rect.width > 0 ? rect.left : 0;
     const svgX = ((clientX - left) / width) * chartWidth;
@@ -282,7 +289,11 @@ export const Trend7DayChart: React.FC<Trend7DayChartProps> = ({
           >
             <div className="flex items-center gap-1.5 text-[10px] text-slate-300 font-sans">
               <span>📅</span>
-              <span>{activeCoord.p.dayLabel}</span>
+              <span>
+                {timeframe === 'year'
+                  ? `เดือน ${activeCoord.p.dayLabel}`
+                  : activeCoord.p.dayLabel}
+              </span>
             </div>
             <div className="text-sm font-bold font-mono text-emerald-400 mt-0.5">
               {activeCoord.p.totalDistanceKm.toFixed(1)}{' '}
@@ -290,7 +301,7 @@ export const Trend7DayChart: React.FC<Trend7DayChartProps> = ({
             </div>
             {activeCoord.p.isToday && (
               <span className="mt-1 px-1.5 py-0.5 rounded text-[9px] font-semibold bg-emerald-500/25 text-emerald-300 border border-emerald-400/30 whitespace-nowrap">
-                วันนี้
+                {timeframe === 'year' ? 'เดือนนี้' : 'วันนี้'}
               </span>
             )}
           </div>

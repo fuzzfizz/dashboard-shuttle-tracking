@@ -83,7 +83,10 @@ export const HourlyActivityChart: React.FC<HourlyActivityChartProps> = ({
   ) => {
     if (!svgRef.current || coords.length === 0) return;
     const rect = svgRef.current.getBoundingClientRect();
-    const clientX = 'clientX' in e ? e.clientX : e.touches?.[0]?.clientX ?? 0;
+    const clientX =
+      typeof (e as any).clientX === 'number'
+        ? (e as any).clientX
+        : (e as any).touches?.[0]?.clientX ?? 0;
     const width = rect.width > 0 ? rect.width : chartWidth;
     const left = rect.width > 0 ? rect.left : 0;
     const svgX = ((clientX - left) / width) * chartWidth;
