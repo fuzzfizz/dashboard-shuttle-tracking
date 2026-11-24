@@ -438,4 +438,31 @@ describe('App Integration', () => {
     fireEvent.click(overviewBtn);
     expect(setSelectedVehicleIdMock).toHaveBeenCalledWith(null);
   });
+
+  it('does not render route polyline when no vehicle is selected (initial overview mode)', () => {
+    vi.spyOn(shuttleHook, 'useShuttleTelemetry').mockReturnValue({
+      status: 'connected',
+      vehicles: {
+        'shuttle-test-01': {
+          vehicle_id: 'shuttle-test-01',
+          lat: 18.7883,
+          lng: 98.9853,
+          speed: 20,
+          heading: 90,
+          timestamp: Date.now(),
+        },
+      },
+      lastSeenMap: { 'shuttle-test-01': Date.now() },
+      selectedVehicleId: null,
+      setSelectedVehicleId: vi.fn(),
+      telemetry: null as any,
+      lastSeen: Date.now(),
+      now: Date.now(),
+    });
+
+    render(<App />);
+
+    expect(screen.queryByTestId('planned-route-polyline')).toBeNull();
+    expect(screen.queryByTestId('actual-path-polyline')).toBeNull();
+  });
 });

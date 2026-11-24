@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef, Suspense, lazy } from 'react';
+import { useState, useEffect, useMemo, Suspense, lazy } from 'react';
 import { useShuttleTelemetry } from './hooks/useShuttleTelemetry';
 import { useDailyMetrics } from './hooks/useDailyMetrics';
 import { useVehicleTripRoute } from './hooks/useVehicleTripRoute';
@@ -50,23 +50,6 @@ function OperationalDashboard() {
       recordVehicleBreadcrumb(v.vehicle_id, v.lat, v.lng);
     });
   }, [vehicles, recordVehicleBreadcrumb]);
-
-  // Pre-initialize route trip for shuttle-test-01 when it connects
-  const autoTripInitializedRef = useRef<Record<string, boolean>>({});
-  useEffect(() => {
-    if (
-      vehicles['shuttle-test-01'] &&
-      !trips['shuttle-test-01'] &&
-      !autoTripInitializedRef.current['shuttle-test-01']
-    ) {
-      autoTripInitializedRef.current['shuttle-test-01'] = true;
-      startTrip(
-        'shuttle-test-01',
-        { lat: 18.790033028824645, lng: 98.96553891726919, name: 'จุดรับ (สุเทพ / มช.)' },
-        { lat: 18.7239969760301, lng: 98.98380842699336, name: 'จุดส่ง (หางดง / แม่เหียะ)' }
-      );
-    }
-  }, [vehicles, trips, startTrip]);
 
   const [isMapFullscreen, setIsMapFullscreen] = useState(false);
   const [activeTab, setActiveTab] = useState<'today' | 'history'>('today');
@@ -303,9 +286,9 @@ function OperationalDashboard() {
                   defaultCenter={DEFAULT_CENTER}
                   zoom={14}
                   isFullscreen={isMapFullscreen}
-                  activeTrip={selectedVehicleId ? trips[selectedVehicleId] : (trips['shuttle-test-01'] || Object.values(trips)[0])}
-                  actualPath={selectedVehicleId ? actualPaths[selectedVehicleId] : (actualPaths['shuttle-test-01'] || Object.values(actualPaths)[0])}
-                  roundStage={selectedVehicleId ? roundStages[selectedVehicleId] : (roundStages['shuttle-test-01'] || Object.values(roundStages)[0])}
+                  activeTrip={selectedVehicleId ? trips[selectedVehicleId] : undefined}
+                  actualPath={selectedVehicleId ? actualPaths[selectedVehicleId] : undefined}
+                  roundStage={selectedVehicleId ? roundStages[selectedVehicleId] : undefined}
                   pinMode={pinMode}
                   onSetPinMode={setPinMode}
                   onStartTrip={startTrip}
