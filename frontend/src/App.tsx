@@ -243,6 +243,18 @@ function OperationalDashboard() {
                   <span className="px-1.5 py-0.5 rounded text-[10px] font-mono font-medium bg-slate-100 text-slate-600 border border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700/60 hidden sm:inline-block">
                     Longdo Map
                   </span>
+                  {selectedVehicleId && (
+                    <button
+                      type="button"
+                      onClick={() => setSelectedVehicleId(null)}
+                      data-testid="inline-overview-button"
+                      className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/60 dark:hover:bg-emerald-900 dark:text-emerald-300 dark:border-emerald-800 text-xs font-medium transition-colors cursor-pointer"
+                      title="กลับสู่มุมมองรถทั้งหมด"
+                    >
+                      <span>กำลังดู: <strong className="font-mono">{selectedVehicleId}</strong></span>
+                      <span className="text-[10px] bg-emerald-200/70 dark:bg-emerald-800/80 px-1.5 py-0.5 rounded font-sans">✕ ดูรถทั้งหมด</span>
+                    </button>
+                  )}
                 </div>
                 <div className="flex items-center gap-2">
                   <a

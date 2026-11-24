@@ -405,4 +405,37 @@ describe('App Integration', () => {
     expect(calculateTripRouteSpy).not.toHaveBeenCalled();
     calculateTripRouteSpy.mockRestore();
   });
+
+  it('renders a return to overview button on inline map header when a vehicle is selected, and clicking it resets focus', () => {
+    const setSelectedVehicleIdMock = vi.fn();
+    vi.spyOn(shuttleHook, 'useShuttleTelemetry').mockReturnValue({
+      status: 'connected',
+      vehicles: {
+        'EV-01': {
+          vehicle_id: 'EV-01',
+          lat: 18.7883,
+          lng: 98.9853,
+          speed: 20,
+          heading: 90,
+          timestamp: Date.now(),
+        },
+      },
+      lastSeenMap: { 'EV-01': Date.now() },
+      selectedVehicleId: 'EV-01',
+      setSelectedVehicleId: setSelectedVehicleIdMock,
+      telemetry: null as any,
+      lastSeen: Date.now(),
+      now: Date.now(),
+    });
+
+    render(<App />);
+
+    const overviewBtn = screen.getByTestId('inline-overview-button');
+    expect(overviewBtn).toBeInTheDocument();
+    expect(overviewBtn).toHaveTextContent('EV-01');
+    expect(overviewBtn).toHaveTextContent('ดูรถทั้งหมด');
+
+    fireEvent.click(overviewBtn);
+    expect(setSelectedVehicleIdMock).toHaveBeenCalledWith(null);
+  });
 });
