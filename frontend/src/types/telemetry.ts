@@ -28,4 +28,6 @@ export interface UseShuttleTelemetryOptions {
   topic?: string;
   username?: string;
   password?: string;
+  streamUrl?: string;
+  mode?: 'mqtt' | 'sse' | 'auto';
 }

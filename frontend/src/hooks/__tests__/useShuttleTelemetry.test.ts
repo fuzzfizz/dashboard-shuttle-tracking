@@ -2,6 +2,24 @@ import { renderHook, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { useShuttleTelemetry } from '../useShuttleTelemetry';
 
+class MockEventSource {
+  static instances: MockEventSource[] = [];
+  url: string;
+  readyState = 0;
+  onopen: (() => void) | null = null;
+  onmessage: ((ev: { data: string }) => void) | null = null;
+  onerror: (() => void) | null = null;
+  close = vi.fn();
+
+  constructor(url: string) {
+    this.url = url;
+    MockEventSource.instances.push(this);
+  }
+}
+
+// @ts-ignore
+globalThis.EventSource = MockEventSource;
+
 const mockMqttClient = {
   on: vi.fn(),
   subscribe: vi.fn(),
@@ -201,5 +219,77 @@ describe('useShuttleTelemetry', () => {
 
     expect(result.current.vehicles['shuttle-01']).toBeDefined();
     expect(result.current.vehicles['shuttle-01'].speed).toBe(35);
+  });
+
+  it('connects via SSE and ingests vehicles when mode is sse', () => {
+    MockEventSource.instances = [];
+    const { result } = renderHook(() =>
+      useShuttleTelemetry({ mode: 'sse', streamUrl: '/api/telemetry/stream' })
+    );
+
+    expect(MockEventSource.instances.length).toBe(1);
+    const es = MockEventSource.instances[0];
+    expect(es.url).toBe('/api/telemetry/stream');
+
+    act(() => {
+      es.onopen?.();
+    });
+    expect(result.current.status).toBe('connected');
+
+    act(() => {
+      es.onmessage?.({
+        data: JSON.stringify({
+          vehicle_id: 'sse-bus-01',
+          lat: 18.79,
+          lng: 98.96,
+          speed: 40,
+          timestamp: 5000,
+        }),
+      });
+    });
+
+    expect(result.current.vehicles['sse-bus-01']).toBeDefined();
+    expect(result.current.vehicles['sse-bus-01'].speed).toBe(40);
+  });
+
+  it('falls back to SSE stream when MQTT encounters an error', () => {
+    MockEventSource.instances = [];
+    let errorHandler: ((err: Error) => void) | undefined;
+    mockMqttClient.on.mockImplementation((event: string, handler: any) => {
+      if (event === 'error') {
+        errorHandler = handler;
+      }
+      return mockMqttClient;
+    });
+
+    const { result } = renderHook(() =>
+      useShuttleTelemetry({ brokerUrl: 'wss://iot.pharmacy.cmu.ac.th:8083/mqtt' })
+    );
+
+    act(() => {
+      errorHandler?.(new Error('net::ERR_CERT_DATE_INVALID'));
+    });
+
+    // Should switch to SSE EventSource
+    expect(MockEventSource.instances.length).toBe(1);
+    const es = MockEventSource.instances[0];
+    expect(es.url).toBe('/api/telemetry/stream');
+
+    act(() => {
+      es.onopen?.();
+      es.onmessage?.({
+        data: JSON.stringify({
+          vehicle_id: 'fallback-bus',
+          lat: 18.789,
+          lng: 98.987,
+          speed: 28,
+          timestamp: 9999,
+        }),
+      });
+    });
+
+    expect(result.current.status).toBe('connected');
+    expect(result.current.vehicles['fallback-bus']).toBeDefined();
+    expect(result.current.vehicles['fallback-bus'].speed).toBe(28);
   });
 });

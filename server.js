@@ -20,6 +20,33 @@ const DIST_DIR = path.join(__dirname, 'frontend', 'dist');
 // Start the background MQTT ingestion engine
 const worker = startWorker();
 
+// Active SSE client connections for real-time telemetry streaming
+const sseClients = new Set();
+
+if (typeof worker.on === 'function') {
+  worker.on('telemetry', (payload) => {
+    const message = `data: ${JSON.stringify(payload)}\n\n`;
+    for (const client of sseClients) {
+      try {
+        client.write(message);
+      } catch {
+        sseClients.delete(client);
+      }
+    }
+  });
+}
+
+// Periodic heartbeat every 20 seconds to prevent Render proxy / Cloudflare timeout on idle SSE
+const sseHeartbeat = setInterval(() => {
+  for (const client of sseClients) {
+    try {
+      client.write(': ping\n\n');
+    } catch {
+      sseClients.delete(client);
+    }
+  }
+}, 20000);
+
 // Optional simulator: only runs if explicitly requested via ENABLE_SIMULATOR=true
 if (process.env.ENABLE_SIMULATOR === 'true') {
   import('./tools/simulate-chiangmai.js')
@@ -69,7 +96,45 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  // 2. Serve static frontend assets from frontend/dist
+  // 2. Real-time Telemetry Relay: Server-Sent Events (SSE) Stream
+  if (urlPath === '/api/telemetry/stream') {
+    res.writeHead(200, {
+      'Content-Type': 'text/event-stream; charset=utf-8',
+      'Cache-Control': 'no-cache, no-transform',
+      'Connection': 'keep-alive',
+      'Access-Control-Allow-Origin': '*',
+      'X-Accel-Buffering': 'no',
+    });
+    res.write(': connected\n\n');
+
+    // Immediately push current active vehicle snapshot so client is updated on connect
+    const snapshot = typeof worker.getFleetSnapshot === 'function' ? worker.getFleetSnapshot() : {};
+    if (snapshot && Object.keys(snapshot).length > 0) {
+      for (const vehicle of Object.values(snapshot)) {
+        res.write(`data: ${JSON.stringify(vehicle)}\n\n`);
+      }
+    }
+
+    sseClients.add(res);
+    req.on('close', () => {
+      sseClients.delete(res);
+    });
+    return;
+  }
+
+  // 3. REST Snapshot of latest vehicle telemetry
+  if (urlPath === '/api/telemetry/latest') {
+    res.writeHead(200, {
+      'Content-Type': 'application/json; charset=utf-8',
+      'Access-Control-Allow-Origin': '*',
+      'Cache-Control': 'no-cache',
+    });
+    const snapshot = typeof worker.getFleetSnapshot === 'function' ? worker.getFleetSnapshot() : {};
+    res.end(JSON.stringify(snapshot));
+    return;
+  }
+
+  // 4. Serve static frontend assets from frontend/dist
   let safePath = path.normalize(urlPath).replace(/^(\.\.[\/\\])+/, '');
   let filePath = path.join(DIST_DIR, safePath);
 
@@ -134,6 +199,14 @@ const handleShutdown = async (signal) => {
   if (isShuttingDown) return;
   isShuttingDown = true;
   console.log(`\n[Unified Server] Received ${signal}. Gracefully shutting down...`);
+
+  clearInterval(sseHeartbeat);
+  for (const client of sseClients) {
+    try {
+      client.end();
+    } catch {}
+  }
+  sseClients.clear();
 
   server.close(() => {
     console.log('[Unified Server] HTTP server closed.');

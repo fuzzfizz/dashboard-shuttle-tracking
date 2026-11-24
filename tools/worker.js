@@ -1,4 +1,5 @@
 import mqtt from 'mqtt';
+import { EventEmitter } from 'events';
 import { createClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
 import path from 'path';
@@ -54,6 +55,8 @@ export function startWorker(options = {}) {
   });
 
   // In-memory state tracking per vehicle
+  const emitter = new EventEmitter();
+  const latestTelemetryMap = new Map();
   const vehicleState = new Map();
   let totalPacketsReceived = 0;
   let connectionStatus = 'connecting';
@@ -187,6 +190,25 @@ export function startWorker(options = {}) {
       const today = getBangkokDate(now);
       const numericSpeed = typeof speed === 'number' && !isNaN(speed) ? speed : 0;
       const numericHeading = typeof heading === 'number' && !isNaN(heading) ? heading : 0;
+      const payloadTimestamp = typeof timestamp === 'number' && !isNaN(timestamp) ? timestamp : now;
+
+      const currentPayload = {
+        vehicle_id,
+        lat,
+        lng,
+        speed: numericSpeed,
+        heading: numericHeading,
+        timestamp: payloadTimestamp,
+      };
+      latestTelemetryMap.set(vehicle_id, currentPayload);
+      emitter.emit('telemetry', currentPayload);
+      if (typeof options.onTelemetry === 'function') {
+        try {
+          options.onTelemetry(currentPayload);
+        } catch (cbErr) {
+          console.error('[Worker] onTelemetry callback error:', cbErr.message);
+        }
+      }
 
       let state = vehicleState.get(vehicle_id);
       if (!state) {
@@ -283,6 +305,14 @@ export function startWorker(options = {}) {
     supabaseConnected: Boolean(supabase),
   });
 
+  const getFleetSnapshot = () => {
+    const snapshot = {};
+    for (const [id, data] of latestTelemetryMap.entries()) {
+      snapshot[id] = { ...data };
+    }
+    return snapshot;
+  };
+
   const shutdown = async () => {
     console.log('\n[Worker] Gracefully shutting down ingestion pipeline...');
     clearInterval(flushInterval);
@@ -302,7 +332,16 @@ export function startWorker(options = {}) {
     });
   };
 
-  return { client, shutdown, getStats };
+  return {
+    client,
+    shutdown,
+    getStats,
+    getFleetSnapshot,
+    on: emitter.on.bind(emitter),
+    off: emitter.off.bind(emitter),
+    once: emitter.once.bind(emitter),
+    emit: emitter.emit.bind(emitter),
+  };
 }
 
 // Auto-run if executed directly as a script

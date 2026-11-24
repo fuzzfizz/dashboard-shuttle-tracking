@@ -12,14 +12,23 @@ const DEFAULT_BROKER = import.meta.env.VITE_MQTT_BROKER_URL || 'ws://localhost:8
 const DEFAULT_TOPIC = import.meta.env.VITE_MQTT_TOPIC || 'shuttle/+';
 const DEFAULT_USERNAME = import.meta.env.VITE_MQTT_USERNAME;
 const DEFAULT_PASSWORD = import.meta.env.VITE_MQTT_PASSWORD;
+const DEFAULT_STREAM_URL = import.meta.env.VITE_TELEMETRY_STREAM_URL || '/api/telemetry/stream';
+
+const isHttpOrRelativeUrl = (url: string) =>
+  url.startsWith('http://') ||
+  url.startsWith('https://') ||
+  url.startsWith('/') ||
+  url.includes('/api/telemetry');
 
 export function useShuttleTelemetry(options: UseShuttleTelemetryOptions = {}) {
   const brokerUrl = options.brokerUrl || DEFAULT_BROKER;
   const topic = options.topic || DEFAULT_TOPIC;
   const username = options.username || DEFAULT_USERNAME;
   const password = options.password || DEFAULT_PASSWORD;
+  const streamUrl = options.streamUrl || (isHttpOrRelativeUrl(brokerUrl) ? brokerUrl : DEFAULT_STREAM_URL);
 
   const [status, setStatus] = useState<ConnectionStatus>('connecting');
+  const [useSseFallback, setUseSseFallback] = useState(false);
   const [vehicles, setVehicles] = useState<FleetMap>(() => loadLastKnownVehicles());
   const [lastSeenMap, setLastSeenMap] = useState<Record<string, number>>(() => {
     const initial = loadLastKnownVehicles();
@@ -31,6 +40,25 @@ export function useShuttleTelemetry(options: UseShuttleTelemetryOptions = {}) {
   });
   const [selectedVehicleId, setSelectedVehicleId] = useState<string | null>(null);
   const [now, setNow] = useState<number>(Date.now());
+
+  // Ingestion handler shared between MQTT and SSE
+  const handleIncomingTelemetry = (parsed: TelemetryPayload | null) => {
+    if (!parsed) return;
+    const timestamp = Date.now();
+    setNow(timestamp);
+    setVehicles((prev) => {
+      const updated = {
+        ...prev,
+        [parsed.vehicle_id]: parsed,
+      };
+      saveLastKnownVehicles(updated);
+      return updated;
+    });
+    setLastSeenMap((prev) => ({
+      ...prev,
+      [parsed.vehicle_id]: timestamp,
+    }));
+  };
 
   // Clock tick
   useEffect(() => {
@@ -67,8 +95,60 @@ export function useShuttleTelemetry(options: UseShuttleTelemetryOptions = {}) {
     };
   }, []);
 
+  // Real-time connection: SSE or MQTT
+  const shouldUseSse =
+    options.mode === 'sse' ||
+    Boolean(options.streamUrl) ||
+    isHttpOrRelativeUrl(brokerUrl) ||
+    useSseFallback ||
+    (typeof window !== 'undefined' &&
+      window.location.protocol === 'https:' &&
+      brokerUrl.startsWith('ws://localhost'));
+
   useEffect(() => {
     setStatus('connecting');
+
+    if (shouldUseSse) {
+      if (typeof EventSource === 'undefined') {
+        console.warn('EventSource is not supported in this environment.');
+        setStatus('error');
+        return;
+      }
+
+      const eventSource = new EventSource(streamUrl);
+
+      eventSource.onopen = () => {
+        setStatus('connected');
+      };
+
+      eventSource.onmessage = (event) => {
+        try {
+          const raw = event.data;
+          if (!raw || raw.startsWith(':')) return;
+          const parsed = parseTelemetryPayload(raw);
+          if (parsed) {
+            handleIncomingTelemetry(parsed);
+          }
+        } catch (err) {
+          console.warn('[SSE Stream] Failed to parse message:', err);
+        }
+      };
+
+      eventSource.onerror = () => {
+        if (eventSource.readyState === EventSource.CLOSED) {
+          setStatus('disconnected');
+        } else {
+          // EventSource will auto-reconnect
+          setStatus('connecting');
+        }
+      };
+
+      return () => {
+        eventSource.close();
+      };
+    }
+
+    // Default: MQTT WebSocket client
     const client: MqttClient = mqtt.connect(brokerUrl, {
       clientId: `shuttle_web_${Math.random().toString(16).slice(2, 10)}`,
       clean: true,
@@ -91,40 +171,36 @@ export function useShuttleTelemetry(options: UseShuttleTelemetryOptions = {}) {
     client.on('message', (msgTopic, message) => {
       const parsed = parseTelemetryPayload(message.toString(), msgTopic);
       if (parsed) {
-        const timestamp = Date.now();
-        setNow(timestamp);
-        setVehicles((prev) => {
-          const updated = {
-            ...prev,
-            [parsed.vehicle_id]: parsed,
-          };
-          saveLastKnownVehicles(updated);
-          return updated;
-        });
-        setLastSeenMap((prev) => ({
-          ...prev,
-          [parsed.vehicle_id]: timestamp,
-        }));
+        handleIncomingTelemetry(parsed);
       }
     });
 
     client.on('error', (err) => {
       console.error('MQTT client error:', err);
-      setStatus('error');
+      if (!useSseFallback && typeof EventSource !== 'undefined') {
+        console.warn('[Telemetry] MQTT connection failed, falling back to backend SSE stream...');
+        setUseSseFallback(true);
+      } else {
+        setStatus('error');
+      }
     });
 
     client.on('close', () => {
-      setStatus('disconnected');
+      if (!useSseFallback) {
+        setStatus('disconnected');
+      }
     });
 
     client.on('reconnect', () => {
-      setStatus('connecting');
+      if (!useSseFallback) {
+        setStatus('connecting');
+      }
     });
 
     return () => {
       client.end(true);
     };
-  }, [brokerUrl, topic]);
+  }, [brokerUrl, topic, streamUrl, shouldUseSse, useSseFallback]);
 
   // Backward compatibility helper
   const selectedVehicle = selectedVehicleId ? vehicles[selectedVehicleId] || null : null;
