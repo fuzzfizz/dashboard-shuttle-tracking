@@ -8,9 +8,13 @@ import {
   fetchLastKnownTelemetry,
 } from '../services/telemetryStorage';
 
+const isLocalhost =
+  typeof window !== 'undefined' &&
+  (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+
 const DEFAULT_BROKER =
   import.meta.env.VITE_MQTT_BROKER_URL ||
-  (typeof window !== 'undefined' && window.location.protocol === 'https:'
+  (typeof window !== 'undefined' && (!isLocalhost || window.location.protocol === 'https:')
     ? '/api/telemetry/stream'
     : 'ws://localhost:8083/mqtt');
 const DEFAULT_TOPIC = import.meta.env.VITE_MQTT_TOPIC || 'shuttle/+';
@@ -75,6 +79,24 @@ export function useShuttleTelemetry(options: UseShuttleTelemetryOptions = {}) {
   // Fetch last known telemetry from Supabase on mount
   useEffect(() => {
     let isMounted = true;
+
+    // 1. Fetch latest telemetry snapshot from backend relay if available
+    if (typeof fetch !== 'undefined') {
+      fetch('/api/telemetry/latest')
+        .then((res) => (res.ok ? res.json() : null))
+        .then((latestFleet) => {
+          if (!isMounted || !latestFleet || typeof latestFleet !== 'object') return;
+          for (const raw of Object.values(latestFleet)) {
+            const parsed = parseTelemetryPayload(raw as any);
+            if (parsed) {
+              handleIncomingTelemetry(parsed);
+            }
+          }
+        })
+        .catch(() => {});
+    }
+
+    // 2. Fetch last known telemetry from Supabase
     fetchLastKnownTelemetry().then((remoteFleet) => {
       if (!isMounted) return;
       if (remoteFleet && Object.keys(remoteFleet).length > 0) {

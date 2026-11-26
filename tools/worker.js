@@ -30,12 +30,25 @@ export function haversineDistance(lat1, lng1, lat2, lng2) {
 }
 
 export function startWorker(options = {}) {
-  const BROKER = options.broker || process.env.MQTT_BROKER || process.env.VITE_MQTT_BROKER_URL || 'mqtt://localhost:1883';
+  const primaryBroker = options.broker || process.env.MQTT_BROKER || process.env.VITE_MQTT_BROKER_URL || 'wss://iot.pharmacy.cmu.ac.th:8083/mqtt';
   const TOPIC = options.topic || process.env.VITE_MQTT_TOPIC || process.env.MQTT_TOPIC || 'shuttle/+';
   const USERNAME = options.username || process.env.VITE_MQTT_USERNAME || process.env.MQTT_USERNAME;
   const PASSWORD = options.password || process.env.VITE_MQTT_PASSWORD || process.env.MQTT_PASSWORD;
   const SUPABASE_URL = options.supabaseUrl || process.env.SUPABASE_URL;
   const SUPABASE_KEY = options.supabaseKey || process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY;
+
+  // Build candidate brokers list for automatic transport/port failover
+  const candidateBrokers = [];
+  if (primaryBroker) candidateBrokers.push(primaryBroker);
+  if (!candidateBrokers.includes('wss://iot.pharmacy.cmu.ac.th:8083/mqtt')) {
+    candidateBrokers.push('wss://iot.pharmacy.cmu.ac.th:8083/mqtt');
+  }
+  if (!candidateBrokers.includes('mqtt://iot.pharmacy.cmu.ac.th:1883')) {
+    candidateBrokers.push('mqtt://iot.pharmacy.cmu.ac.th:1883');
+  }
+  if (!candidateBrokers.includes('wss://broker.emqx.io:8084/mqtt')) {
+    candidateBrokers.push('wss://broker.emqx.io:8084/mqtt');
+  }
 
   let supabase = null;
   if (!SUPABASE_URL || !SUPABASE_KEY) {
@@ -47,40 +60,112 @@ export function startWorker(options = {}) {
     });
   }
 
-  console.log(`[Worker] Connecting to MQTT broker: ${BROKER}...`);
-  const client = mqtt.connect(BROKER, {
-    clientId: `shuttle_ingest_worker_${Math.random().toString(16).slice(2, 8)}`,
-    ...(USERNAME ? { username: USERNAME } : {}),
-    ...(PASSWORD ? { password: PASSWORD } : {}),
-  });
-
   // In-memory state tracking per vehicle
   const emitter = new EventEmitter();
   const latestTelemetryMap = new Map();
   const vehicleState = new Map();
   let totalPacketsReceived = 0;
   let connectionStatus = 'connecting';
+  let activeBroker = null;
+  let lastErrorMessage = null;
+  let lastErrorTime = null;
+  let currentBrokerIndex = 0;
+  let failoverTimer = null;
+  let client = null;
+  let isShuttingDown = false;
 
-  client.on('connect', () => {
-    connectionStatus = 'connected';
-    console.log(`[Worker] Connected to MQTT broker! Subscribing to: ${TOPIC}`);
-    client.subscribe(TOPIC, (err) => {
-      if (err) {
-        console.error('[Worker] Subscribe error:', err.message);
-      } else {
-        console.log('[Worker] Ingestion pipeline is active and listening for telemetry.');
+  function connectToBroker(index = 0) {
+    if (isShuttingDown) return;
+    currentBrokerIndex = index % candidateBrokers.length;
+    const brokerUrl = candidateBrokers[currentBrokerIndex];
+    const username = USERNAME || (brokerUrl.includes('pharmacy') ? 'pharmacy' : undefined);
+    const password = PASSWORD || (brokerUrl.includes('pharmacy') ? 'pharmacy' : undefined);
+
+    console.log(`[Worker] Connecting to MQTT broker (${currentBrokerIndex + 1}/${candidateBrokers.length}): ${brokerUrl}...`);
+    connectionStatus = 'connecting';
+
+    try {
+      client = mqtt.connect(brokerUrl, {
+        clientId: `shuttle_ingest_worker_${Math.random().toString(16).slice(2, 8)}`,
+        connectTimeout: 8000,
+        reconnectPeriod: 5000,
+        rejectUnauthorized: false, // In case of expired/self-signed SSL certificates on campus brokers
+        ...(username ? { username } : {}),
+        ...(password ? { password } : {}),
+      });
+    } catch (e) {
+      console.error(`[Worker] Failed to initialize MQTT client for ${brokerUrl}:`, e.message);
+      lastErrorMessage = e.message;
+      lastErrorTime = new Date().toISOString();
+      tryNextBroker();
+      return;
+    }
+
+    let hasConnected = false;
+    clearTimeout(failoverTimer);
+    failoverTimer = setTimeout(() => {
+      if (!hasConnected && !isShuttingDown) {
+        console.warn(`[Worker] Connection to ${brokerUrl} timed out after 8s. Attempting failover to next candidate...`);
+        tryNextBroker();
+      }
+    }, 8000);
+
+    client.on('connect', () => {
+      hasConnected = true;
+      clearTimeout(failoverTimer);
+      connectionStatus = 'connected';
+      activeBroker = brokerUrl;
+      lastErrorMessage = null;
+      console.log(`[Worker] Connected to MQTT broker! (${brokerUrl}) Subscribing to: ${TOPIC}`);
+      client.subscribe(TOPIC, (err) => {
+        if (err) {
+          console.error('[Worker] Subscribe error:', err.message);
+        } else {
+          console.log('[Worker] Ingestion pipeline is active and listening for telemetry.');
+        }
+      });
+    });
+
+    client.on('offline', () => {
+      if (connectionStatus === 'connected') {
+        connectionStatus = 'offline';
       }
     });
-  });
 
-  client.on('offline', () => {
-    connectionStatus = 'offline';
-  });
+    client.on('error', (err) => {
+      lastErrorMessage = err.message;
+      lastErrorTime = new Date().toISOString();
+      console.error(`[Worker] MQTT client error on ${brokerUrl}:`, err.message);
+      if (!hasConnected && candidateBrokers.length > 1) {
+        clearTimeout(failoverTimer);
+        tryNextBroker();
+      } else {
+        connectionStatus = 'error';
+      }
+    });
 
-  client.on('error', (err) => {
-    connectionStatus = 'error';
-    console.error('[Worker] MQTT client error:', err.message);
-  });
+    client.on('message', handleIncomingMessage);
+  }
+
+  function tryNextBroker() {
+    if (isShuttingDown) return;
+    clearTimeout(failoverTimer);
+    if (client) {
+      try {
+        client.removeAllListeners();
+        client.end(true);
+      } catch {}
+      client = null;
+    }
+    setTimeout(() => {
+      if (!isShuttingDown) {
+        connectToBroker(currentBrokerIndex + 1);
+      }
+    }, 1000);
+  }
+
+  // Start connecting to primary candidate
+  connectToBroker(0);
 
   async function flushVehicle(vehicle_id, state) {
     const hasDistance = state.pendingDistanceKm > 0;
@@ -167,7 +252,7 @@ export function startWorker(options = {}) {
   // Background timer to flush idle vehicles every 5 seconds
   const flushInterval = setInterval(flushAllVehicles, 5000);
 
-  client.on('message', async (topicReceived, message) => {
+  async function handleIncomingMessage(topicReceived, message) {
     try {
       totalPacketsReceived++;
       const data = JSON.parse(message.toString());
@@ -292,12 +377,16 @@ export function startWorker(options = {}) {
     } catch (err) {
       console.error('[Worker] Message processing error:', err.message);
     }
-  });
+  };
 
   const getStats = () => ({
-    broker: BROKER,
+    broker: activeBroker || candidateBrokers[currentBrokerIndex],
+    activeBroker,
+    candidateBrokers,
     topic: TOPIC,
     status: connectionStatus,
+    lastError: lastErrorMessage,
+    lastErrorTime,
     activeVehicles: vehicleState.size,
     vehicleIds: Array.from(vehicleState.keys()),
     totalPacketsReceived,
@@ -314,6 +403,8 @@ export function startWorker(options = {}) {
   };
 
   const shutdown = async () => {
+    isShuttingDown = true;
+    clearTimeout(failoverTimer);
     console.log('\n[Worker] Gracefully shutting down ingestion pipeline...');
     clearInterval(flushInterval);
 
@@ -325,10 +416,14 @@ export function startWorker(options = {}) {
     }
 
     return new Promise((resolve) => {
-      client.end(false, () => {
-        console.log('[Worker] Disconnected from MQTT broker.');
+      if (client) {
+        client.end(false, () => {
+          console.log('[Worker] Disconnected from MQTT broker.');
+          resolve();
+        });
+      } else {
         resolve();
-      });
+      }
     });
   };
 
