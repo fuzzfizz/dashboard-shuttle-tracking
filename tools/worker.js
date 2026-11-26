@@ -37,14 +37,12 @@ export function startWorker(options = {}) {
   const SUPABASE_URL = options.supabaseUrl || process.env.SUPABASE_URL;
   const SUPABASE_KEY = options.supabaseKey || process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY;
 
-  // Build candidate brokers list for automatic transport/port failover
-  const candidateBrokers = [];
-  if (primaryBroker) candidateBrokers.push(primaryBroker);
-  if (!candidateBrokers.includes('wss://65f2ec1d516f46368f91e15a90eb91a1.s1.eu.hivemq.cloud:8884/mqtt')) {
-    candidateBrokers.push('wss://65f2ec1d516f46368f91e15a90eb91a1.s1.eu.hivemq.cloud:8884/mqtt');
-  }
-  if (!candidateBrokers.includes('mqtts://65f2ec1d516f46368f91e15a90eb91a1.s1.eu.hivemq.cloud:8883')) {
-    candidateBrokers.push('mqtts://65f2ec1d516f46368f91e15a90eb91a1.s1.eu.hivemq.cloud:8883');
+  // Build candidate brokers list for automatic transport/port failover (HiveMQ Cloud prioritized)
+  const hivemqWss = 'wss://65f2ec1d516f46368f91e15a90eb91a1.s1.eu.hivemq.cloud:8884/mqtt';
+  const hivemqMqtts = 'mqtts://65f2ec1d516f46368f91e15a90eb91a1.s1.eu.hivemq.cloud:8883';
+  const candidateBrokers = [hivemqWss, hivemqMqtts];
+  if (primaryBroker && !candidateBrokers.includes(primaryBroker)) {
+    candidateBrokers.push(primaryBroker);
   }
   if (!candidateBrokers.includes('wss://iot.pharmacy.cmu.ac.th:8083/mqtt')) {
     candidateBrokers.push('wss://iot.pharmacy.cmu.ac.th:8083/mqtt');
