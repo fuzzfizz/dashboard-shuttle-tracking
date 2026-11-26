@@ -1,6 +1,11 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { ReplayToolbar } from '../ReplayToolbar';
+import {
+  getBangkokDate,
+  getBangkokMinRetentionDate,
+  shiftBangkokDate,
+} from '../../services/historicalDateUtils';
 
 describe('ReplayToolbar', () => {
   const vehicles = [
@@ -98,5 +103,143 @@ describe('ReplayToolbar', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /รีเฟรช/i }));
     expect(onRefresh).toHaveBeenCalled();
+  });
+
+  it('sets min and max attributes properly for 14-day retention', () => {
+    const minDate = getBangkokMinRetentionDate(14);
+    const maxDate = getBangkokDate();
+
+    render(
+      <ReplayToolbar
+        selectedDate="2026-10-28"
+        onDateChange={vi.fn()}
+        selectedVehicleId="shuttle-01"
+        onVehicleChange={vi.fn()}
+        vehicleList={vehicles}
+        summary={defaultSummary}
+        isLoading={false}
+        onRefresh={vi.fn()}
+      />
+    );
+
+    const dateInput = screen.getByLabelText('Select Date');
+    expect(dateInput).toHaveAttribute('min', minDate);
+    expect(dateInput).toHaveAttribute('max', maxDate);
+  });
+
+  it('navigates to previous and next day when clicking step buttons', () => {
+    const onDateChange = vi.fn();
+    const minDate = getBangkokMinRetentionDate(14);
+    const maxDate = getBangkokDate();
+    const currentDate = shiftBangkokDate(maxDate, -2, minDate, maxDate);
+
+    render(
+      <ReplayToolbar
+        selectedDate={currentDate}
+        onDateChange={onDateChange}
+        selectedVehicleId="shuttle-01"
+        onVehicleChange={vi.fn()}
+        vehicleList={vehicles}
+        summary={defaultSummary}
+        isLoading={false}
+        onRefresh={vi.fn()}
+      />
+    );
+
+    const prevButton = screen.getByRole('button', { name: 'วันก่อนหน้า' });
+    const nextButton = screen.getByRole('button', { name: 'วันถัดไป' });
+
+    expect(prevButton).not.toBeDisabled();
+    expect(nextButton).not.toBeDisabled();
+
+    fireEvent.click(prevButton);
+    expect(onDateChange).toHaveBeenCalledWith(shiftBangkokDate(currentDate, -1, minDate, maxDate));
+
+    fireEvent.click(nextButton);
+    expect(onDateChange).toHaveBeenCalledWith(shiftBangkokDate(currentDate, 1, minDate, maxDate));
+  });
+
+  it('disables previous day button when at minDate and next day button when at maxDate', () => {
+    const minDate = getBangkokMinRetentionDate(14);
+    const maxDate = getBangkokDate();
+
+    const { rerender } = render(
+      <ReplayToolbar
+        selectedDate={minDate}
+        onDateChange={vi.fn()}
+        selectedVehicleId="shuttle-01"
+        onVehicleChange={vi.fn()}
+        vehicleList={vehicles}
+        summary={defaultSummary}
+        isLoading={false}
+        onRefresh={vi.fn()}
+      />
+    );
+
+    expect(screen.getByRole('button', { name: 'วันก่อนหน้า' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'วันถัดไป' })).not.toBeDisabled();
+
+    rerender(
+      <ReplayToolbar
+        selectedDate={maxDate}
+        onDateChange={vi.fn()}
+        selectedVehicleId="shuttle-01"
+        onVehicleChange={vi.fn()}
+        vehicleList={vehicles}
+        summary={defaultSummary}
+        isLoading={false}
+        onRefresh={vi.fn()}
+      />
+    );
+
+    expect(screen.getByRole('button', { name: 'วันถัดไป' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'วันก่อนหน้า' })).not.toBeDisabled();
+  });
+
+  it('triggers onDateChange when clicking วันนี้ and เมื่อวาน preset buttons', () => {
+    const onDateChange = vi.fn();
+    const minDate = getBangkokMinRetentionDate(14);
+    const maxDate = getBangkokDate();
+    const yesterday = shiftBangkokDate(maxDate, -1, minDate, maxDate);
+
+    render(
+      <ReplayToolbar
+        selectedDate="2026-10-20"
+        onDateChange={onDateChange}
+        selectedVehicleId="shuttle-01"
+        onVehicleChange={vi.fn()}
+        vehicleList={vehicles}
+        summary={defaultSummary}
+        isLoading={false}
+        onRefresh={vi.fn()}
+      />
+    );
+
+    const todayBtn = screen.getByRole('button', { name: /วันนี้/i });
+    const yesterdayBtn = screen.getByRole('button', { name: /เมื่อวาน/i });
+
+    fireEvent.click(todayBtn);
+    expect(onDateChange).toHaveBeenCalledWith(maxDate);
+
+    fireEvent.click(yesterdayBtn);
+    expect(onDateChange).toHaveBeenCalledWith(yesterday);
+  });
+
+  it('renders 14-day retention label and summary metrics including max speed', () => {
+    render(
+      <ReplayToolbar
+        selectedDate="2026-10-28"
+        onDateChange={vi.fn()}
+        selectedVehicleId="shuttle-01"
+        onVehicleChange={vi.fn()}
+        vehicleList={vehicles}
+        summary={defaultSummary}
+        isLoading={false}
+        onRefresh={vi.fn()}
+      />
+    );
+
+    expect(screen.getByText('บันทึกย้อนหลัง 14 วัน')).toBeInTheDocument();
+    expect(screen.getByText(/45.2 กม.\/ชม./)).toBeInTheDocument();
   });
 });

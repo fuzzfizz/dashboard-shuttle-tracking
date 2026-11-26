@@ -1,7 +1,20 @@
 import React from 'react';
-import { Calendar, Bus, RefreshCw, Route, MapPin } from 'lucide-react';
+import {
+  Calendar,
+  Bus,
+  RefreshCw,
+  Route,
+  MapPin,
+  Gauge,
+  ChevronLeft,
+  ChevronRight,
+} from 'lucide-react';
 import { HistoricalTripSummary } from '../types/historical';
-import { getBangkokDate } from '../hooks/useDailyMetrics';
+import {
+  getBangkokDate,
+  getBangkokMinRetentionDate,
+  shiftBangkokDate,
+} from '../services/historicalDateUtils';
 
 interface ReplayToolbarProps {
   selectedDate: string;
@@ -24,24 +37,80 @@ export const ReplayToolbar: React.FC<ReplayToolbarProps> = ({
   isLoading,
   onRefresh,
 }) => {
+  const minDate = getBangkokMinRetentionDate(14);
   const maxDate = getBangkokDate();
+  const yesterday = shiftBangkokDate(maxDate, -1, minDate, maxDate);
 
   return (
     <div className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 px-3 py-2.5 sm:px-4 sm:py-3 md:px-6 lg:px-8 z-10 transition-colors">
-      <div className="w-full flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5 sm:gap-3">
+      <div className="w-full flex flex-col lg:flex-row lg:items-center lg:justify-between gap-2.5 sm:gap-3">
         {/* Left: Selectors (Date & Vehicle) & Refresh Button */}
-        <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
-          {/* Date Picker */}
-          <div className="flex-1 sm:flex-none flex items-center gap-2 bg-slate-100 dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700/80 rounded-xl px-2.5 sm:px-3 py-2 sm:py-1.5 shadow-sm min-h-[42px] sm:min-h-0">
-            <Calendar className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
-            <input
-              type="date"
-              value={selectedDate}
-              max={maxDate}
-              onChange={(e) => onDateChange(e.target.value)}
-              className="bg-transparent text-sm font-medium text-slate-800 dark:text-slate-100 outline-none cursor-pointer w-full"
-              aria-label="Select Date"
-            />
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3 w-full lg:w-auto">
+          {/* Date Picker with Prev/Next Steppers */}
+          <div className="flex items-center gap-1 sm:gap-1.5 flex-1 sm:flex-none">
+            <button
+              type="button"
+              aria-label="วันก่อนหน้า"
+              title="วันก่อนหน้า"
+              disabled={selectedDate <= minDate}
+              onClick={() => onDateChange(shiftBangkokDate(selectedDate, -1, minDate, maxDate))}
+              className="p-2 sm:p-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 disabled:opacity-40 disabled:cursor-not-allowed transition-all shrink-0 min-h-[42px] min-w-[36px] flex items-center justify-center cursor-pointer"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+
+            <div className="flex-1 sm:flex-none flex items-center gap-2 bg-slate-100 dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700/80 rounded-xl px-2.5 sm:px-3 py-2 sm:py-1.5 shadow-sm min-h-[42px] sm:min-h-0">
+              <Calendar className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+              <input
+                type="date"
+                value={selectedDate}
+                min={minDate}
+                max={maxDate}
+                onChange={(e) => onDateChange(e.target.value)}
+                className="bg-transparent text-sm font-medium text-slate-800 dark:text-slate-100 outline-none cursor-pointer w-full"
+                aria-label="Select Date"
+              />
+            </div>
+
+            <button
+              type="button"
+              aria-label="วันถัดไป"
+              title="วันถัดไป"
+              disabled={selectedDate >= maxDate}
+              onClick={() => onDateChange(shiftBangkokDate(selectedDate, 1, minDate, maxDate))}
+              className="p-2 sm:p-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 disabled:opacity-40 disabled:cursor-not-allowed transition-all shrink-0 min-h-[42px] min-w-[36px] flex items-center justify-center cursor-pointer"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+
+          {/* Quick Date Presets & Retention Indicator */}
+          <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => onDateChange(maxDate)}
+              className={`px-2.5 py-1.5 rounded-lg text-xs font-medium border transition-colors shrink-0 min-h-[36px] flex items-center cursor-pointer ${
+                selectedDate === maxDate
+                  ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs'
+                  : 'bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'
+              }`}
+            >
+              วันนี้
+            </button>
+            <button
+              type="button"
+              onClick={() => onDateChange(yesterday)}
+              className={`px-2.5 py-1.5 rounded-lg text-xs font-medium border transition-colors shrink-0 min-h-[36px] flex items-center cursor-pointer ${
+                selectedDate === yesterday
+                  ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs'
+                  : 'bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'
+              }`}
+            >
+              เมื่อวาน
+            </button>
+            <span className="text-[11px] text-slate-500 dark:text-slate-400 whitespace-nowrap">
+              บันทึกย้อนหลัง 14 วัน
+            </span>
           </div>
 
           {/* Vehicle Dropdown */}
@@ -71,7 +140,7 @@ export const ReplayToolbar: React.FC<ReplayToolbarProps> = ({
             disabled={isLoading}
             aria-label="รีเฟรชข้อมูล"
             title="รีเฟรชข้อมูล"
-            className="flex items-center justify-center gap-1.5 px-3 py-2 sm:py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 text-xs font-medium transition-all shadow-sm disabled:opacity-50 min-h-[42px] min-w-[42px] shrink-0"
+            className="flex items-center justify-center gap-1.5 px-3 py-2 sm:py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 text-xs font-medium transition-all shadow-sm disabled:opacity-50 min-h-[42px] min-w-[42px] shrink-0 cursor-pointer"
           >
             <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin text-emerald-500' : ''}`} />
             <span className="hidden sm:inline">รีเฟรช</span>
@@ -79,14 +148,21 @@ export const ReplayToolbar: React.FC<ReplayToolbarProps> = ({
         </div>
 
         {/* Right: Summary Badge */}
-        <div className="flex items-center justify-between sm:justify-start gap-2 px-3 py-2 sm:py-1.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/50 text-xs text-emerald-700 dark:text-emerald-300 font-medium w-full sm:w-auto shadow-xs">
+        <div className="flex items-center justify-between sm:justify-start gap-2.5 px-3 py-2 sm:py-1.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/50 text-xs text-emerald-700 dark:text-emerald-300 font-medium w-full lg:w-auto shadow-xs flex-wrap">
           <div className="flex items-center gap-1.5">
             <Route className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
             <span>
               ระยะทาง: <strong className="font-semibold font-mono">{(summary?.total_distance_km ?? 0).toFixed(1)} กม.</strong>
             </span>
           </div>
-          <span className="text-emerald-300 dark:text-emerald-700">|</span>
+          <span className="text-emerald-300 dark:text-emerald-700 hidden sm:inline">|</span>
+          <div className="flex items-center gap-1.5">
+            <Gauge className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+            <span>
+              ความเร็วสูงสุด: <strong className="font-semibold font-mono">{(summary?.max_speed_kmh ?? 0).toFixed(1)} กม./ชม.</strong>
+            </span>
+          </div>
+          <span className="text-emerald-300 dark:text-emerald-700 hidden sm:inline">|</span>
           <div className="flex items-center gap-1.5">
             <MapPin className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
             <span className="font-mono">{(summary?.total_points ?? 0).toLocaleString()} จุด</span>
