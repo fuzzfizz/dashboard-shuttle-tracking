@@ -50,26 +50,21 @@ export const LicensePlateBadge: React.FC<LicensePlateBadgeProps> = ({
   return (
     <div
       data-testid="license-plate-badge"
-      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-[4px] bg-white border-2 transition-all select-none shadow-xs ${
+      className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-[4px] bg-white border-2 transition-colors select-none shadow-xs ${
         isSelected
           ? 'border-[#4a7c0b] ring-2 ring-[#5c990e]/35 shadow-sm'
           : 'border-slate-800 dark:border-slate-700 hover:border-slate-900 dark:hover:border-slate-600'
       } ${className}`}
-      style={{
-        boxShadow: isSelected
-          ? '0 0 0 2px rgba(92, 153, 14, 0.3), 0 2px 4px rgba(0,0,0,0.1), inset 0 0 0 1px rgba(0,0,0,0.1)'
-          : '0 1px 3px rgba(0,0,0,0.12), inset 0 0 0 1px rgba(0,0,0,0.08)',
-      }}
       title={`ป้ายทะเบียน: ${plateNumber}`}
     >
       {/* Left Stamped Rivet Screw */}
-      <span className="w-1 h-1 rounded-full bg-slate-300 dark:bg-slate-400 border border-slate-500 shrink-0" />
+      <span className="w-1 h-1 rounded-full bg-slate-400 border border-slate-500 shrink-0" />
       {/* License Plate String */}
-      <span className="font-mono font-bold text-slate-900 text-xs tracking-wider uppercase leading-none">
+      <span className="font-mono tabular-nums font-bold text-slate-900 text-xs tracking-wider uppercase leading-none">
         {plateNumber}
       </span>
       {/* Right Stamped Rivet Screw */}
-      <span className="w-1 h-1 rounded-full bg-slate-300 dark:bg-slate-400 border border-slate-500 shrink-0" />
+      <span className="w-1 h-1 rounded-full bg-slate-400 border border-slate-500 shrink-0" />
     </div>
   );
 };

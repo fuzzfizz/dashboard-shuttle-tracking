@@ -64,11 +64,8 @@ export const TelemetryHUD: React.FC<TelemetryHUDProps> = ({
         {/* Status & Vehicle Info Header */}
         <div className="flex items-center justify-between sm:justify-start gap-3 w-full sm:w-auto">
           <div className="flex items-center gap-3">
-            <div className="relative flex h-3 w-3 shrink-0">
-              {status === 'connected' && (
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-              )}
-              <span className={`relative inline-flex rounded-full h-3 w-3 ${getStatusColor(status).split(' ')[0]}`}></span>
+            <div className="flex h-2.5 w-2.5 shrink-0 items-center justify-center">
+              <span className={`inline-flex rounded-full h-2.5 w-2.5 ${getStatusColor(status).split(' ')[0]}`}></span>
             </div>
             <div>
               {telemetry ? (
@@ -76,17 +73,17 @@ export const TelemetryHUD: React.FC<TelemetryHUDProps> = ({
                 <div className="text-xs sm:text-sm font-semibold flex items-center gap-1.5 leading-normal">
                   {isOnline === false ? (
                     <span className="text-rose-600 dark:text-rose-400 font-semibold flex items-center gap-1.5">
-                      <span className="w-2 h-2 rounded-full bg-rose-500" />
+                      <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
                       <span>ขาดสัญญาณ</span>
                     </span>
                   ) : isMoving ? (
                     <span className="text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1.5">
-                      <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                       <span>กำลังวิ่ง</span>
                     </span>
                   ) : (
                     <span className="text-slate-600 dark:text-slate-300 font-medium flex items-center gap-1.5">
-                      <span className="w-2 h-2 rounded-full bg-slate-400" />
+                      <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
                       <span>จอดพัก</span>
                     </span>
                   )}
@@ -94,14 +91,14 @@ export const TelemetryHUD: React.FC<TelemetryHUDProps> = ({
               ) : (
                 // Overview mode status
                 <div className="text-xs font-medium text-slate-600 dark:text-slate-300 flex items-center gap-1.5">
-                  <Radio className="w-3.5 h-3.5" />
+                  <Radio className="w-3.5 h-3.5 text-slate-400" />
                   <span>{status === 'connected' ? 'เชื่อมต่อระบบแล้ว' : status === 'connecting' ? 'กำลังเชื่อมต่อ...' : 'ขาดการเชื่อมต่อ'}</span>
                 </div>
               )}
 
               <div className="text-sm sm:text-base font-bold tracking-tight text-slate-900 dark:text-white flex items-center gap-2 mt-0.5">
                 <Bus className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                <span className="font-mono">
+                <span className="font-mono tabular-nums">
                   {telemetry
                     ? telemetry.vehicle_id
                     : `Overview (${fleetStats?.onlineVehicles ?? totalVehicles ?? 0} online)`}
@@ -134,7 +131,7 @@ export const TelemetryHUD: React.FC<TelemetryHUDProps> = ({
             </div>
             <div>
               <div className="text-xs font-medium text-slate-500 dark:text-slate-400 leading-normal">ความเร็ว</div>
-              <div className="text-xs sm:text-sm font-bold font-mono text-slate-900 dark:text-white leading-tight">
+              <div className="text-xs sm:text-sm font-bold font-mono tabular-nums text-slate-900 dark:text-white leading-tight">
                 {telemetry
                   ? (isOnline === false ? '--' : telemetry.speed.toFixed(1))
                   : fleetStats?.averageSpeed !== undefined
@@ -153,12 +150,12 @@ export const TelemetryHUD: React.FC<TelemetryHUDProps> = ({
           {/* Today Distance (if available) */}
           {dailyDistanceKm !== undefined && (
             <div className="flex items-center gap-2 bg-slate-50 sm:bg-transparent dark:bg-slate-800/40 sm:dark:bg-transparent p-2 sm:p-0 rounded-xl">
-              <div className="p-1.5 bg-white dark:bg-slate-800/80 rounded-xl text-indigo-600 dark:text-indigo-400 shrink-0 shadow-xs sm:shadow-none">
-                <Route className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+              <div className="p-1.5 bg-white dark:bg-slate-800/80 rounded-xl text-emerald-600 dark:text-emerald-400 shrink-0 shadow-xs sm:shadow-none">
+                <Route className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
               </div>
               <div>
                 <div className="text-xs font-medium text-slate-500 dark:text-slate-400 leading-normal">ระยะทางวันนี้</div>
-                <div className="text-xs sm:text-sm font-bold font-mono text-slate-900 dark:text-white leading-tight">
+                <div className="text-xs sm:text-sm font-bold font-mono tabular-nums text-slate-900 dark:text-white leading-tight">
                   {distanceUnit === 'mile'
                     ? (dailyDistanceKm * 0.621371192).toFixed(2)
                     : dailyDistanceKm.toFixed(2)}
@@ -172,12 +169,12 @@ export const TelemetryHUD: React.FC<TelemetryHUDProps> = ({
 
           {/* Last Seen / Heartbeat */}
           <div className="flex items-center gap-2 bg-slate-50 sm:bg-transparent dark:bg-slate-800/40 sm:dark:bg-transparent p-2 sm:p-0 rounded-xl">
-            <div className="p-1.5 bg-white dark:bg-slate-800/80 rounded-xl text-amber-600 dark:text-amber-400 shrink-0 shadow-xs sm:shadow-none">
-              <Clock className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+            <div className="p-1.5 bg-white dark:bg-slate-800/80 rounded-xl text-slate-500 dark:text-slate-400 shrink-0 shadow-xs sm:shadow-none">
+              <Clock className="w-4 h-4 text-slate-500 dark:text-slate-400" />
             </div>
             <div>
               <div className="text-xs font-medium text-slate-500 dark:text-slate-400 leading-normal">อัปเดตล่าสุด</div>
-              <div className="text-xs sm:text-sm font-bold font-mono text-slate-900 dark:text-white leading-tight">
+              <div className="text-xs sm:text-sm font-bold font-mono tabular-nums text-slate-900 dark:text-white leading-tight">
                 {formatLastSeen(lastSeen)}
               </div>
             </div>

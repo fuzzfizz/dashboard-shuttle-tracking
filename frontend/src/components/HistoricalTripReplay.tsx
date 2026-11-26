@@ -279,14 +279,11 @@ export const HistoricalTripReplay: React.FC<HistoricalTripReplayProps> = ({
                   </span>
                 )}
                 {selectedDate && (
-                  <span className="px-2 py-0.5 rounded text-xs font-mono font-medium bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+                  <span className="px-2 py-0.5 rounded text-xs font-mono tabular-nums font-medium bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
                     {selectedDate}
                   </span>
                 )}
               </div>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
-                Historical Trip Replay
-              </p>
             </div>
           </div>
 

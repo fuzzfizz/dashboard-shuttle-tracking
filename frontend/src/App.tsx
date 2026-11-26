@@ -136,9 +136,9 @@ function OperationalDashboard() {
   const getConnectionDot = (s: string) => {
     switch (s) {
       case 'connected':
-        return 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)]';
+        return 'bg-emerald-500';
       case 'connecting':
-        return 'bg-amber-500 animate-pulse';
+        return 'bg-amber-500';
       case 'disconnected':
       case 'error':
       default:
@@ -218,14 +218,17 @@ function OperationalDashboard() {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2 sm:gap-2.5">
                   <h2 className="text-xs sm:text-sm font-semibold text-slate-800 dark:text-slate-200">
-                    <span>แผนที่ตำแหน่งรถสด</span> <span className="text-xs font-normal text-slate-400 dark:text-slate-500 ml-1">Fleet Live Map</span>
+                    <span>แผนที่ตำแหน่งรถสด</span>
+                    <span className="text-xs font-normal text-slate-400 dark:text-slate-500 ml-1">Fleet Live Map</span>
                   </h2>
-                  <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-                    ออนไลน์ {fleetStats.onlineVehicles}
+                  <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200/80 dark:bg-emerald-950/50 dark:text-emerald-300 dark:border-emerald-800/60">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+                    <span>ออนไลน์ <strong className="font-mono tabular-nums font-semibold">{fleetStats.onlineVehicles}</strong></span>
                   </span>
                   {fleetStats.totalVehicles - fleetStats.onlineVehicles > 0 && (
-                    <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20">
-                      ขาดสัญญาณ {fleetStats.totalVehicles - fleetStats.onlineVehicles}
+                    <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-xs font-medium bg-rose-50 text-rose-700 border border-rose-200/80 dark:bg-rose-950/50 dark:text-rose-300 dark:border-rose-800/60">
+                      <span className="w-1.5 h-1.5 rounded-full bg-rose-500 shrink-0" />
+                      <span>ขาดสัญญาณ <strong className="font-mono tabular-nums font-semibold">{fleetStats.totalVehicles - fleetStats.onlineVehicles}</strong></span>
                     </span>
                   )}
                   <span className="px-1.5 py-0.5 rounded text-[10px] font-mono font-medium bg-slate-100 text-slate-600 border border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700/60 hidden sm:inline-block">
@@ -253,9 +256,9 @@ function OperationalDashboard() {
                       window.dispatchEvent(new Event('hashchange'));
                     }}
                     title="ทดสอบเปรียบเทียบ Longdo Native vs OSRM"
-                    className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 dark:bg-indigo-950/60 dark:hover:bg-indigo-900 dark:text-indigo-300 dark:border-indigo-800 text-xs font-medium transition-colors min-h-[36px]"
+                    className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-slate-900 border border-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-300 dark:hover:text-white dark:border-slate-700/70 text-xs font-medium transition-colors min-h-[36px]"
                   >
-                    <Route className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+                    <Route className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
                     <span className="hidden sm:inline">ห้องทดสอบเปรียบเทียบเส้นทาง</span>
                     <span className="sm:hidden">ทดสอบเส้นทาง</span>
                   </a>

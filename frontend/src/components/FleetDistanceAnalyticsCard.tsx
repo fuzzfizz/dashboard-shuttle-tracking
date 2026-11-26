@@ -177,7 +177,7 @@ export const FleetDistanceAnalyticsCard: React.FC<FleetDistanceAnalyticsCardProp
 
   const containerClasses =
     className ??
-    'bg-white border border-slate-200 text-slate-800 shadow-sm dark:bg-slate-900 dark:border-slate-800 dark:text-slate-100 rounded-2xl p-4 sm:p-5 flex flex-col gap-4 transition-all duration-300';
+    'bg-white border border-slate-200 text-slate-800 shadow-sm dark:bg-slate-900 dark:border-slate-800 dark:text-slate-100 rounded-2xl p-4 sm:p-5 flex flex-col gap-4 transition-colors';
 
   return (
     <section aria-label="Fleet Mileage Analytics Card" className={containerClasses}>
@@ -262,10 +262,10 @@ export const FleetDistanceAnalyticsCard: React.FC<FleetDistanceAnalyticsCardProp
                 onChange={(e) => setSelectedVehicleId(e.target.value)}
                 className="w-full sm:w-auto appearance-none bg-slate-100 hover:bg-slate-200/80 dark:bg-slate-800 dark:hover:bg-slate-700/80 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 text-xs font-medium rounded-lg pl-3 pr-8 py-2 sm:py-1.5 min-h-[42px] sm:min-h-0 cursor-pointer focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-colors"
               >
-                <option value="all">🚐 ทุกคัน (รวมกองรถ)</option>
+                <option value="all">ทุกคัน (รวมกองรถ)</option>
                 {uniqueVehicleIds.map((vId) => (
                   <option key={vId} value={vId}>
-                    🚌 {vId}
+                    {vId}
                   </option>
                 ))}
               </select>

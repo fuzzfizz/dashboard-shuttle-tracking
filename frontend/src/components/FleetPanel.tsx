@@ -39,7 +39,7 @@ export const FleetPanel: React.FC<FleetPanelProps> = ({
               <Bus className="w-4 h-4" />
             </div>
             <div>
-              <h2 className="text-xs font-bold text-slate-800 uppercase tracking-wider dark:text-slate-200">Fleet Status</h2>
+              <h2 className="text-xs font-semibold text-slate-800 dark:text-slate-200">Fleet Status</h2>
               <p className="text-[10px] text-slate-500 font-medium dark:text-slate-400">
                 {totalCount} {totalCount === 1 ? 'vehicle' : 'vehicles'} active
               </p>
@@ -112,12 +112,9 @@ export const FleetPanel: React.FC<FleetPanelProps> = ({
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2.5 min-w-0">
-                        <span className="relative flex h-2.5 w-2.5">
-                          {status.isOnline && (
-                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                          )}
+                        <span className="flex h-2.5 w-2.5 items-center justify-center">
                           <span
-                            className={`relative inline-flex rounded-full h-2.5 w-2.5 ${
+                            className={`inline-flex rounded-full h-2 w-2 ${
                               status.isOnline ? 'bg-emerald-500' : 'bg-amber-400'
                             }`}
                           ></span>
