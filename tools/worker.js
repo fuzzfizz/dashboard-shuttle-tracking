@@ -84,9 +84,18 @@ export function startWorker(options = {}) {
     currentBrokerIndex = index % candidateBrokers.length;
     const brokerUrl = candidateBrokers[currentBrokerIndex];
     const isHiveMQ = brokerUrl.includes('hivemq.cloud');
-    const isPharmacy = brokerUrl.includes('pharmacy');
-    const username = USERNAME || (isHiveMQ ? 'cmu_phamacy_shuttle' : isPharmacy ? 'pharmacy' : undefined);
-    const password = PASSWORD || (isHiveMQ ? 'cmu_phamacy_shuttle' : isPharmacy ? 'pharmacy' : undefined);
+    const isPharmacy = brokerUrl.includes('pharmacy.cmu.ac.th');
+
+    let username = USERNAME;
+    let password = PASSWORD;
+
+    if (isHiveMQ) {
+      username = process.env.HIVEMQ_USERNAME || (USERNAME && USERNAME !== 'pharmacy' ? USERNAME : 'cmu_phamacy_shuttle');
+      password = process.env.HIVEMQ_PASSWORD || (PASSWORD && PASSWORD !== 'pharmacy' ? PASSWORD : 'cmu_phamacy_shuttle');
+    } else if (isPharmacy) {
+      username = USERNAME || 'pharmacy';
+      password = PASSWORD || 'pharmacy';
+    }
 
     console.log(`[Worker] Connecting to MQTT broker (${currentBrokerIndex + 1}/${candidateBrokers.length}): ${brokerUrl}...`);
     connectionStatus = 'connecting';
