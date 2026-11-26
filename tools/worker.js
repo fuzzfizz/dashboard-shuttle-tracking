@@ -90,8 +90,8 @@ export function startWorker(options = {}) {
     let password = PASSWORD;
 
     if (isHiveMQ) {
-      username = process.env.HIVEMQ_USERNAME || (USERNAME && USERNAME !== 'pharmacy' ? USERNAME : 'cmu_phamacy_shuttle');
-      password = process.env.HIVEMQ_PASSWORD || (PASSWORD && PASSWORD !== 'pharmacy' ? PASSWORD : 'cmu_phamacy_shuttle');
+      username = process.env.HIVEMQ_USERNAME || (USERNAME && USERNAME !== 'pharmacy' ? USERNAME : process.env.MQTT_USERNAME);
+      password = process.env.HIVEMQ_PASSWORD || (PASSWORD && PASSWORD !== 'pharmacy' ? PASSWORD : process.env.MQTT_PASSWORD);
     } else if (isPharmacy) {
       username = USERNAME || 'pharmacy';
       password = PASSWORD || 'pharmacy';
@@ -285,9 +285,11 @@ export function startWorker(options = {}) {
           vehicle_id = parts[parts.length - 2];
         }
       }
-      const { lat, lng, speed, heading, timestamp } = data;
+      const lat = typeof data.lat === 'number' && !isNaN(data.lat) ? data.lat : (typeof data.latitude === 'number' && !isNaN(data.latitude) ? data.latitude : null);
+      const lng = typeof data.lng === 'number' && !isNaN(data.lng) ? data.lng : (typeof data.longitude === 'number' && !isNaN(data.longitude) ? data.longitude : null);
+      const { speed, heading, timestamp } = data;
 
-      if (!vehicle_id || typeof lat !== 'number' || typeof lng !== 'number') {
+      if (!vehicle_id || lat === null || lng === null) {
         return;
       }
 
