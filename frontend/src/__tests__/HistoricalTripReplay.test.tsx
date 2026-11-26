@@ -163,4 +163,46 @@ describe('HistoricalTripReplay', () => {
     // Distance covered should be non-zero and displayed
     expect(screen.getByText(/\/ 15.0 กม./i)).toBeInTheDocument();
   });
+
+  it('renders compact mode with "ขยายเต็มจอ" button', () => {
+    render(<HistoricalTripReplay initialVehicleId="shuttle-01" />);
+
+    const expandBtn = screen.getByRole('button', { name: /expand replay map to full screen/i });
+    expect(expandBtn).toBeInTheDocument();
+    expect(screen.getByTestId('maximize-replay-map-button')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /exit full screen/i })).not.toBeInTheDocument();
+  });
+
+  it('clicking "ขยายเต็มจอ" toggles fullscreen mode and shows "ออกจากเต็มจอ" button', () => {
+    render(<HistoricalTripReplay initialVehicleId="shuttle-01" />);
+
+    const expandBtn = screen.getByRole('button', { name: /expand replay map to full screen/i });
+    fireEvent.click(expandBtn);
+
+    const exitBtn = screen.getByRole('button', { name: /exit full screen/i });
+    expect(exitBtn).toBeInTheDocument();
+    expect(screen.getByTestId('minimize-replay-map-button')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /expand replay map to full screen/i })).not.toBeInTheDocument();
+
+    // Clicking exit button returns to compact mode
+    fireEvent.click(exitBtn);
+    expect(screen.getByRole('button', { name: /expand replay map to full screen/i })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /exit full screen/i })).not.toBeInTheDocument();
+  });
+
+  it('pressing Escape exits fullscreen mode', () => {
+    render(<HistoricalTripReplay initialVehicleId="shuttle-01" />);
+
+    const expandBtn = screen.getByRole('button', { name: /expand replay map to full screen/i });
+    fireEvent.click(expandBtn);
+
+    expect(screen.getByRole('button', { name: /exit full screen/i })).toBeInTheDocument();
+
+    // Press Escape key
+    fireEvent.keyDown(window, { key: 'Escape', code: 'Escape' });
+
+    // Should return to compact mode
+    expect(screen.queryByRole('button', { name: /exit full screen/i })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /expand replay map to full screen/i })).toBeInTheDocument();
+  });
 });

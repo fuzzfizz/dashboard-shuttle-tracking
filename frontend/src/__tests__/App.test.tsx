@@ -349,7 +349,8 @@ describe('App Integration', () => {
     expect(screen.getByRole('slider')).toBeInTheDocument();
 
     // Click "วันนี้" tab to return
-    const todayTab = screen.getByRole('button', { name: 'วันนี้' });
+    const mainNav = screen.getByRole('navigation', { name: /main navigation/i });
+    const todayTab = within(mainNav).getByRole('button', { name: 'วันนี้' });
     fireEvent.click(todayTab);
 
     // Live view elements restored

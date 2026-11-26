@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { Bus, Maximize2, Minimize2 } from 'lucide-react';
 import { ReplayToolbar } from './ReplayToolbar';
 import { ReplayMap } from './ReplayMap';
 import { ReplayPlayerBar } from './ReplayPlayerBar';
@@ -42,7 +43,18 @@ export const HistoricalTripReplay: React.FC<HistoricalTripReplayProps> = ({
   const [selectedVehicleId, setSelectedVehicleId] = useState<string>(
     initialVehicleId || vehicleList[0]?.id || ''
   );
+  const [isMapFullscreen, setIsMapFullscreen] = useState(false);
   const lastInitialVehicleIdRef = useRef<string | undefined>(initialVehicleId);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isMapFullscreen) {
+        setIsMapFullscreen(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isMapFullscreen]);
 
   // Adopt new initialVehicleId only when the prop explicitly changes to a different vehicle
   useEffect(() => {
@@ -107,8 +119,82 @@ export const HistoricalTripReplay: React.FC<HistoricalTripReplayProps> = ({
     return list;
   }, [vehicleList, selectedVehicleId]);
 
+  if (isMapFullscreen) {
+    return (
+      <div className="fixed inset-0 z-[1500] w-screen h-screen bg-slate-950 flex flex-col select-none overflow-hidden">
+        {/* Floating Top Controls */}
+        <div className="absolute top-2 left-2 right-2 sm:top-4 sm:left-4 sm:right-4 z-[1100] flex items-center justify-between pointer-events-none gap-2">
+          <div className="flex items-center gap-2 sm:gap-2.5 bg-white/95 dark:bg-slate-900/90 backdrop-blur-md border border-slate-200 dark:border-slate-800 px-3 py-2 sm:px-4 sm:py-2.5 rounded-2xl shadow-md dark:shadow-lg pointer-events-auto shrink-0">
+            <div className="p-1 sm:p-1.5 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 rounded-lg">
+              <Bus className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h1 className="text-xs sm:text-sm font-bold tracking-tight text-slate-900 dark:text-white leading-tight">
+                  แผนที่เส้นทางย้อนหลัง
+                </h1>
+                {selectedVehicleId && (
+                  <span className="px-1.5 py-0.5 rounded text-[10px] font-mono font-semibold bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700/60">
+                    {selectedVehicleId}
+                  </span>
+                )}
+                {selectedDate && (
+                  <span className="px-1.5 py-0.5 rounded text-[10px] font-mono font-medium bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+                    {selectedDate}
+                  </span>
+                )}
+              </div>
+              <p className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 font-sans leading-tight">
+                Historical Trip Replay
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-1.5 sm:gap-2 pointer-events-auto shrink-0">
+            <button
+              onClick={() => setIsMapFullscreen(false)}
+              aria-label="Exit full screen"
+              title="ออกจากโหมดเต็มจอ (Esc)"
+              data-testid="minimize-replay-map-button"
+              className="flex items-center gap-1.5 px-2.5 py-1.5 sm:px-3.5 sm:py-2 rounded-xl bg-white/95 hover:bg-slate-100 dark:bg-slate-900/90 dark:hover:bg-slate-800 text-slate-800 dark:text-white border border-slate-200 dark:border-slate-800 shadow-md dark:shadow-xl backdrop-blur-md transition-colors text-xs font-semibold min-h-[36px] cursor-pointer"
+            >
+              <Minimize2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+              <span>ออกจากเต็มจอ</span>
+              <kbd className="hidden sm:inline-block ml-1 px-1.5 py-0.5 text-[10px] font-mono bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded text-slate-500 dark:text-slate-400">Esc</kbd>
+            </button>
+          </div>
+        </div>
+
+        {/* Fullscreen Map Viewport */}
+        <div className="w-full h-full relative flex-1">
+          <ReplayMap
+            points={points}
+            traversedPoints={traversedPoints}
+            currentPoint={currentPoint}
+            isLoading={isLoading}
+          />
+          <ReplayPlayerBar
+            currentIndex={currentIndex}
+            totalPoints={points.length}
+            isPlaying={isPlaying}
+            speedMultiplier={speedMultiplier}
+            currentPoint={currentPoint}
+            startTimeStr={summary.start_time}
+            endTimeStr={summary.end_time}
+            totalDistanceKm={summary.total_distance_km}
+            distanceCoveredKm={distanceCoveredKm}
+            onTogglePlay={togglePlay}
+            onReset={reset}
+            onSeek={seekToIndex}
+            onSpeedChange={setSpeedMultiplier}
+          />
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="flex flex-col h-[calc(100vh-4rem)] w-full relative overflow-hidden bg-slate-100 dark:bg-slate-900">
+    <div className="w-full px-3 sm:px-4 md:px-6 lg:px-8 py-4 sm:py-6 flex flex-col gap-4 sm:gap-6 bg-slate-100 dark:bg-slate-900 min-h-screen">
       {/* Top Toolbar */}
       <ReplayToolbar
         selectedDate={selectedDate}
@@ -121,30 +207,73 @@ export const HistoricalTripReplay: React.FC<HistoricalTripReplayProps> = ({
         onRefresh={refetch}
       />
 
-      {/* Main Map Viewport */}
-      <ReplayMap
-        points={points}
-        traversedPoints={traversedPoints}
-        currentPoint={currentPoint}
-        isLoading={isLoading}
-      />
+      {/* Compact Map Card */}
+      <div className="flex flex-col gap-3">
+        {/* Card Header */}
+        <div className="flex items-center justify-between px-1">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+              <Bus className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white leading-tight">
+                  แผนที่เส้นทางย้อนหลัง
+                </h2>
+                {selectedVehicleId && (
+                  <span className="px-2 py-0.5 rounded text-xs font-mono font-semibold bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700/60">
+                    {selectedVehicleId}
+                  </span>
+                )}
+                {selectedDate && (
+                  <span className="px-2 py-0.5 rounded text-xs font-mono font-medium bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+                    {selectedDate}
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                Historical Trip Replay
+              </p>
+            </div>
+          </div>
 
-      {/* Floating Bottom Player Bar */}
-      <ReplayPlayerBar
-        currentIndex={currentIndex}
-        totalPoints={points.length}
-        isPlaying={isPlaying}
-        speedMultiplier={speedMultiplier}
-        currentPoint={currentPoint}
-        startTimeStr={summary.start_time}
-        endTimeStr={summary.end_time}
-        totalDistanceKm={summary.total_distance_km}
-        distanceCoveredKm={distanceCoveredKm}
-        onTogglePlay={togglePlay}
-        onReset={reset}
-        onSeek={seekToIndex}
-        onSpeedChange={setSpeedMultiplier}
-      />
+          <button
+            onClick={() => setIsMapFullscreen(true)}
+            aria-label="Expand replay map to full screen"
+            title="ขยายแผนที่เต็มจอ"
+            data-testid="maximize-replay-map-button"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white border border-slate-200 dark:border-slate-700 text-xs font-medium transition-colors min-h-[36px] shadow-sm cursor-pointer"
+          >
+            <Maximize2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+            <span className="hidden sm:inline">ขยายเต็มจอ</span>
+          </button>
+        </div>
+
+        {/* Map Container */}
+        <div className="h-[380px] sm:h-[480px] md:h-[540px] lg:h-[580px] xl:h-[620px] w-full rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-slate-950 shadow-xl relative">
+          <ReplayMap
+            points={points}
+            traversedPoints={traversedPoints}
+            currentPoint={currentPoint}
+            isLoading={isLoading}
+          />
+          <ReplayPlayerBar
+            currentIndex={currentIndex}
+            totalPoints={points.length}
+            isPlaying={isPlaying}
+            speedMultiplier={speedMultiplier}
+            currentPoint={currentPoint}
+            startTimeStr={summary.start_time}
+            endTimeStr={summary.end_time}
+            totalDistanceKm={summary.total_distance_km}
+            distanceCoveredKm={distanceCoveredKm}
+            onTogglePlay={togglePlay}
+            onReset={reset}
+            onSeek={seekToIndex}
+            onSpeedChange={setSpeedMultiplier}
+          />
+        </div>
+      </div>
     </div>
   );
 };

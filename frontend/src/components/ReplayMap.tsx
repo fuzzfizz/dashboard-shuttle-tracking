@@ -168,7 +168,7 @@ export const ReplayMap: React.FC<ReplayMapProps> = ({
               {emptyMessage}
             </h3>
             <p className="text-xs text-slate-500 dark:text-slate-400">
-              กรุณาเลือกวันที่หรือรถคันอื่นจากแถบเครื่องมือด้านบน
+              กรุณาเลือกวันที่หรือรถคันอื่นจากแถบเครื่องมือด้านบน (ระบบจัดเก็บบันทึกย้อนหลัง 14 วัน)
             </p>
           </div>
         </div>
