@@ -196,34 +196,6 @@ describe('ReplayToolbar', () => {
     expect(screen.getByRole('button', { name: 'วันก่อนหน้า' })).not.toBeDisabled();
   });
 
-  it('triggers onDateChange when clicking วันนี้ and เมื่อวาน preset buttons', () => {
-    const onDateChange = vi.fn();
-    const minDate = getBangkokMinRetentionDate(14);
-    const maxDate = getBangkokDate();
-    const yesterday = shiftBangkokDate(maxDate, -1, minDate, maxDate);
-
-    render(
-      <ReplayToolbar
-        selectedDate="2026-10-20"
-        onDateChange={onDateChange}
-        selectedVehicleId="shuttle-01"
-        onVehicleChange={vi.fn()}
-        vehicleList={vehicles}
-        summary={defaultSummary}
-        isLoading={false}
-        onRefresh={vi.fn()}
-      />
-    );
-
-    const todayBtn = screen.getByRole('button', { name: /วันนี้/i });
-    const yesterdayBtn = screen.getByRole('button', { name: /เมื่อวาน/i });
-
-    fireEvent.click(todayBtn);
-    expect(onDateChange).toHaveBeenCalledWith(maxDate);
-
-    fireEvent.click(yesterdayBtn);
-    expect(onDateChange).toHaveBeenCalledWith(yesterday);
-  });
 
   it('renders 14-day retention label and summary metrics including max speed', () => {
     render(

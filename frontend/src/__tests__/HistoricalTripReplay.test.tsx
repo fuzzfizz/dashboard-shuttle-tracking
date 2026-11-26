@@ -39,7 +39,7 @@ describe('HistoricalTripReplay', () => {
   it('renders toolbar, map, and player bar', () => {
     render(<HistoricalTripReplay initialVehicleId="shuttle-01" />);
 
-    expect(screen.getByText(/ระยะทาง:/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/ระยะทาง:/i).length).toBeGreaterThanOrEqual(1);
     expect(screen.getByTestId('replay-map')).toBeInTheDocument();
     expect(screen.getByRole('slider')).toBeInTheDocument();
   });

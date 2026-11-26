@@ -161,8 +161,10 @@ describe('Mobile Responsive Ergonomics & Clarity', () => {
       />
     );
 
-    // Speed option button exists and is clickable
-    const speed2xBtn = screen.getByRole('button', { name: '2x' });
+    // Open speed popover and click 2x option
+    const speedToggle = screen.getByRole('button', { name: /ความเร็วการเล่น|1x/i });
+    fireEvent.click(speedToggle);
+    const speed2xBtn = screen.getByRole('menuitem', { name: /2x/i });
     fireEvent.click(speed2xBtn);
     expect(onSpeedChange).toHaveBeenCalledWith(2);
 

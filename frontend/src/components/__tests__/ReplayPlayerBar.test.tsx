@@ -32,7 +32,7 @@ describe('ReplayPlayerBar', () => {
       />
     );
 
-    expect(screen.getByRole('button', { name: /เล่น/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^เล่น$/ })).toBeInTheDocument();
     expect(screen.getByText('28.5 กม./ชม.')).toBeInTheDocument();
     expect(screen.getByText('10:15:45')).toBeInTheDocument();
     expect(screen.getByText(/10.0 \/ 20.0 กม./)).toBeInTheDocument();
@@ -58,7 +58,7 @@ describe('ReplayPlayerBar', () => {
       />
     );
 
-    fireEvent.click(screen.getByRole('button', { name: /เล่น/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^เล่น$/ }));
     expect(onTogglePlay).toHaveBeenCalled();
   });
 
@@ -82,7 +82,12 @@ describe('ReplayPlayerBar', () => {
       />
     );
 
-    fireEvent.click(screen.getByRole('button', { name: '5x' }));
+    // Click speed popover toggle button to open menu
+    const speedToggle = screen.getByRole('button', { name: /เปลี่ยนความเร็วการเล่น|1x/i });
+    fireEvent.click(speedToggle);
+
+    // Select 5x option from menu
+    fireEvent.click(screen.getByRole('menuitem', { name: /5x/i }));
     expect(onSpeedChange).toHaveBeenCalledWith(5);
   });
 

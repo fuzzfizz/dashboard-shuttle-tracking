@@ -174,6 +174,7 @@ export const HistoricalTripReplay: React.FC<HistoricalTripReplayProps> = ({
             isLoading={isLoading}
           />
           <ReplayPlayerBar
+            className="absolute bottom-3 sm:bottom-6 left-2 right-2 sm:left-1/2 sm:-translate-x-1/2 z-[1000] w-auto sm:w-[92vw] sm:max-w-xl md:max-w-3xl pb-[env(safe-area-inset-bottom)]"
             currentIndex={currentIndex}
             totalPoints={points.length}
             isPlaying={isPlaying}
@@ -258,6 +259,7 @@ export const HistoricalTripReplay: React.FC<HistoricalTripReplayProps> = ({
             isLoading={isLoading}
           />
           <ReplayPlayerBar
+            className="absolute bottom-3 sm:bottom-6 left-2 right-2 sm:left-1/2 sm:-translate-x-1/2 z-[1000] w-auto sm:w-[92vw] sm:max-w-xl md:max-w-3xl pb-[env(safe-area-inset-bottom)]"
             currentIndex={currentIndex}
             totalPoints={points.length}
             isPlaying={isPlaying}
