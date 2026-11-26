@@ -11,6 +11,8 @@ import {
   ClipboardPaste,
   Clock,
   Navigation,
+  Bus,
+  ChevronDown,
 } from 'lucide-react';
 import { TripLocation, VehicleTrip, MapPinMode, TripRoundStage } from '../types/trip';
 import { calculateTripProgressMetrics } from '../services/tripMetricsService';
@@ -218,22 +220,26 @@ export const TripTestPanel: React.FC<TripTestPanelProps> = ({
             >
               เลือกรถที่ต้องการทดสอบ:
             </label>
-            <select
-              id="test-vehicle-select"
-              value={targetVehicleId}
-              onChange={(e) => {
-                const id = e.target.value;
-                setTargetVehicleId(id);
-                onSelectVehicle(id);
-              }}
-              className="w-full px-2.5 py-1.5 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 font-mono font-bold text-xs focus:ring-1 focus:ring-emerald-500 outline-none"
-            >
-              {vehicleIds.map((id) => (
-                <option key={id} value={id}>
-                  {id}
-                </option>
-              ))}
-            </select>
+            <div className="relative flex items-center">
+              <Bus className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 shrink-0" />
+              <select
+                id="test-vehicle-select"
+                value={targetVehicleId}
+                onChange={(e) => {
+                  const id = e.target.value;
+                  setTargetVehicleId(id);
+                  onSelectVehicle(id);
+                }}
+                className="w-full appearance-none pl-8.5 pr-8 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 font-mono font-bold text-xs focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all shadow-xs cursor-pointer"
+              >
+                {vehicleIds.map((id) => (
+                  <option key={id} value={id}>
+                    {id}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown className="w-3.5 h-3.5 text-slate-400 pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 shrink-0" />
+            </div>
           </div>
 
           {/* Pickup Point Input Section */}

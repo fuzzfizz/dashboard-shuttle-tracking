@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
-import { Route, ArrowUpDown, Maximize2, Search, X, Filter, ChevronDown } from 'lucide-react';
+import { Route, Maximize2, Search, X, Filter, ChevronDown, Check } from 'lucide-react';
 import { DailyMetricsMap } from '../types/metrics';
 import { FleetMap } from '../types/telemetry';
 import { OFFLINE_THRESHOLD_MS } from '../services/fleetStatus';
@@ -112,7 +112,6 @@ export const DailyDistanceTable: React.FC<DailyDistanceTableProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [isStatusMenuOpen, setIsStatusMenuOpen] = useState(false);
-  const [sortMode, setSortMode] = useState<SortMode>('distance-desc');
   const statusMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -174,29 +173,10 @@ export const DailyDistanceTable: React.FC<DailyDistanceTableProps> = ({
 
   const sortedRows = useMemo(() => {
     return [...filteredRows].sort((a, b) => {
-      if (sortMode === 'distance-desc') {
-        if (b.distanceKm !== a.distanceKm) return b.distanceKm - a.distanceKm;
-        return a.vehicleId.localeCompare(b.vehicleId);
-      }
-      if (sortMode === 'id-asc') {
-        return a.vehicleId.localeCompare(b.vehicleId);
-      }
-      return 0;
+      if (b.distanceKm !== a.distanceKm) return b.distanceKm - a.distanceKm;
+      return a.vehicleId.localeCompare(b.vehicleId);
     });
-  }, [filteredRows, sortMode]);
-
-  const handleSortToggle = () => {
-    setSortMode((prev) => (prev === 'distance-desc' ? 'id-asc' : 'distance-desc'));
-  };
-
-  const getSortLabel = (mode: SortMode) => {
-    switch (mode) {
-      case 'distance-desc':
-        return 'ระยะทางมากสุด';
-      case 'id-asc':
-        return 'หมายเลขรถ';
-    }
-  };
+  }, [filteredRows]);
 
   const getStatusFilterLabel = (filter: StatusFilter) => {
     switch (filter) {
@@ -298,93 +278,91 @@ export const DailyDistanceTable: React.FC<DailyDistanceTableProps> = ({
           )}
         </div>
 
-        {/* Filter and Sort row with responsive grid preventing any mobile overflow */}
-        <div className="grid grid-cols-2 sm:flex sm:items-center gap-2 w-full sm:w-auto">
-          {/* Combined Status Filter Dropdown */}
-          <div ref={statusMenuRef} className="relative w-full sm:w-auto min-w-0">
-            <button
-              type="button"
-              onClick={() => setIsStatusMenuOpen(!isStatusMenuOpen)}
-              aria-label="Filter by status"
-              aria-expanded={isStatusMenuOpen}
-              className="w-full sm:w-auto flex items-center justify-between gap-1.5 px-3 py-2 sm:py-1.5 rounded-lg bg-white hover:bg-slate-100 text-slate-700 hover:text-slate-900 border border-slate-200 dark:bg-slate-900 dark:hover:bg-slate-800 dark:text-slate-300 dark:hover:text-white dark:border-slate-700/80 text-xs sm:text-sm font-medium transition-all shadow-sm min-h-[44px] sm:min-h-0 min-w-0"
-            >
-              <div className="flex items-center gap-1.5 min-w-0 overflow-hidden">
-                <Filter className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                {statusFilter === 'online' && <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />}
-                {statusFilter === 'offline' && <span className="w-2 h-2 rounded-full bg-rose-500 shrink-0" />}
-                <span className="truncate">{getStatusFilterLabel(statusFilter)}</span>
-              </div>
-              <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform shrink-0 ${isStatusMenuOpen ? 'rotate-180' : ''}`} />
-            </button>
-
-            {isStatusMenuOpen && (
-              <div className="absolute left-0 mt-1.5 w-60 max-w-[calc(100vw-3rem)] bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-2xl py-1 z-[60]">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setStatusFilter('all');
-                    setIsStatusMenuOpen(false);
-                  }}
-                  className={`w-full flex items-center justify-between px-3.5 py-2.5 text-xs sm:text-sm font-medium text-left transition-colors min-h-[44px] sm:min-h-0 ${
-                    statusFilter === 'all'
-                      ? 'bg-slate-100 text-slate-900 dark:bg-slate-800 dark:text-white font-semibold'
-                      : 'text-slate-600 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800/60'
-                  }`}
-                >
-                  <span>รถทั้งหมด</span>
-                  <span className="text-xs px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-500">{allVehicleIds.length}</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setStatusFilter('online');
-                    setIsStatusMenuOpen(false);
-                  }}
-                  className={`w-full flex items-center justify-between px-3.5 py-2.5 text-xs sm:text-sm font-medium text-left transition-colors min-h-[44px] sm:min-h-0 ${
-                    statusFilter === 'online'
-                      ? 'bg-emerald-500/10 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300 font-semibold'
-                      : 'text-slate-600 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800/60'
-                  }`}
-                >
-                  <span className="flex items-center gap-1.5">
-                    <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                    ออนไลน์
-                  </span>
-                  <span className="text-xs px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-500">{onlineCount}</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setStatusFilter('offline');
-                    setIsStatusMenuOpen(false);
-                  }}
-                  className={`w-full flex items-center justify-between px-3.5 py-2.5 text-xs sm:text-sm font-medium text-left transition-colors min-h-[44px] sm:min-h-0 ${
-                    statusFilter === 'offline'
-                      ? 'bg-rose-500/10 text-rose-700 dark:bg-rose-500/20 dark:text-rose-300 font-semibold'
-                      : 'text-slate-600 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800/60'
-                  }`}
-                >
-                  <span className="flex items-center gap-1.5">
-                    <span className="w-2 h-2 rounded-full bg-rose-500" />
-                    ขาดสัญญาณ
-                  </span>
-                  <span className="text-xs px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-500">{offlineCount}</span>
-                </button>
-              </div>
-            )}
-          </div>
-
-          {/* Sort Toggle Button */}
+        {/* Combined Status Filter Dropdown */}
+        <div ref={statusMenuRef} className="relative w-full sm:w-auto min-w-0">
           <button
-            onClick={handleSortToggle}
-            aria-label="Toggle sort"
-            title={`Sort mode: ${sortMode}`}
-            className="w-full sm:w-auto flex items-center justify-center gap-1.5 px-3 py-2 sm:py-1.5 rounded-lg bg-white hover:bg-slate-100 text-slate-700 hover:text-slate-900 border border-slate-200 dark:bg-slate-900 dark:hover:bg-slate-800 dark:text-slate-300 dark:hover:text-white dark:border-slate-700/80 text-xs sm:text-sm font-medium transition-all shadow-sm min-h-[44px] sm:min-h-0 min-w-0"
+            type="button"
+            onClick={() => setIsStatusMenuOpen(!isStatusMenuOpen)}
+            aria-label="Filter by status"
+            aria-expanded={isStatusMenuOpen}
+            className="w-full sm:w-auto flex items-center justify-between gap-2 px-3 py-2 sm:py-1.5 rounded-xl bg-white hover:bg-slate-50 text-slate-800 hover:text-slate-900 border border-slate-200/90 dark:bg-slate-900 dark:hover:bg-slate-800 dark:text-slate-200 dark:hover:text-white dark:border-slate-700/80 text-xs sm:text-sm font-semibold transition-all shadow-xs hover:border-slate-300 dark:hover:border-slate-600 min-h-[44px] sm:min-h-0 min-w-0"
           >
-            <ArrowUpDown className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
-            <span className="truncate">{getSortLabel(sortMode)}</span>
+            <div className="flex items-center gap-1.5 min-w-0 overflow-hidden">
+              <Filter className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+              {statusFilter === 'online' && <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />}
+              {statusFilter === 'offline' && <span className="w-2 h-2 rounded-full bg-rose-500 shrink-0" />}
+              <span className="truncate">{getStatusFilterLabel(statusFilter)}</span>
+            </div>
+            <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 shrink-0 ${isStatusMenuOpen ? 'rotate-180 text-emerald-500' : ''}`} />
           </button>
+
+          {isStatusMenuOpen && (
+            <div className="absolute left-0 mt-2 w-64 max-w-[calc(100vw-3rem)] bg-white/98 dark:bg-slate-900/98 backdrop-blur-xl border border-slate-200/90 dark:border-slate-700/80 rounded-2xl shadow-2xl p-1.5 z-[60] animate-in fade-in zoom-in-95 duration-100">
+              <div className="px-2.5 py-1 text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-0.5">
+                กรองสถานะรถ
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setStatusFilter('all');
+                  setIsStatusMenuOpen(false);
+                }}
+                className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs sm:text-sm font-medium text-left transition-colors min-h-[44px] sm:min-h-0 ${
+                  statusFilter === 'all'
+                    ? 'bg-emerald-50 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 font-semibold border border-emerald-200/60 dark:border-emerald-800/50'
+                    : 'text-slate-700 hover:bg-slate-100/80 dark:text-slate-300 dark:hover:bg-slate-800/80'
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <span>รถทั้งหมด</span>
+                  {statusFilter === 'all' && <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />}
+                </div>
+                <span className="text-xs font-mono tabular-nums px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400">{allVehicleIds.length}</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setStatusFilter('online');
+                  setIsStatusMenuOpen(false);
+                }}
+                className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs sm:text-sm font-medium text-left transition-colors min-h-[44px] sm:min-h-0 ${
+                  statusFilter === 'online'
+                    ? 'bg-emerald-50 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 font-semibold border border-emerald-200/60 dark:border-emerald-800/50'
+                    : 'text-slate-700 hover:bg-slate-100/80 dark:text-slate-300 dark:hover:bg-slate-800/80'
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <span className="flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
+                    <span>ออนไลน์</span>
+                  </span>
+                  {statusFilter === 'online' && <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />}
+                </div>
+                <span className="text-xs font-mono tabular-nums px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400">{onlineCount}</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setStatusFilter('offline');
+                  setIsStatusMenuOpen(false);
+                }}
+                className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs sm:text-sm font-medium text-left transition-colors min-h-[44px] sm:min-h-0 ${
+                  statusFilter === 'offline'
+                    ? 'bg-emerald-50 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 font-semibold border border-emerald-200/60 dark:border-emerald-800/50'
+                    : 'text-slate-700 hover:bg-slate-100/80 dark:text-slate-300 dark:hover:bg-slate-800/80'
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <span className="flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-rose-500 shrink-0" />
+                    <span>ขาดสัญญาณ</span>
+                  </span>
+                  {statusFilter === 'offline' && <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />}
+                </div>
+                <span className="text-xs font-mono tabular-nums px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400">{offlineCount}</span>
+              </button>
+            </div>
+          )}
         </div>
       </div>
 

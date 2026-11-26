@@ -5,6 +5,7 @@ import {
   Clock,
   ChevronDown,
   ChevronUp,
+  Bus,
 } from 'lucide-react';
 import { DailyMetricsMap } from '../types/metrics';
 import { FleetMap } from '../types/telemetry';
@@ -251,25 +252,28 @@ export const FleetDistanceAnalyticsCard: React.FC<FleetDistanceAnalyticsCardProp
             </div>
 
             {/* Vehicle Selector Dropdown */}
-            <div className="relative w-full sm:w-auto">
+            <div className="relative w-full sm:w-auto flex items-center">
               <label htmlFor="vehicle-analytics-select" className="sr-only">
                 เลือกคันรถสำหรับดูกราฟ
               </label>
+              <Bus className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 shrink-0" />
               <select
                 id="vehicle-analytics-select"
                 aria-label="เลือกคันรถสำหรับดูกราฟ"
                 value={selectedVehicleId}
                 onChange={(e) => setSelectedVehicleId(e.target.value)}
-                className="w-full sm:w-auto appearance-none bg-slate-100 hover:bg-slate-200/80 dark:bg-slate-800 dark:hover:bg-slate-700/80 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 text-xs font-medium rounded-lg pl-3 pr-8 py-2 sm:py-1.5 min-h-[42px] sm:min-h-0 cursor-pointer focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-colors"
+                className="w-full sm:w-auto appearance-none bg-white hover:bg-slate-50 dark:bg-slate-800/90 dark:hover:bg-slate-800 border border-slate-200/90 dark:border-slate-700/80 text-slate-800 dark:text-slate-200 text-xs font-semibold rounded-xl pl-8.5 pr-8 py-2 sm:py-1.5 min-h-[42px] sm:min-h-0 cursor-pointer shadow-xs focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
               >
-                <option value="all">ทุกคัน (รวมกองรถ)</option>
+                <option value="all" className="bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100">
+                  ทุกคัน (รวมกองรถ)
+                </option>
                 {uniqueVehicleIds.map((vId) => (
-                  <option key={vId} value={vId}>
+                  <option key={vId} value={vId} className="bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100">
                     {vId}
                   </option>
                 ))}
               </select>
-              <ChevronDown className="w-3.5 h-3.5 text-slate-400 pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2" />
+              <ChevronDown className="w-3.5 h-3.5 text-slate-400 pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 shrink-0" />
             </div>
           </div>
 

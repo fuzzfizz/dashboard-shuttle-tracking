@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { Bus, Maximize2, Minimize2, Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Bus, Maximize2, Minimize2, Calendar, ChevronLeft, ChevronRight, ChevronDown } from 'lucide-react';
 import { ReplayToolbar } from './ReplayToolbar';
 import { ReplayMap } from './ReplayMap';
 import { ReplayPlayerBar } from './ReplayPlayerBar';
@@ -141,15 +141,15 @@ export const HistoricalTripReplay: React.FC<HistoricalTripReplayProps> = ({
             </div>
 
             {/* Vehicle Selector (Compact) */}
-            <div className="flex items-center gap-1.5 bg-white/95 dark:bg-slate-900/90 backdrop-blur-md border border-slate-200 dark:border-slate-800 px-2.5 py-1.5 sm:py-2 rounded-2xl shadow-md shrink-0">
-              <Bus className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+            <div className="relative flex items-center gap-1.5 bg-white/95 dark:bg-slate-900/90 backdrop-blur-md border border-slate-200/90 dark:border-slate-700/80 pl-2.5 pr-7 py-1.5 sm:py-2 rounded-2xl shadow-md shrink-0 hover:border-slate-300 dark:hover:border-slate-600 transition-colors focus-within:ring-2 focus-within:ring-emerald-500/20">
+              <Bus className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0 pointer-events-none" />
               <label htmlFor="fullscreen-vehicle-select" className="sr-only">เลือกรถ</label>
               <select
                 id="fullscreen-vehicle-select"
                 aria-label="Fullscreen Select Vehicle"
                 value={selectedVehicleId}
                 onChange={(e) => handleVehicleChange(e.target.value)}
-                className="bg-transparent text-xs font-semibold text-slate-800 dark:text-slate-100 outline-none cursor-pointer pr-1"
+                className="appearance-none bg-transparent text-xs font-semibold text-slate-800 dark:text-slate-100 outline-none cursor-pointer w-full"
               >
                 {effectiveVehicleList.map((v) => (
                   <option key={v.id} value={v.id} className="bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100">
@@ -157,6 +157,7 @@ export const HistoricalTripReplay: React.FC<HistoricalTripReplayProps> = ({
                   </option>
                 ))}
               </select>
+              <ChevronDown className="w-3.5 h-3.5 text-slate-400 pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 shrink-0" />
             </div>
 
             {/* Date Selector with Steppers (Compact) */}

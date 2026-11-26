@@ -97,7 +97,7 @@ describe('DailyDistanceTable', () => {
     expect(handleOpenMap).toHaveBeenCalledWith('EV-01');
   });
 
-  it('sorts vehicles between highest distance and vehicle ID on sort button click', () => {
+  it('defaults to sorting vehicles by highest distance with sort toggle removed', () => {
     const metrics: DailyMetricsMap = {
       'EV-01': {
         vehicle_id: 'EV-01',
@@ -130,23 +130,13 @@ describe('DailyDistanceTable', () => {
     );
 
     // Default: distance-desc (EV-02 first: 35km, EV-01 second: 10km)
-    let vehicleItems = screen.getAllByTestId('vehicle-id-cell');
+    const vehicleItems = screen.getAllByTestId('vehicle-id-cell');
     expect(vehicleItems[0]).toHaveTextContent('EV-02');
     expect(vehicleItems[1]).toHaveTextContent('EV-01');
 
-    // Toggle sort button -> id-asc (EV-01 first, EV-02 second)
-    const sortBtn = screen.getByRole('button', { name: /toggle sort/i });
-    fireEvent.click(sortBtn);
-
-    vehicleItems = screen.getAllByTestId('vehicle-id-cell');
-    expect(vehicleItems[0]).toHaveTextContent('EV-01');
-    expect(vehicleItems[1]).toHaveTextContent('EV-02');
-
-    // Toggle again -> back to distance-desc (EV-02 first, EV-01 second)
-    fireEvent.click(sortBtn);
-    vehicleItems = screen.getAllByTestId('vehicle-id-cell');
-    expect(vehicleItems[0]).toHaveTextContent('EV-02');
-    expect(vehicleItems[1]).toHaveTextContent('EV-01');
+    // Confirms sort toggle button is removed from the toolbar
+    expect(screen.queryByRole('button', { name: /toggle sort/i })).toBeNull();
+    expect(screen.queryByText('ระยะทางมากสุด')).toBeNull();
   });
 
   it('filters vehicles by search query and status pills', () => {
