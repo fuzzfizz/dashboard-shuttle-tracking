@@ -205,4 +205,30 @@ describe('HistoricalTripReplay', () => {
     expect(screen.queryByRole('button', { name: /exit full screen/i })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: /expand replay map to full screen/i })).toBeInTheDocument();
   });
+
+  it('allows selecting vehicle and date while in fullscreen mode', () => {
+    const useHistoricalTripSpy = vi.spyOn(tripHook, 'useHistoricalTrip');
+    render(
+      <HistoricalTripReplay
+        initialVehicleId="shuttle-01"
+        vehicleList={[
+          { id: 'shuttle-01', name: 'Shuttle 1' },
+          { id: 'shuttle-02', name: 'Shuttle 2' },
+        ]}
+      />
+    );
+
+    // Expand to fullscreen
+    fireEvent.click(screen.getByRole('button', { name: /expand replay map to full screen/i }));
+
+    // In fullscreen, select vehicle
+    const fullscreenVehicleSelect = screen.getByLabelText(/fullscreen select vehicle/i);
+    fireEvent.change(fullscreenVehicleSelect, { target: { value: 'shuttle-02' } });
+    expect(useHistoricalTripSpy).toHaveBeenCalledWith('shuttle-02', expect.any(String));
+
+    // In fullscreen, select date
+    const fullscreenDateInput = screen.getByLabelText(/fullscreen select date/i);
+    fireEvent.change(fullscreenDateInput, { target: { value: '2026-11-20' } });
+    expect(useHistoricalTripSpy).toHaveBeenCalledWith('shuttle-02', '2026-11-20');
+  });
 });

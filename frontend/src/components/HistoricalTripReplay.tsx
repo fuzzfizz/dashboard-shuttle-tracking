@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { Bus, Maximize2, Minimize2 } from 'lucide-react';
+import { Bus, Maximize2, Minimize2, Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
 import { ReplayToolbar } from './ReplayToolbar';
 import { ReplayMap } from './ReplayMap';
 import { ReplayPlayerBar } from './ReplayPlayerBar';
 import { useHistoricalTrip } from '../hooks/useHistoricalTrip';
 import { useTripPlayback } from '../hooks/useTripPlayback';
 import { getBangkokDate } from '../hooks/useDailyMetrics';
+import { getBangkokMinRetentionDate, shiftBangkokDate } from '../services/historicalDateUtils';
 import { haversineDistance } from '../services/distanceCalculator';
 import { fetchHistoricalVehicles } from '../services/historicalTelemetryService';
 
@@ -119,48 +120,98 @@ export const HistoricalTripReplay: React.FC<HistoricalTripReplayProps> = ({
     return list;
   }, [vehicleList, selectedVehicleId]);
 
+  const minDate = getBangkokMinRetentionDate(14);
+  const maxDate = getBangkokDate();
+
   if (isMapFullscreen) {
     return (
       <div className="fixed inset-0 z-[1500] w-screen h-screen bg-slate-950 flex flex-col select-none overflow-hidden">
         {/* Floating Top Controls */}
-        <div className="absolute top-2 left-2 right-2 sm:top-4 sm:left-4 sm:right-4 z-[1100] flex items-center justify-between pointer-events-none gap-2">
-          <div className="flex items-center gap-2 sm:gap-2.5 bg-white/95 dark:bg-slate-900/90 backdrop-blur-md border border-slate-200 dark:border-slate-800 px-3 py-2 sm:px-4 sm:py-2.5 rounded-2xl shadow-md dark:shadow-lg pointer-events-auto shrink-0">
-            <div className="p-1 sm:p-1.5 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 rounded-lg">
-              <Bus className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-xs sm:text-sm font-bold tracking-tight text-slate-900 dark:text-white leading-tight">
-                  แผนที่เส้นทางย้อนหลัง
-                </h1>
-                {selectedVehicleId && (
-                  <span className="px-1.5 py-0.5 rounded text-[10px] font-mono font-semibold bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700/60">
-                    {selectedVehicleId}
-                  </span>
-                )}
-                {selectedDate && (
-                  <span className="px-1.5 py-0.5 rounded text-[10px] font-mono font-medium bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
-                    {selectedDate}
-                  </span>
-                )}
+        <div className="absolute top-2 left-2 right-2 sm:top-4 sm:left-4 sm:right-4 z-[1100] flex flex-wrap items-center justify-between pointer-events-none gap-2">
+          {/* Left / Center: Compact Date & Vehicle Selectors */}
+          <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 pointer-events-auto">
+            {/* Branding / Title Badge (compact) */}
+            <div className="flex items-center gap-1.5 sm:gap-2 bg-white/95 dark:bg-slate-900/90 backdrop-blur-md border border-slate-200 dark:border-slate-800 px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-2xl shadow-md shrink-0">
+              <div className="p-1 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 rounded-lg">
+                <Bus className="w-3.5 h-3.5" />
               </div>
-              <p className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 font-sans leading-tight">
-                Historical Trip Replay
-              </p>
+              <span className="text-xs sm:text-sm font-bold tracking-tight text-slate-900 dark:text-white hidden md:inline">
+                ประวัติเส้นทาง
+              </span>
+            </div>
+
+            {/* Vehicle Selector (Compact) */}
+            <div className="flex items-center gap-1.5 bg-white/95 dark:bg-slate-900/90 backdrop-blur-md border border-slate-200 dark:border-slate-800 px-2.5 py-1.5 sm:py-2 rounded-2xl shadow-md shrink-0">
+              <Bus className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+              <label htmlFor="fullscreen-vehicle-select" className="sr-only">เลือกรถ</label>
+              <select
+                id="fullscreen-vehicle-select"
+                aria-label="Fullscreen Select Vehicle"
+                value={selectedVehicleId}
+                onChange={(e) => handleVehicleChange(e.target.value)}
+                className="bg-transparent text-xs font-semibold text-slate-800 dark:text-slate-100 outline-none cursor-pointer pr-1"
+              >
+                {effectiveVehicleList.map((v) => (
+                  <option key={v.id} value={v.id} className="bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100">
+                    {v.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Date Selector with Steppers (Compact) */}
+            <div className="flex items-center gap-1 bg-white/95 dark:bg-slate-900/90 backdrop-blur-md border border-slate-200 dark:border-slate-800 p-1 sm:px-2 rounded-2xl shadow-md shrink-0">
+              <button
+                type="button"
+                aria-label="วันก่อนหน้า (เต็มจอ)"
+                title="วันก่อนหน้า"
+                disabled={selectedDate <= minDate}
+                onClick={() => setSelectedDate(shiftBangkokDate(selectedDate, -1, minDate, maxDate))}
+                className="p-1 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              >
+                <ChevronLeft className="w-3.5 h-3.5" />
+              </button>
+
+              <div className="flex items-center gap-1 px-1">
+                <Calendar className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                <label htmlFor="fullscreen-date-input" className="sr-only">เลือกวันที่</label>
+                <input
+                  id="fullscreen-date-input"
+                  aria-label="Fullscreen Select Date"
+                  type="date"
+                  value={selectedDate}
+                  min={minDate}
+                  max={maxDate}
+                  onChange={(e) => setSelectedDate(e.target.value)}
+                  className="bg-transparent text-xs font-mono font-medium text-slate-800 dark:text-slate-100 outline-none cursor-pointer"
+                />
+              </div>
+
+              <button
+                type="button"
+                aria-label="วันถัดไป (เต็มจอ)"
+                title="วันถัดไป"
+                disabled={selectedDate >= maxDate}
+                onClick={() => setSelectedDate(shiftBangkokDate(selectedDate, 1, minDate, maxDate))}
+                className="p-1 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              >
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
             </div>
           </div>
 
+          {/* Right: Exit Fullscreen button */}
           <div className="flex items-center gap-1.5 sm:gap-2 pointer-events-auto shrink-0">
             <button
               onClick={() => setIsMapFullscreen(false)}
               aria-label="Exit full screen"
               title="ออกจากโหมดเต็มจอ (Esc)"
               data-testid="minimize-replay-map-button"
-              className="flex items-center gap-1.5 px-2.5 py-1.5 sm:px-3.5 sm:py-2 rounded-xl bg-white/95 hover:bg-slate-100 dark:bg-slate-900/90 dark:hover:bg-slate-800 text-slate-800 dark:text-white border border-slate-200 dark:border-slate-800 shadow-md dark:shadow-xl backdrop-blur-md transition-colors text-xs font-semibold min-h-[36px] cursor-pointer"
+              className="flex items-center gap-1.5 px-2.5 py-1.5 sm:px-3.5 sm:py-2 rounded-2xl bg-white/95 hover:bg-slate-100 dark:bg-slate-900/90 dark:hover:bg-slate-800 text-slate-800 dark:text-white border border-slate-200 dark:border-slate-800 shadow-md backdrop-blur-md transition-colors text-xs font-semibold min-h-[36px] cursor-pointer"
             >
               <Minimize2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-              <span>ออกจากเต็มจอ</span>
-              <kbd className="hidden sm:inline-block ml-1 px-1.5 py-0.5 text-[10px] font-mono bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded text-slate-500 dark:text-slate-400">Esc</kbd>
+              <span className="hidden sm:inline">ออกจากเต็มจอ</span>
+              <kbd className="hidden md:inline-block ml-1 px-1.5 py-0.5 text-[10px] font-mono bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded text-slate-500 dark:text-slate-400">Esc</kbd>
             </button>
           </div>
         </div>
