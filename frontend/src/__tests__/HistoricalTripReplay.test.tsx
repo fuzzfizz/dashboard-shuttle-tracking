@@ -231,4 +231,20 @@ describe('HistoricalTripReplay', () => {
     fireEvent.change(fullscreenDateInput, { target: { value: '2026-11-20' } });
     expect(useHistoricalTripSpy).toHaveBeenCalledWith('shuttle-02', '2026-11-20');
   });
+
+  it('docks player bar below map in compact mode, and floats in fullscreen mode', () => {
+    render(<HistoricalTripReplay initialVehicleId="shuttle-01" />);
+
+    // Compact mode: player bar is docked
+    const playerBar = screen.getByTestId('replay-player-bar');
+    expect(playerBar).toHaveAttribute('data-variant', 'docked');
+
+    // Switch to fullscreen mode
+    const expandBtn = screen.getByRole('button', { name: /expand replay map to full screen/i });
+    fireEvent.click(expandBtn);
+
+    // Fullscreen mode: player bar is floating
+    const fsPlayerBar = screen.getByTestId('replay-player-bar');
+    expect(fsPlayerBar).toHaveAttribute('data-variant', 'floating');
+  });
 });

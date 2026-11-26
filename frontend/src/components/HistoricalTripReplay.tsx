@@ -225,6 +225,7 @@ export const HistoricalTripReplay: React.FC<HistoricalTripReplayProps> = ({
             isLoading={isLoading}
           />
           <ReplayPlayerBar
+            variant="floating"
             className="absolute bottom-3 sm:bottom-6 left-2 right-2 sm:left-1/2 sm:-translate-x-1/2 z-[1000] w-auto sm:w-[92vw] sm:max-w-xl md:max-w-3xl pb-[env(safe-area-inset-bottom)]"
             currentIndex={currentIndex}
             totalPoints={points.length}
@@ -259,7 +260,7 @@ export const HistoricalTripReplay: React.FC<HistoricalTripReplayProps> = ({
         onRefresh={refetch}
       />
 
-      {/* Compact Map Card */}
+      {/* Compact Map & Console Card */}
       <div className="flex flex-col gap-3">
         {/* Card Header */}
         <div className="flex items-center justify-between px-1">
@@ -301,16 +302,21 @@ export const HistoricalTripReplay: React.FC<HistoricalTripReplayProps> = ({
           </button>
         </div>
 
-        {/* Map Container */}
-        <div className="h-[380px] sm:h-[480px] md:h-[540px] lg:h-[580px] xl:h-[620px] w-full rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-slate-950 shadow-xl relative">
-          <ReplayMap
-            points={points}
-            traversedPoints={traversedPoints}
-            currentPoint={currentPoint}
-            isLoading={isLoading}
-          />
+        {/* Unified Map & Docked Console Deck Card */}
+        <div className="w-full rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xl flex flex-col">
+          {/* Map Viewport - Clean & Unobstructed */}
+          <div className="h-[380px] sm:h-[480px] md:h-[540px] lg:h-[580px] xl:h-[620px] w-full relative bg-slate-950">
+            <ReplayMap
+              points={points}
+              traversedPoints={traversedPoints}
+              currentPoint={currentPoint}
+              isLoading={isLoading}
+            />
+          </div>
+
+          {/* Docked Player Bar Deck */}
           <ReplayPlayerBar
-            className="absolute bottom-3 sm:bottom-6 left-2 right-2 sm:left-1/2 sm:-translate-x-1/2 z-[1000] w-auto sm:w-[92vw] sm:max-w-xl md:max-w-3xl pb-[env(safe-area-inset-bottom)]"
+            variant="docked"
             currentIndex={currentIndex}
             totalPoints={points.length}
             isPlaying={isPlaying}

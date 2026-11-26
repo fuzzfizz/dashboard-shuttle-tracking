@@ -115,4 +115,54 @@ describe('ReplayPlayerBar', () => {
     fireEvent.change(slider, { target: { value: '75' } });
     expect(onSeek).toHaveBeenCalledWith(75);
   });
+
+  it('supports docked variant for clean bottom console deck below map', () => {
+    const { rerender } = render(
+      <ReplayPlayerBar
+        variant="docked"
+        currentIndex={10}
+        totalPoints={100}
+        isPlaying={false}
+        speedMultiplier={1}
+        currentPoint={currentPt}
+        startTimeStr="2026-10-28T01:00:00.000Z"
+        endTimeStr="2026-10-28T05:00:00.000Z"
+        totalDistanceKm={20.0}
+        distanceCoveredKm={5.0}
+        onTogglePlay={vi.fn()}
+        onReset={vi.fn()}
+        onSeek={vi.fn()}
+        onSpeedChange={vi.fn()}
+      />
+    );
+
+    const playerBar = screen.getByTestId('replay-player-bar');
+    expect(playerBar).toHaveAttribute('data-variant', 'docked');
+    expect(playerBar.className).toContain('w-full');
+    expect(playerBar.className).toContain('border-t');
+
+    // Rerender with floating variant
+    rerender(
+      <ReplayPlayerBar
+        variant="floating"
+        currentIndex={10}
+        totalPoints={100}
+        isPlaying={false}
+        speedMultiplier={1}
+        currentPoint={currentPt}
+        startTimeStr="2026-10-28T01:00:00.000Z"
+        endTimeStr="2026-10-28T05:00:00.000Z"
+        totalDistanceKm={20.0}
+        distanceCoveredKm={5.0}
+        onTogglePlay={vi.fn()}
+        onReset={vi.fn()}
+        onSeek={vi.fn()}
+        onSpeedChange={vi.fn()}
+      />
+    );
+
+    const floatingPlayerBar = screen.getByTestId('replay-player-bar');
+    expect(floatingPlayerBar).toHaveAttribute('data-variant', 'floating');
+    expect(floatingPlayerBar.className).toContain('absolute');
+  });
 });

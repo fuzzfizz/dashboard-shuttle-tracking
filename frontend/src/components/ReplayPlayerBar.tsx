@@ -18,6 +18,7 @@ export interface ReplayPlayerBarProps {
   onSeek: (index: number) => void;
   onSpeedChange: (speed: SpeedMultiplier) => void;
   className?: string;
+  variant?: 'floating' | 'docked';
 }
 
 const SPEED_OPTIONS: SpeedMultiplier[] = [1, 2, 5, 10, 30];
@@ -37,6 +38,7 @@ export const ReplayPlayerBar: React.FC<ReplayPlayerBarProps> = ({
   onSeek,
   onSpeedChange,
   className,
+  variant = 'floating',
 }) => {
   const [isSpeedMenuOpen, setIsSpeedMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
@@ -61,13 +63,27 @@ export const ReplayPlayerBar: React.FC<ReplayPlayerBarProps> = ({
   const endTimeDisplay = endTimeStr ? formatTimeHHmmss(endTimeStr) : '--:--:--';
   const currentSpeed = currentPoint ? `${currentPoint.speed.toFixed(1)} กม./ชม.` : '0.0 กม./ชม.';
 
-  const containerClasses =
-    className ??
-    'absolute bottom-3 left-2 right-2 sm:bottom-4 sm:left-4 sm:right-4 md:left-1/2 md:-translate-x-1/2 md:w-full md:max-w-3xl z-[1000] pb-[env(safe-area-inset-bottom)] transition-all';
+  const isDocked = variant === 'docked';
+
+  const defaultContainerClasses = isDocked
+    ? 'w-full bg-slate-50/95 dark:bg-slate-900/95 border-t border-slate-200 dark:border-slate-800 p-3 sm:p-4 rounded-b-2xl transition-all'
+    : 'absolute bottom-3 left-2 right-2 sm:bottom-4 sm:left-4 sm:right-4 md:left-1/2 md:-translate-x-1/2 md:w-full md:max-w-3xl z-[1000] pb-[env(safe-area-inset-bottom)] transition-all';
+
+  const containerClasses = className ?? defaultContainerClasses;
 
   return (
-    <div className={containerClasses}>
-      <div className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl p-2.5 sm:p-3.5 flex flex-col gap-2">
+    <div
+      data-testid="replay-player-bar"
+      data-variant={variant}
+      className={containerClasses}
+    >
+      <div
+        className={
+          isDocked
+            ? 'flex flex-col gap-2.5 w-full'
+            : 'bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl p-2.5 sm:p-3.5 flex flex-col gap-2'
+        }
+      >
         {/* Main Control Row: Reset, Play, Scrubber, Time, and Speed Popover */}
         <div className="flex items-center gap-2 sm:gap-3 w-full">
           {/* Reset button */}
@@ -123,6 +139,7 @@ export const ReplayPlayerBar: React.FC<ReplayPlayerBarProps> = ({
               className="flex items-center gap-1 px-2 py-1 sm:px-2.5 sm:py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700/70 text-xs font-mono font-semibold transition-all min-h-[34px]"
             >
               <Zap className="w-3.5 h-3.5 text-emerald-500" />
+              <span className="hidden sm:inline font-sans font-medium text-slate-500 dark:text-slate-400">ความเร็ว:</span>
               <span>{speedMultiplier}x</span>
               <ChevronUp className={`w-3 h-3 text-slate-400 transition-transform ${isSpeedMenuOpen ? 'rotate-180' : ''}`} />
             </button>
