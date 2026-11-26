@@ -7,6 +7,8 @@ import {
   getBangkokDate,
   getBangkokHour,
   formatLastSeen,
+  getBangkokMinRetentionDate,
+  shiftBangkokDate,
 } from '../historicalDateUtils';
 
 describe('historicalDateUtils', () => {
@@ -119,6 +121,56 @@ describe('historicalDateUtils', () => {
       expect(res.mainText).toBe('วันนี้ยังไม่มีการเดินทาง');
       expect(res.subText).toBe('พบล่าสุด: 17 พ.ย. 14:20 น.');
       expect(res.isToday).toBe(false);
+    });
+  });
+
+  describe('getBangkokMinRetentionDate', () => {
+    it('returns exactly 14 days before Bangkok date by default', () => {
+      // 2026-11-26 12:00 UTC+7 is 2026-11-26T05:00:00Z
+      const now = new Date('2026-11-26T05:00:00.000Z');
+      expect(getBangkokMinRetentionDate(14, now)).toBe('2026-11-12');
+    });
+
+    it('supports now as timestamp number and custom retention days', () => {
+      const nowMs = new Date('2026-11-26T05:00:00.000Z').getTime();
+      expect(getBangkokMinRetentionDate(7, nowMs)).toBe('2026-11-19');
+      expect(getBangkokMinRetentionDate(0, nowMs)).toBe('2026-11-26');
+    });
+
+    it('works with default arguments using current time', () => {
+      const minDate = getBangkokMinRetentionDate();
+      expect(minDate).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    });
+  });
+
+  describe('shiftBangkokDate', () => {
+    it('shifts date forward (+1) and backward (-1)', () => {
+      expect(shiftBangkokDate('2026-11-15', 1)).toBe('2026-11-16');
+      expect(shiftBangkokDate('2026-11-15', -1)).toBe('2026-11-14');
+      expect(shiftBangkokDate('2026-11-15', 5)).toBe('2026-11-20');
+      expect(shiftBangkokDate('2026-11-15', -5)).toBe('2026-11-10');
+    });
+
+    it('handles month and year boundaries correctly', () => {
+      expect(shiftBangkokDate('2026-12-31', 1)).toBe('2027-01-01');
+      expect(shiftBangkokDate('2027-01-01', -1)).toBe('2026-12-31');
+      expect(shiftBangkokDate('2026-03-01', -1)).toBe('2026-02-28');
+    });
+
+    it('clamps to minDate boundary', () => {
+      expect(shiftBangkokDate('2026-11-12', -1, '2026-11-12')).toBe('2026-11-12');
+      expect(shiftBangkokDate('2026-11-13', -5, '2026-11-12')).toBe('2026-11-12');
+    });
+
+    it('clamps to maxDate boundary', () => {
+      expect(shiftBangkokDate('2026-11-26', 1, undefined, '2026-11-26')).toBe('2026-11-26');
+      expect(shiftBangkokDate('2026-11-25', 5, undefined, '2026-11-26')).toBe('2026-11-26');
+    });
+
+    it('respects both minDate and maxDate', () => {
+      expect(shiftBangkokDate('2026-11-20', -10, '2026-11-15', '2026-11-25')).toBe('2026-11-15');
+      expect(shiftBangkokDate('2026-11-20', 10, '2026-11-15', '2026-11-25')).toBe('2026-11-25');
+      expect(shiftBangkokDate('2026-11-20', 2, '2026-11-15', '2026-11-25')).toBe('2026-11-22');
     });
   });
 });

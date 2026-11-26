@@ -131,3 +131,34 @@ export function formatLastSeen(
   };
 }
 
+export function getBangkokMinRetentionDate(retentionDays: number = 14, now?: Date | number): string {
+  const baseDate = now ? (typeof now === 'number' ? new Date(now) : now) : new Date();
+  const target = new Date(baseDate.getTime() - retentionDays * 24 * 60 * 60 * 1000);
+  return getBangkokDate(target);
+}
+
+export function shiftBangkokDate(
+  dateStr: string,
+  deltaDays: number,
+  minDate?: string,
+  maxDate?: string
+): string {
+  const [y, m, d] = dateStr.split('-').map(Number);
+  const dateObj = new Date(Date.UTC(y, m - 1, d));
+  dateObj.setUTCDate(dateObj.getUTCDate() + deltaDays);
+
+  const shiftedY = dateObj.getUTCFullYear();
+  const shiftedM = String(dateObj.getUTCMonth() + 1).padStart(2, '0');
+  const shiftedD = String(dateObj.getUTCDate()).padStart(2, '0');
+  let result = `${shiftedY}-${shiftedM}-${shiftedD}`;
+
+  if (minDate && result < minDate) {
+    result = minDate;
+  }
+  if (maxDate && result > maxDate) {
+    result = maxDate;
+  }
+  return result;
+}
+
+
