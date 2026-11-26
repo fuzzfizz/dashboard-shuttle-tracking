@@ -30,20 +30,20 @@ export function haversineDistance(lat1, lng1, lat2, lng2) {
 }
 
 export function startWorker(options = {}) {
-  const primaryBroker = options.broker || process.env.MQTT_BROKER || process.env.VITE_MQTT_BROKER_URL || 'wss://65f2ec1d516f46368f91e15a90eb91a1.s1.eu.hivemq.cloud:8884/mqtt';
+  const primaryBroker = options.broker || process.env.MQTT_BROKER || process.env.VITE_MQTT_BROKER_URL || 'mqtts://65f2ec1d516f46368f91e15a90eb91a1.s1.eu.hivemq.cloud:8883';
   const TOPIC = options.topic || process.env.VITE_MQTT_TOPIC || process.env.MQTT_TOPIC || 'shuttle/+';
   const USERNAME = options.username || process.env.VITE_MQTT_USERNAME || process.env.MQTT_USERNAME;
   const PASSWORD = options.password || process.env.VITE_MQTT_PASSWORD || process.env.MQTT_PASSWORD;
   const SUPABASE_URL = options.supabaseUrl || process.env.SUPABASE_URL;
   const SUPABASE_KEY = options.supabaseKey || process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY;
 
-  // Build candidate brokers list for automatic transport/port failover (HiveMQ Cloud prioritized)
-  const hivemqWss = 'wss://65f2ec1d516f46368f91e15a90eb91a1.s1.eu.hivemq.cloud:8884/mqtt';
+  // Build candidate brokers list for automatic transport/port failover (Native MQTTS prioritized)
   const hivemqMqtts = 'mqtts://65f2ec1d516f46368f91e15a90eb91a1.s1.eu.hivemq.cloud:8883';
-  const candidateBrokers = [hivemqWss, hivemqMqtts];
-  if (primaryBroker && !candidateBrokers.includes(primaryBroker)) {
-    candidateBrokers.push(primaryBroker);
-  }
+  const hivemqWss = 'wss://65f2ec1d516f46368f91e15a90eb91a1.s1.eu.hivemq.cloud:8884/mqtt';
+  const candidateBrokers = [];
+  if (primaryBroker) candidateBrokers.push(primaryBroker);
+  if (!candidateBrokers.includes(hivemqMqtts)) candidateBrokers.push(hivemqMqtts);
+  if (!candidateBrokers.includes(hivemqWss)) candidateBrokers.push(hivemqWss);
   if (!candidateBrokers.includes('wss://iot.pharmacy.cmu.ac.th:8083/mqtt')) {
     candidateBrokers.push('wss://iot.pharmacy.cmu.ac.th:8083/mqtt');
   }
