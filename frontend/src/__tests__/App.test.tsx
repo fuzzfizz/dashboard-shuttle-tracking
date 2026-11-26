@@ -71,6 +71,7 @@ describe('App Integration', () => {
     const { container } = render(<App />);
     expect(screen.getByText('ระบบติดตามรถรับส่ง')).toBeInTheDocument();
     expect(screen.getByText('ติดตามตำแหน่งและระยะทางแบบเรียลไทม์')).toBeInTheDocument();
+    expect(screen.getByText('แผนที่รถรับ-ส่ง')).toBeInTheDocument();
     expect(screen.getByText('Fleet Live Map')).toBeInTheDocument();
     // Confirms Fleet Status panel has been removed from main dashboard
     expect(screen.queryByText('Fleet Status')).toBeNull();

@@ -218,7 +218,7 @@ function OperationalDashboard() {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2 sm:gap-2.5">
                   <h2 className="text-xs sm:text-sm font-semibold text-slate-800 dark:text-slate-200">
-                    <span>แผนที่ตำแหน่งรถสด</span>
+                    <span>แผนที่รถรับ-ส่ง</span>
                     <span className="text-xs font-normal text-slate-400 dark:text-slate-500 ml-1">Fleet Live Map</span>
                   </h2>
                   <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200/80 dark:bg-emerald-950/50 dark:text-emerald-300 dark:border-emerald-800/60">
