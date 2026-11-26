@@ -10,11 +10,10 @@
 
 | รายการ | ค่าที่ต้องตั้งในโปรแกรม | คำอธิบาย |
 | :--- | :--- | :--- |
-| **MQTT Broker Host** | `YOUR_MQTT_BROKER_HOST` | ระบุโฮสต์เซิร์ฟเวอร์ Broker (ดูจากเอกสารภายใน mqtt.md) |
-| **Port (TCP)** | `1883` | พอร์ตมาตรฐานสำหรับฮาร์ดแวร์ทั่วไป (ไม่เข้ารหัส TLS) |
-| **Port (TLS/SSL)** | `8883` | *(ทางเลือก)* พอร์ตเข้ารหัส SSL หากโมดูลรองรับ MQTTS |
-| **Username** | `YOUR_MQTT_USERNAME` | ชื่อผู้ใช้งาน (ดูจากเอกสารภายใน mqtt.md) |
-| **Password** | `YOUR_MQTT_PASSWORD` | รหัสผ่าน (ดูจากเอกสารภายใน mqtt.md) |
+| **MQTT Broker Host** | `65f2ec1d516f46368f91e15a90eb91a1.s1.eu.hivemq.cloud` | Private Cloud Broker สำหรับระบบ Shuttle Bus |
+| **Port (TLS/SSL)** | `8883` | พอร์ตมาตรฐานที่เข้ารหัส SSL/TLS ปลอดภัยสูง |
+| **Username** | `cmu_phamacy_shuttle` | ชื่อผู้ใช้งาน |
+| **Password** | `cmu_phamacy_shuttle` | รหัสผ่าน |
 | **Client ID** | เช่น `esp32_shuttle_01` | ควรตั้งไม่ให้ซ้ำกับอุปกรณ์อื่น |
 | **Keep Alive** | `60` วินาที | ช่วงเวลาส่ง Ping เช็คสถานะเชื่อมต่อ |
 | **Clean Session** | `true` | ไม่ต้องค้าง Session เก่า |
@@ -83,6 +82,7 @@
 
 ```cpp
 #include <WiFi.h>
+#include <WiFiClientSecure.h>
 #include <PubSubClient.h>
 #include <TinyGPSPlus.h>
 #include <HardwareSerial.h>
@@ -92,18 +92,18 @@
 const char* ssid = "YOUR_WIFI_SSID";          // เปลี่ยนเป็นชื่อ WiFi ของคุณ
 const char* password = "YOUR_WIFI_PASSWORD";  // เปลี่ยนเป็นรหัสผ่าน WiFi
 
-// 2. ตั้งค่า MQTT Broker
-const char* mqtt_server = "YOUR_MQTT_BROKER_HOST"; // ดูจากเอกสารภายใน mqtt.md
-const int mqtt_port = 1883;
-const char* mqtt_user = "YOUR_MQTT_USERNAME";      // ดูจากเอกสารภายใน mqtt.md
-const char* mqtt_pass = "YOUR_MQTT_PASSWORD";      // ดูจากเอกสารภายใน mqtt.md
+// 2. ตั้งค่า MQTT Broker (HiveMQ Cloud Private Broker)
+const char* mqtt_server = "65f2ec1d516f46368f91e15a90eb91a1.s1.eu.hivemq.cloud";
+const int mqtt_port = 8883; // MQTTS เข้ารหัส SSL/TLS
+const char* mqtt_user = "cmu_phamacy_shuttle";
+const char* mqtt_pass = "cmu_phamacy_shuttle";
 const char* mqtt_topic = "shuttle/shuttle-01";
 const char* vehicle_id = "shuttle-01";
 
 // 3. กำหนดขา Serial สำหรับเชื่อมต่อกับ GPS (GPIO 16 = RX2, GPIO 17 = TX2)
 HardwareSerial gpsSerial(2);
 TinyGPSPlus gps;
-WiFiClient espClient;
+WiFiClientSecure espClient;
 PubSubClient client(espClient);
 
 unsigned long lastPublishTime = 0;
@@ -139,8 +139,10 @@ void setup() {
   }
   Serial.println("\nWiFi เชื่อมต่อสำเร็จ!");
 
-  // ตั้งค่า MQTT
+  // ตั้งค่า SSL / TLS และ MQTT Server
+  espClient.setInsecure(); // ข้ามการตรวจ Root CA เพื่อเชื่อมต่อ SSL 8883 ได้ทันที
   client.setServer(mqtt_server, mqtt_port);
+  client.setBufferSize(512);
 }
 
 void reconnectMQTT() {

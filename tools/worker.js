@@ -30,7 +30,7 @@ export function haversineDistance(lat1, lng1, lat2, lng2) {
 }
 
 export function startWorker(options = {}) {
-  const primaryBroker = options.broker || process.env.MQTT_BROKER || process.env.VITE_MQTT_BROKER_URL || 'wss://iot.pharmacy.cmu.ac.th:8083/mqtt';
+  const primaryBroker = options.broker || process.env.MQTT_BROKER || process.env.VITE_MQTT_BROKER_URL || 'wss://65f2ec1d516f46368f91e15a90eb91a1.s1.eu.hivemq.cloud:8884/mqtt';
   const TOPIC = options.topic || process.env.VITE_MQTT_TOPIC || process.env.MQTT_TOPIC || 'shuttle/+';
   const USERNAME = options.username || process.env.VITE_MQTT_USERNAME || process.env.MQTT_USERNAME;
   const PASSWORD = options.password || process.env.VITE_MQTT_PASSWORD || process.env.MQTT_PASSWORD;
@@ -40,6 +40,12 @@ export function startWorker(options = {}) {
   // Build candidate brokers list for automatic transport/port failover
   const candidateBrokers = [];
   if (primaryBroker) candidateBrokers.push(primaryBroker);
+  if (!candidateBrokers.includes('wss://65f2ec1d516f46368f91e15a90eb91a1.s1.eu.hivemq.cloud:8884/mqtt')) {
+    candidateBrokers.push('wss://65f2ec1d516f46368f91e15a90eb91a1.s1.eu.hivemq.cloud:8884/mqtt');
+  }
+  if (!candidateBrokers.includes('mqtts://65f2ec1d516f46368f91e15a90eb91a1.s1.eu.hivemq.cloud:8883')) {
+    candidateBrokers.push('mqtts://65f2ec1d516f46368f91e15a90eb91a1.s1.eu.hivemq.cloud:8883');
+  }
   if (!candidateBrokers.includes('wss://iot.pharmacy.cmu.ac.th:8083/mqtt')) {
     candidateBrokers.push('wss://iot.pharmacy.cmu.ac.th:8083/mqtt');
   }
@@ -79,8 +85,10 @@ export function startWorker(options = {}) {
     if (isShuttingDown) return;
     currentBrokerIndex = index % candidateBrokers.length;
     const brokerUrl = candidateBrokers[currentBrokerIndex];
-    const username = USERNAME || (brokerUrl.includes('pharmacy') ? 'pharmacy' : undefined);
-    const password = PASSWORD || (brokerUrl.includes('pharmacy') ? 'pharmacy' : undefined);
+    const isHiveMQ = brokerUrl.includes('hivemq.cloud');
+    const isPharmacy = brokerUrl.includes('pharmacy');
+    const username = USERNAME || (isHiveMQ ? 'cmu_phamacy_shuttle' : isPharmacy ? 'pharmacy' : undefined);
+    const password = PASSWORD || (isHiveMQ ? 'cmu_phamacy_shuttle' : isPharmacy ? 'pharmacy' : undefined);
 
     console.log(`[Worker] Connecting to MQTT broker (${currentBrokerIndex + 1}/${candidateBrokers.length}): ${brokerUrl}...`);
     connectionStatus = 'connecting';
