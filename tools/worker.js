@@ -69,6 +69,7 @@ export function startWorker(options = {}) {
   let activeBroker = null;
   let lastErrorMessage = null;
   let lastErrorTime = null;
+  const brokerErrors = {};
   let currentBrokerIndex = 0;
   let failoverTimer = null;
   let client = null;
@@ -105,6 +106,9 @@ export function startWorker(options = {}) {
     clearTimeout(failoverTimer);
     failoverTimer = setTimeout(() => {
       if (!hasConnected && !isShuttingDown) {
+        brokerErrors[brokerUrl] = 'Connection timed out after 8s';
+        lastErrorMessage = brokerErrors[brokerUrl];
+        lastErrorTime = new Date().toISOString();
         console.warn(`[Worker] Connection to ${brokerUrl} timed out after 8s. Attempting failover to next candidate...`);
         tryNextBroker();
       }
@@ -133,6 +137,7 @@ export function startWorker(options = {}) {
     });
 
     client.on('error', (err) => {
+      brokerErrors[brokerUrl] = err.message;
       lastErrorMessage = err.message;
       lastErrorTime = new Date().toISOString();
       console.error(`[Worker] MQTT client error on ${brokerUrl}:`, err.message);
@@ -383,6 +388,7 @@ export function startWorker(options = {}) {
     broker: activeBroker || candidateBrokers[currentBrokerIndex],
     activeBroker,
     candidateBrokers,
+    brokerErrors,
     topic: TOPIC,
     status: connectionStatus,
     lastError: lastErrorMessage,
