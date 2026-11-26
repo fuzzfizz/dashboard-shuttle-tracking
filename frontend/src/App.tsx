@@ -150,7 +150,7 @@ function OperationalDashboard() {
     <div className={`min-h-screen bg-slate-100 dark:bg-slate-900 text-slate-800 dark:text-slate-100 flex flex-col ${isMapFullscreen ? 'overflow-hidden h-screen' : ''}`}>
       {/* Top Header (compact mode only) */}
       {!isMapFullscreen && (
-        <header className="h-16 border-b border-slate-200 dark:border-slate-800 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md px-3 sm:px-4 md:px-6 flex items-center justify-between gap-2 z-[1100] sticky top-0 shadow-sm dark:shadow-lg">
+        <header className="h-16 border-b border-slate-200 dark:border-slate-800 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md px-3 sm:px-4 md:px-6 lg:px-8 flex items-center justify-between gap-2 z-[1100] sticky top-0 shadow-sm dark:shadow-lg">
           <div className="flex items-center gap-2 sm:gap-3 shrink-0">
             <div className="p-2 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 rounded-xl">
               <Bus className="w-5 h-5" />
@@ -211,7 +211,7 @@ function OperationalDashboard() {
 
       {/* Content View */}
       {activeTab === 'today' ? (
-        <main className="flex-1 p-3 sm:p-4 md:p-6 flex flex-col gap-4 sm:gap-6 max-w-7xl mx-auto w-full">
+        <main className="flex-1 px-3 sm:px-4 md:px-6 lg:px-8 py-4 sm:py-6 flex flex-col gap-4 sm:gap-6 w-full">
           {/* Full-Width Map Card */}
           <div className={isMapFullscreen ? '' : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-3 sm:p-4 shadow-sm dark:shadow-xl flex flex-col gap-3'}>
             {!isMapFullscreen && (
@@ -277,7 +277,7 @@ function OperationalDashboard() {
               className={
                 isMapFullscreen
                   ? 'fixed inset-0 z-[1500] w-screen h-screen bg-slate-950 flex flex-col select-none overflow-hidden'
-                  : 'h-[320px] sm:h-[420px] md:h-[540px] w-full rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-slate-950 shadow-xl relative'
+                  : 'h-[320px] sm:h-[420px] md:h-[540px] lg:h-[580px] xl:h-[640px] w-full rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-slate-950 shadow-xl relative'
               }
             >
               {/* Single Persistent Map Instance */}

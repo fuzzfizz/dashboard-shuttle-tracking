@@ -369,8 +369,8 @@ export const RouteCompareLab: React.FC<RouteCompareLabProps> = ({ onBack }) => {
   return (
     <div className="min-h-screen bg-slate-100 dark:bg-slate-950 text-slate-800 dark:text-slate-100 flex flex-col">
       {/* Header & Navigation */}
-      <header className="bg-white/95 dark:bg-slate-900/95 border-b border-slate-200 dark:border-slate-800 px-4 py-3 sticky top-0 z-50 backdrop-blur-md">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-3">
+      <header className="bg-white/95 dark:bg-slate-900/95 border-b border-slate-200 dark:border-slate-800 px-4 md:px-6 lg:px-8 py-3 sticky top-0 z-50 backdrop-blur-md">
+        <div className="w-full flex flex-col md:flex-row md:items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             {onBack && (
               <button
@@ -464,7 +464,7 @@ export const RouteCompareLab: React.FC<RouteCompareLabProps> = ({ onBack }) => {
       </header>
 
       {/* Main Container */}
-      <main className="flex-1 max-w-7xl w-full mx-auto p-4 flex flex-col gap-4">
+      <main className="flex-1 w-full p-4 md:p-6 lg:p-8 flex flex-col gap-4">
         {/* Mapbox Token Configuration Bar */}
         <section className="bg-gradient-to-r from-blue-500/10 via-indigo-500/10 to-emerald-500/10 p-3.5 rounded-2xl border border-blue-500/20 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
           <div className="flex items-center gap-2">
