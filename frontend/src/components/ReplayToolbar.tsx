@@ -58,7 +58,7 @@ export const ReplayToolbar: React.FC<ReplayToolbarProps> = ({
   const maxDate = getBangkokDate();
 
   return (
-    <div className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 px-3 py-2.5 sm:px-4 sm:py-3 md:px-6 lg:px-8 z-10 transition-colors">
+    <div className="relative z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 px-3 py-2.5 sm:px-4 sm:py-3 md:px-6 lg:px-8 transition-colors">
       <div className="w-full flex flex-col lg:flex-row lg:items-center lg:justify-between gap-2.5 sm:gap-3">
         {/* Left: Selectors (Date & Vehicle) & Refresh Button */}
         <div className="flex flex-wrap items-center gap-2 sm:gap-3 w-full lg:w-auto">
@@ -105,7 +105,7 @@ export const ReplayToolbar: React.FC<ReplayToolbarProps> = ({
           </span>
 
           {/* Custom Vehicle Dropdown matching DailyDistanceTable */}
-          <div ref={vehicleMenuRef} className="relative flex-1 sm:flex-none min-w-0">
+          <div ref={vehicleMenuRef} className="relative flex-1 sm:flex-none min-w-0 z-50">
             {/* Native select for accessibility & automated tests */}
             <select
               value={selectedVehicleId}
@@ -141,7 +141,7 @@ export const ReplayToolbar: React.FC<ReplayToolbarProps> = ({
 
             {/* Custom Dropdown Menu matching DailyDistanceTable */}
             {isVehicleMenuOpen && (
-              <div className="absolute right-0 sm:right-auto sm:left-0 mt-2 w-64 max-w-[calc(100vw-3rem)] bg-white/98 dark:bg-slate-900/98 backdrop-blur-xl border border-slate-200/90 dark:border-slate-700/80 rounded-2xl shadow-2xl p-1.5 z-[60] animate-in fade-in zoom-in-95 duration-100 max-h-72 overflow-y-auto">
+              <div className="absolute right-0 sm:right-auto sm:left-0 mt-2 w-64 max-w-[calc(100vw-3rem)] bg-white/98 dark:bg-slate-900/98 backdrop-blur-xl border border-slate-200/90 dark:border-slate-700/80 rounded-2xl shadow-2xl p-1.5 z-[100] animate-in fade-in zoom-in-95 duration-100 max-h-72 overflow-y-auto">
                 <div className="px-2.5 py-1 text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-0.5">
                   เลือกรถ
                 </div>

@@ -153,7 +153,7 @@ export const HistoricalTripReplay: React.FC<HistoricalTripReplayProps> = ({
             </div>
 
             {/* Custom Vehicle Selector matching DailyDistanceTable */}
-            <div ref={vehicleMenuRef} className="relative flex items-center shrink-0">
+            <div ref={vehicleMenuRef} className="relative flex items-center shrink-0 z-50">
               <label htmlFor="fullscreen-vehicle-select" className="sr-only">เลือกรถ</label>
               <select
                 id="fullscreen-vehicle-select"
@@ -324,7 +324,7 @@ export const HistoricalTripReplay: React.FC<HistoricalTripReplayProps> = ({
       />
 
       {/* Compact Map & Console Card */}
-      <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-3 relative z-10">
         {/* Card Header */}
         <div className="flex items-center justify-between px-1">
           <div className="flex items-center gap-2 sm:gap-3">

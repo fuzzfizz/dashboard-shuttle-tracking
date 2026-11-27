@@ -116,7 +116,7 @@ describe('FleetDistanceAnalyticsCard', () => {
     expect(selector).toBeInTheDocument();
 
     // Options exist: 'all', 'BUS-01', 'BUS-02', 'BUS-03'
-    expect(screen.getByRole('option', { name: /ทุกคัน \(รวมกองรถ\)/i })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: /^ทุกคัน$/i })).toBeInTheDocument();
     expect(screen.getByRole('option', { name: /BUS-01/i })).toBeInTheDocument();
     expect(screen.getByRole('option', { name: /BUS-02/i })).toBeInTheDocument();
     expect(screen.getByRole('option', { name: /BUS-03/i })).toBeInTheDocument();

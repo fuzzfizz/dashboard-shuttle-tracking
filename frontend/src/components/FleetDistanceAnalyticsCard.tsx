@@ -237,7 +237,7 @@ export const FleetDistanceAnalyticsCard: React.FC<FleetDistanceAnalyticsCardProp
       {!isCollapsed && (
         <>
           {/* Controls Bar: Timeframe Selector & Vehicle Filter */}
-          <div className="flex flex-wrap sm:flex-nowrap items-center justify-between gap-3">
+          <div className="flex flex-wrap sm:flex-nowrap items-center justify-between gap-3 relative z-30">
             {/* Timeframe Selector Pills */}
             <div
               role="group"
@@ -265,7 +265,7 @@ export const FleetDistanceAnalyticsCard: React.FC<FleetDistanceAnalyticsCardProp
             </div>
 
             {/* Custom Vehicle Selector Dropdown matching DailyDistanceTable */}
-            <div ref={vehicleMenuRef} className="relative w-full sm:w-auto min-w-0">
+            <div ref={vehicleMenuRef} className="relative w-full sm:w-auto min-w-0 z-40">
               <label htmlFor="vehicle-analytics-select" className="sr-only">
                 เลือกคันรถสำหรับดูกราฟ
               </label>
@@ -279,7 +279,7 @@ export const FleetDistanceAnalyticsCard: React.FC<FleetDistanceAnalyticsCardProp
                 className="sr-only"
                 tabIndex={-1}
               >
-                <option value="all">ทุกคัน (รวมกองรถ)</option>
+                <option value="all">ทุกคัน</option>
                 {uniqueVehicleIds.map((vId) => (
                   <option key={vId} value={vId}>
                     {vId}
@@ -297,7 +297,7 @@ export const FleetDistanceAnalyticsCard: React.FC<FleetDistanceAnalyticsCardProp
                 <div className="flex items-center gap-2 min-w-0">
                   <Bus className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
                   <span className="truncate">
-                    {selectedVehicleId === 'all' ? 'ทุกคัน (รวมกองรถ)' : selectedVehicleId}
+                    {selectedVehicleId === 'all' ? 'ทุกคัน' : selectedVehicleId}
                   </span>
                 </div>
                 <ChevronDown
@@ -309,7 +309,7 @@ export const FleetDistanceAnalyticsCard: React.FC<FleetDistanceAnalyticsCardProp
 
               {/* Custom Dropdown Menu matching DailyDistanceTable */}
               {isVehicleMenuOpen && (
-                <div className="absolute right-0 sm:right-auto sm:left-0 mt-2 w-64 max-w-[calc(100vw-3rem)] bg-white/98 dark:bg-slate-900/98 backdrop-blur-xl border border-slate-200/90 dark:border-slate-700/80 rounded-2xl shadow-2xl p-1.5 z-[60] animate-in fade-in zoom-in-95 duration-100 max-h-72 overflow-y-auto">
+                <div className="absolute right-0 sm:right-auto sm:left-0 mt-2 w-64 max-w-[calc(100vw-3rem)] bg-white/98 dark:bg-slate-900/98 backdrop-blur-xl border border-slate-200/90 dark:border-slate-700/80 rounded-2xl shadow-2xl p-1.5 z-[100] animate-in fade-in zoom-in-95 duration-100 max-h-72 overflow-y-auto">
                   <div className="px-2.5 py-1 text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-0.5">
                     เลือกรถสำหรับดูกราฟ
                   </div>
@@ -328,7 +328,7 @@ export const FleetDistanceAnalyticsCard: React.FC<FleetDistanceAnalyticsCardProp
                   >
                     <div className="flex items-center gap-2">
                       <Bus className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                      <span>ทุกคัน (รวมกองรถ)</span>
+                      <span>ทุกคัน</span>
                     </div>
                     {selectedVehicleId === 'all' && (
                       <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
