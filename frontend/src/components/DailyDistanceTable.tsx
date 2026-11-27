@@ -297,7 +297,7 @@ export const DailyDistanceTable: React.FC<DailyDistanceTableProps> = ({
           </button>
 
           {isStatusMenuOpen && (
-            <div className="absolute left-0 mt-2 w-64 max-w-[calc(100vw-3rem)] bg-white/98 dark:bg-slate-900/98 backdrop-blur-xl border border-slate-200/90 dark:border-slate-700/80 rounded-2xl shadow-2xl p-1.5 z-[60] animate-in fade-in zoom-in-95 duration-100">
+            <div className="absolute left-0 mt-2 w-64 max-w-[calc(100vw-3rem)] bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl p-1.5 z-[60] animate-in fade-in zoom-in-95 duration-100">
               <div className="px-2.5 py-1 text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-0.5">
                 กรองสถานะรถ
               </div>
