@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { Bus, Maximize2, Minimize2, Calendar, ChevronLeft, ChevronRight, ChevronDown } from 'lucide-react';
+import { Bus, Maximize2, Minimize2, Calendar, ChevronLeft, ChevronRight, ChevronDown, Check } from 'lucide-react';
 import { ReplayToolbar } from './ReplayToolbar';
 import { ReplayMap } from './ReplayMap';
 import { ReplayPlayerBar } from './ReplayPlayerBar';
@@ -45,7 +45,19 @@ export const HistoricalTripReplay: React.FC<HistoricalTripReplayProps> = ({
     initialVehicleId || vehicleList[0]?.id || ''
   );
   const [isMapFullscreen, setIsMapFullscreen] = useState(false);
+  const [isVehicleMenuOpen, setIsVehicleMenuOpen] = useState(false);
+  const vehicleMenuRef = useRef<HTMLDivElement>(null);
   const lastInitialVehicleIdRef = useRef<string | undefined>(initialVehicleId);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (vehicleMenuRef.current && !vehicleMenuRef.current.contains(e.target as Node)) {
+        setIsVehicleMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -140,24 +152,74 @@ export const HistoricalTripReplay: React.FC<HistoricalTripReplayProps> = ({
               </span>
             </div>
 
-            {/* Vehicle Selector (Compact) */}
-            <div className="relative flex items-center gap-1.5 bg-white/95 dark:bg-slate-900/90 backdrop-blur-md border border-slate-200/90 dark:border-slate-700/80 pl-2.5 pr-7 py-1.5 sm:py-2 rounded-2xl shadow-md shrink-0 hover:border-slate-300 dark:hover:border-slate-600 transition-colors focus-within:ring-2 focus-within:ring-emerald-500/20">
-              <Bus className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0 pointer-events-none" />
+            {/* Custom Vehicle Selector matching DailyDistanceTable */}
+            <div ref={vehicleMenuRef} className="relative flex items-center shrink-0">
               <label htmlFor="fullscreen-vehicle-select" className="sr-only">เลือกรถ</label>
               <select
                 id="fullscreen-vehicle-select"
                 aria-label="Fullscreen Select Vehicle"
                 value={selectedVehicleId}
                 onChange={(e) => handleVehicleChange(e.target.value)}
-                className="appearance-none bg-transparent text-xs font-semibold text-slate-800 dark:text-slate-100 outline-none cursor-pointer w-full"
+                className="sr-only"
+                tabIndex={-1}
               >
                 {effectiveVehicleList.map((v) => (
-                  <option key={v.id} value={v.id} className="bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100">
+                  <option key={v.id} value={v.id}>
                     {v.name}
                   </option>
                 ))}
               </select>
-              <ChevronDown className="w-3.5 h-3.5 text-slate-400 pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 shrink-0" />
+
+              <button
+                type="button"
+                onClick={() => setIsVehicleMenuOpen(!isVehicleMenuOpen)}
+                aria-expanded={isVehicleMenuOpen}
+                className="flex items-center gap-2 bg-white/95 dark:bg-slate-900/90 backdrop-blur-md border border-slate-200/90 dark:border-slate-700/80 px-3 py-1.5 sm:py-2 rounded-2xl shadow-md shrink-0 hover:border-slate-300 dark:hover:border-slate-600 transition-colors text-xs font-semibold text-slate-800 dark:text-slate-100 cursor-pointer"
+              >
+                <Bus className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                <span>
+                  {effectiveVehicleList.find((v) => v.id === selectedVehicleId)?.name || selectedVehicleId || 'เลือกรถ'}
+                </span>
+                <ChevronDown
+                  className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 shrink-0 ${
+                    isVehicleMenuOpen ? 'rotate-180 text-emerald-500' : ''
+                  }`}
+                />
+              </button>
+
+              {isVehicleMenuOpen && (
+                <div className="absolute left-0 top-full mt-2 w-56 bg-white/98 dark:bg-slate-900/98 backdrop-blur-xl border border-slate-200/90 dark:border-slate-700/80 rounded-2xl shadow-2xl p-1.5 z-[1200] animate-in fade-in zoom-in-95 duration-100 max-h-72 overflow-y-auto">
+                  <div className="px-2.5 py-1 text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-0.5">
+                    เลือกรถ
+                  </div>
+                  {effectiveVehicleList.map((v) => {
+                    const isSelected = selectedVehicleId === v.id;
+                    return (
+                      <button
+                        key={v.id}
+                        type="button"
+                        onClick={() => {
+                          handleVehicleChange(v.id);
+                          setIsVehicleMenuOpen(false);
+                        }}
+                        className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium text-left transition-colors min-h-[36px] cursor-pointer ${
+                          isSelected
+                            ? 'bg-emerald-50 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 font-semibold border border-emerald-200/60 dark:border-emerald-800/50'
+                            : 'text-slate-700 hover:bg-slate-100/80 dark:text-slate-300 dark:hover:bg-slate-800/80'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2">
+                          <Bus className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                          <span>{v.name}</span>
+                        </div>
+                        {isSelected && (
+                          <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
             </div>
 
             {/* Date Selector with Steppers (Compact) */}

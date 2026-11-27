@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   Calendar,
   Bus,
@@ -9,6 +9,7 @@ import {
   ChevronLeft,
   ChevronRight,
   ChevronDown,
+  Check,
 } from 'lucide-react';
 import { HistoricalTripSummary } from '../types/historical';
 import {
@@ -38,6 +39,21 @@ export const ReplayToolbar: React.FC<ReplayToolbarProps> = ({
   isLoading,
   onRefresh,
 }) => {
+  const [isVehicleMenuOpen, setIsVehicleMenuOpen] = useState(false);
+  const vehicleMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (vehicleMenuRef.current && !vehicleMenuRef.current.contains(e.target as Node)) {
+        setIsVehicleMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const selectedVehicleObj = vehicleList.find((v) => v.id === selectedVehicleId);
+  const selectedVehicleName = selectedVehicleObj?.name || selectedVehicleId || 'เลือกรถ';
   const minDate = getBangkokMinRetentionDate(14);
   const maxDate = getBangkokDate();
 
@@ -88,26 +104,75 @@ export const ReplayToolbar: React.FC<ReplayToolbarProps> = ({
             บันทึกย้อนหลัง 14 วัน
           </span>
 
-          {/* Vehicle Dropdown */}
-          <div className="relative flex-1 sm:flex-none flex items-center bg-white dark:bg-slate-800/90 hover:bg-slate-50 dark:hover:bg-slate-800 border border-slate-200/90 dark:border-slate-700/80 rounded-xl px-3 py-2 sm:py-1.5 shadow-xs transition-colors min-h-[42px] sm:min-h-0 focus-within:ring-2 focus-within:ring-emerald-500/20 focus-within:border-emerald-500">
-            <Bus className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 mr-2 pointer-events-none" />
+          {/* Custom Vehicle Dropdown matching DailyDistanceTable */}
+          <div ref={vehicleMenuRef} className="relative flex-1 sm:flex-none min-w-0">
+            {/* Native select for accessibility & automated tests */}
             <select
               value={selectedVehicleId}
               onChange={(e) => onVehicleChange(e.target.value)}
-              className="appearance-none bg-transparent text-xs sm:text-sm font-medium text-slate-800 dark:text-slate-100 outline-none cursor-pointer pr-6 w-full"
+              className="sr-only"
+              tabIndex={-1}
               aria-label="Select Vehicle"
             >
               {vehicleList.map((v) => (
-                <option
-                  key={v.id}
-                  value={v.id}
-                  className="bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100"
-                >
+                <option key={v.id} value={v.id}>
                   {v.name}
                 </option>
               ))}
             </select>
-            <ChevronDown className="w-3.5 h-3.5 text-slate-400 pointer-events-none absolute right-3 shrink-0" />
+
+            {/* Custom Styled Trigger Button */}
+            <button
+              type="button"
+              onClick={() => setIsVehicleMenuOpen(!isVehicleMenuOpen)}
+              aria-expanded={isVehicleMenuOpen}
+              className="w-full sm:w-auto flex items-center justify-between gap-2.5 px-3 py-2 sm:py-1.5 rounded-xl bg-white hover:bg-slate-50 text-slate-800 hover:text-slate-900 border border-slate-200/90 dark:bg-slate-900 dark:hover:bg-slate-800 dark:text-slate-200 dark:hover:text-white dark:border-slate-700/80 text-xs sm:text-sm font-semibold transition-all shadow-xs hover:border-slate-300 dark:hover:border-slate-600 min-h-[42px] sm:min-h-0 min-w-0 cursor-pointer"
+            >
+              <div className="flex items-center gap-2 min-w-0">
+                <Bus className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                <span className="truncate">{selectedVehicleName}</span>
+              </div>
+              <ChevronDown
+                className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 shrink-0 ${
+                  isVehicleMenuOpen ? 'rotate-180 text-emerald-500' : ''
+                }`}
+              />
+            </button>
+
+            {/* Custom Dropdown Menu matching DailyDistanceTable */}
+            {isVehicleMenuOpen && (
+              <div className="absolute right-0 sm:right-auto sm:left-0 mt-2 w-64 max-w-[calc(100vw-3rem)] bg-white/98 dark:bg-slate-900/98 backdrop-blur-xl border border-slate-200/90 dark:border-slate-700/80 rounded-2xl shadow-2xl p-1.5 z-[60] animate-in fade-in zoom-in-95 duration-100 max-h-72 overflow-y-auto">
+                <div className="px-2.5 py-1 text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-0.5">
+                  เลือกรถ
+                </div>
+                {vehicleList.map((v) => {
+                  const isSelected = selectedVehicleId === v.id;
+                  return (
+                    <button
+                      key={v.id}
+                      type="button"
+                      onClick={() => {
+                        onVehicleChange(v.id);
+                        setIsVehicleMenuOpen(false);
+                      }}
+                      className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs sm:text-sm font-medium text-left transition-colors min-h-[40px] sm:min-h-0 cursor-pointer ${
+                        isSelected
+                          ? 'bg-emerald-50 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 font-semibold border border-emerald-200/60 dark:border-emerald-800/50'
+                          : 'text-slate-700 hover:bg-slate-100/80 dark:text-slate-300 dark:hover:bg-slate-800/80'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <Bus className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                        <span>{v.name}</span>
+                      </div>
+                      {isSelected && (
+                        <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           {/* Refresh Button on Mobile / Desktop */}

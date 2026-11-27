@@ -230,7 +230,7 @@ export const TripTestPanel: React.FC<TripTestPanelProps> = ({
                   setTargetVehicleId(id);
                   onSelectVehicle(id);
                 }}
-                className="w-full appearance-none pl-8.5 pr-8 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 font-mono font-bold text-xs focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all shadow-xs cursor-pointer"
+                className="w-full appearance-none pl-9 pr-8 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 font-mono font-bold text-xs focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all shadow-xs cursor-pointer"
               >
                 {vehicleIds.map((id) => (
                   <option key={id} value={id}>

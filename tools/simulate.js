@@ -1,9 +1,22 @@
 import mqtt from 'mqtt';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import dotenv from 'dotenv';
 
-const BROKER = process.env.MQTT_BROKER || process.env.VITE_MQTT_BROKER_URL || 'mqtt://localhost:1883';
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+dotenv.config();
+const toolsEnvPath = path.join(__dirname, '.env');
+if (fs.existsSync(toolsEnvPath)) {
+  dotenv.config({ path: toolsEnvPath });
+}
+
+const BROKER = process.env.MQTT_BROKER || process.env.VITE_MQTT_BROKER_URL || 'mqtt://iot.pharmacy.cmu.ac.th:1883';
 const BASE_TOPIC = process.env.VITE_MQTT_TOPIC_BASE || process.env.MQTT_TOPIC_BASE || 'shuttle';
-const USERNAME = process.env.VITE_MQTT_USERNAME || process.env.MQTT_USERNAME;
-const PASSWORD = process.env.VITE_MQTT_PASSWORD || process.env.MQTT_PASSWORD;
+const USERNAME = process.env.MQTT_USERNAME || process.env.VITE_MQTT_USERNAME || 'pharmacy';
+const PASSWORD = process.env.MQTT_PASSWORD || process.env.VITE_MQTT_PASSWORD || 'pharmacy';
 
 console.log(`Connecting to ${BROKER}...`);
 const client = mqtt.connect(BROKER, {

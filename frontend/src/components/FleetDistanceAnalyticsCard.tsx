@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import {
   BarChart3,
   TrendingUp,
@@ -6,6 +6,7 @@ import {
   ChevronDown,
   ChevronUp,
   Bus,
+  Check,
 } from 'lucide-react';
 import { DailyMetricsMap } from '../types/metrics';
 import { FleetMap } from '../types/telemetry';
@@ -55,6 +56,18 @@ export const FleetDistanceAnalyticsCard: React.FC<FleetDistanceAnalyticsCardProp
 
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [selectedVehicleId, setSelectedVehicleId] = useState<string>('all');
+  const [isVehicleMenuOpen, setIsVehicleMenuOpen] = useState(false);
+  const vehicleMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (vehicleMenuRef.current && !vehicleMenuRef.current.contains(e.target as Node)) {
+        setIsVehicleMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
   const [recordsCache, setRecordsCache] = useState<Partial<Record<AnalyticsTimeframe, DailyRecordItem[]>>>({});
 
   const handleTimeframeChange = async (newTf: AnalyticsTimeframe) => {
@@ -251,29 +264,104 @@ export const FleetDistanceAnalyticsCard: React.FC<FleetDistanceAnalyticsCardProp
               })}
             </div>
 
-            {/* Vehicle Selector Dropdown */}
-            <div className="relative w-full sm:w-auto flex items-center">
+            {/* Custom Vehicle Selector Dropdown matching DailyDistanceTable */}
+            <div ref={vehicleMenuRef} className="relative w-full sm:w-auto min-w-0">
               <label htmlFor="vehicle-analytics-select" className="sr-only">
                 เลือกคันรถสำหรับดูกราฟ
               </label>
-              <Bus className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 shrink-0" />
+
+              {/* Accessible native select for keyboard & screen readers & test automation */}
               <select
                 id="vehicle-analytics-select"
                 aria-label="เลือกคันรถสำหรับดูกราฟ"
                 value={selectedVehicleId}
                 onChange={(e) => setSelectedVehicleId(e.target.value)}
-                className="w-full sm:w-auto appearance-none bg-white hover:bg-slate-50 dark:bg-slate-800/90 dark:hover:bg-slate-800 border border-slate-200/90 dark:border-slate-700/80 text-slate-800 dark:text-slate-200 text-xs font-semibold rounded-xl pl-8.5 pr-8 py-2 sm:py-1.5 min-h-[42px] sm:min-h-0 cursor-pointer shadow-xs focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
+                className="sr-only"
+                tabIndex={-1}
               >
-                <option value="all" className="bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100">
-                  ทุกคัน (รวมกองรถ)
-                </option>
+                <option value="all">ทุกคัน (รวมกองรถ)</option>
                 {uniqueVehicleIds.map((vId) => (
-                  <option key={vId} value={vId} className="bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100">
+                  <option key={vId} value={vId}>
                     {vId}
                   </option>
                 ))}
               </select>
-              <ChevronDown className="w-3.5 h-3.5 text-slate-400 pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 shrink-0" />
+
+              {/* Custom Styled Trigger Button */}
+              <button
+                type="button"
+                onClick={() => setIsVehicleMenuOpen(!isVehicleMenuOpen)}
+                aria-expanded={isVehicleMenuOpen}
+                className="w-full sm:w-auto flex items-center justify-between gap-2.5 px-3 py-2 sm:py-1.5 rounded-xl bg-white hover:bg-slate-50 text-slate-800 hover:text-slate-900 border border-slate-200/90 dark:bg-slate-900 dark:hover:bg-slate-800 dark:text-slate-200 dark:hover:text-white dark:border-slate-700/80 text-xs sm:text-sm font-semibold transition-all shadow-xs hover:border-slate-300 dark:hover:border-slate-600 min-h-[42px] sm:min-h-0 min-w-0 cursor-pointer"
+              >
+                <div className="flex items-center gap-2 min-w-0">
+                  <Bus className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                  <span className="truncate">
+                    {selectedVehicleId === 'all' ? 'ทุกคัน (รวมกองรถ)' : selectedVehicleId}
+                  </span>
+                </div>
+                <ChevronDown
+                  className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 shrink-0 ${
+                    isVehicleMenuOpen ? 'rotate-180 text-emerald-500' : ''
+                  }`}
+                />
+              </button>
+
+              {/* Custom Dropdown Menu matching DailyDistanceTable */}
+              {isVehicleMenuOpen && (
+                <div className="absolute right-0 sm:right-auto sm:left-0 mt-2 w-64 max-w-[calc(100vw-3rem)] bg-white/98 dark:bg-slate-900/98 backdrop-blur-xl border border-slate-200/90 dark:border-slate-700/80 rounded-2xl shadow-2xl p-1.5 z-[60] animate-in fade-in zoom-in-95 duration-100 max-h-72 overflow-y-auto">
+                  <div className="px-2.5 py-1 text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-0.5">
+                    เลือกรถสำหรับดูกราฟ
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedVehicleId('all');
+                      setIsVehicleMenuOpen(false);
+                    }}
+                    className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs sm:text-sm font-medium text-left transition-colors min-h-[40px] sm:min-h-0 cursor-pointer ${
+                      selectedVehicleId === 'all'
+                        ? 'bg-emerald-50 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 font-semibold border border-emerald-200/60 dark:border-emerald-800/50'
+                        : 'text-slate-700 hover:bg-slate-100/80 dark:text-slate-300 dark:hover:bg-slate-800/80'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <Bus className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                      <span>ทุกคัน (รวมกองรถ)</span>
+                    </div>
+                    {selectedVehicleId === 'all' && (
+                      <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                    )}
+                  </button>
+
+                  {uniqueVehicleIds.map((vId) => {
+                    const isSelected = selectedVehicleId === vId;
+                    return (
+                      <button
+                        key={vId}
+                        type="button"
+                        onClick={() => {
+                          setSelectedVehicleId(vId);
+                          setIsVehicleMenuOpen(false);
+                        }}
+                        className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs sm:text-sm font-medium text-left transition-colors min-h-[40px] sm:min-h-0 cursor-pointer ${
+                          isSelected
+                            ? 'bg-emerald-50 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 font-semibold border border-emerald-200/60 dark:border-emerald-800/50'
+                            : 'text-slate-700 hover:bg-slate-100/80 dark:text-slate-300 dark:hover:bg-slate-800/80'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2">
+                          <span className="font-mono">{vId}</span>
+                        </div>
+                        {isSelected && (
+                          <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           </div>
 
